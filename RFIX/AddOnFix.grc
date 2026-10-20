@@ -1,6 +1,6 @@
 'MDID' 32500 "Add-On Identifier" {
 	1114716259			/* developer id */
-	1330922572	/* local id ('OTDL') */
+	97801345	/* local id ('OTDL') */
 }
 
 'GICN' 10001 "AddOnIcon" {
