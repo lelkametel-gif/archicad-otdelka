@@ -85,7 +85,7 @@ xlsx::Sheet MakeDetailsSheet (const std::vector<ZoneData>& zones, const Rules& r
 	xlsx::Sheet x;
 	x.name = L"Расчёт";
 	const wchar_t* head[] = {
-		L"Этаж", L"№ зоны", L"Имя зоны", L"Группа", L"Строка ведомости", L"Потолок (в зоне)", L"Стены (в зоне)",
+		L"Этаж", L"№ зоны", L"Категория зоны", L"Группа", L"Строка ведомости", L"Потолок (в зоне)", L"Стены (в зоне)",
 		L"Площадь потолка, м²", L"Толщина пола, м", L"Толщина пола — откуда",
 		L"ID элемента", L"Конструкция / материал", L"Столбец", L"Длина, м", L"Высота элемента, м", L"Высота отделки, м",
 		L"Проёмов, шт", L"Проёмы, м²", L"Площадь отделки, м²"
@@ -106,7 +106,7 @@ xlsx::Sheet MakeDetailsSheet (const std::vector<ZoneData>& zones, const Rules& r
 		auto zoneCols = [&] (int row) {
 			x.SetNum (row, 0, z.floor, xlsx::Default);
 			x.Set (row, 1, z.number, xlsx::Plain);
-			x.Set (row, 2, z.name, xlsx::Plain);
+			x.Set (row, 2, z.name + (z.roomName.empty () || z.roomName == z.name ? L"" : L" (" + z.roomName + L")"), xlsx::Plain);
 			x.Set (row, 3, g, xlsx::Plain);
 			x.Set (row, 4, RowTitleOf (z, g, rules), xlsx::Plain);
 			x.Set (row, 5, z.ceilFinishRaw, xlsx::Plain);

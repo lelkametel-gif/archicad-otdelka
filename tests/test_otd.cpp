@@ -1,8 +1,9 @@
 ﻿// Проверки логики ведомости отделки:
-//   g++ -std=c++17 -ISrc -o /tmp/t tests/test_otd.cpp Src/FinishCore.cpp Src/FinishReport.cpp Src/XlsxWriter.cpp && /tmp/t [out.xlsx]
+//   g++ -std=c++17 -ISrc -o /tmp/t tests/test_otd.cpp Src/FinishCore.cpp Src/FinishReport.cpp Src/XlsxWriter.cpp Src/FinishTable.cpp && /tmp/t [out.xlsx]
 #include "FinishCore.hpp"
 #include "FinishReport.hpp"
 #include "XlsxWriter.hpp"
+#include "FinishTable.hpp"
 
 #include <cmath>
 #include <cstdio>
@@ -53,6 +54,9 @@ int main (int argc, char** argv)
 	CHECK (ClassifyWall (L"Бетон - конструкционный", r) == 1);
 	CHECK (ClassifyWall (L"Ст_Ут_Вш| Ш 10_ЭППС 30", r) == 1);	// Ш найден, ЭППС нет в правилах
 	CHECK (ClassifyWall (L"Стекло", r) == 0);
+	CHECK (ClassifyWall (L"Ст_П| ПГП-80 | Плитка/- | <3,6м", r) == 2);		// ПГП — как керамзитобетонные перегородки
+	CHECK (ClassifyWall (L"Ст_В| Ш 15_У 50_Кирп 120", r) == 2);			// У — утеплитель, не влияет
+	CHECK (ClassifyWall (L"Ст_Ут| У 100", r) == 0);
 
 	// --- отделка
 	CHECK (CleanFinish (L"00 Покраска", r) == L"Водно-дисперсионная окраска");
@@ -149,6 +153,28 @@ int main (int argc, char** argv)
 	if (argc > 1) {
 		std::ofstream out (argv[1], std::ios::binary);
 		out.write (bytes.data (), (std::streamsize) bytes.size ());
+	}
+
+	// --- таблица для рабочего листа
+	{
+		auto ln = WrapText (L"Водомерный узел, электрощитовая, лестничная клетка, приточная вент.камера", 37.6, 2.5, 0.62);
+		CHECK (ln.size () >= 3);
+		for (const auto& l : ln) CHECK (l.size () <= 24);
+		CHECK (WrapText (L"", 30, 2.5, 0.62).size () == 1);
+		const TableLayout t = LayoutSheet (sh);
+		CHECK (t.width > 200 && t.height > 40);
+		CHECK (t.segs.size () > 20);
+		bool hasTitle = false, hasVert = false;
+		for (const auto& tx : t.texts) {
+			if (tx.text == sh.title) hasTitle = true;
+			if (tx.vertical) hasVert = true;
+		}
+		CHECK (hasTitle && hasVert);
+		if (argc > 2) {
+			std::ofstream svg (argv[2], std::ios::binary);
+			const std::string s = LayoutSvg (t);
+			svg.write (s.data (), (std::streamsize) s.size ());
+		}
 	}
 
 	std::printf ("%d проверок, ошибок: %d\n", checks, fails);

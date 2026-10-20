@@ -81,7 +81,9 @@ struct WallPiece {
 };
 
 struct ZoneData {
-	std::wstring			number, name;
+	std::wstring			number;
+	std::wstring			name;				// наименование для ведомости (категория зоны)
+	std::wstring			roomName;			// имя зоны (для листа проверки)
 	int						floor = 0;
 	int						type = 0;			// iTypeZone
 	std::wstring			section;

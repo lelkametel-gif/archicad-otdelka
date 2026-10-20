@@ -29,6 +29,7 @@
 #include "FinishCore.hpp"
 #include "FinishReport.hpp"
 #include "XlsxWriter.hpp"
+#include "FinishTable.hpp"
 #include "ApiUtils.hpp"
 
 #include <algorithm>
@@ -56,7 +57,7 @@ struct Settings {
 	bool			floorFromSlab = true;
 	std::wstring	floorLayer = L"Полы";
 	bool			subtractOpenings = true;
-	bool			openFile = true;
+	bool			toExcel = true;		// также сохранить в Excel (с листом «Расчёт»)
 	std::wstring	zoneLib = L"HimeraZone";
 
 	std::wstring Serialize () const
@@ -65,7 +66,7 @@ struct Settings {
 		o << L"section\t" << section << L"\n" << L"floors\t" << floors << L"\n"
 		  << L"floorMm\t" << floorMm << L"\n" << L"ceilMm\t" << ceilMm << L"\n"
 		  << L"floorFromSlab\t" << (floorFromSlab ? 1 : 0) << L"\n" << L"floorLayer\t" << floorLayer << L"\n"
-		  << L"subtractOpenings\t" << (subtractOpenings ? 1 : 0) << L"\n" << L"openFile\t" << (openFile ? 1 : 0) << L"\n"
+		  << L"subtractOpenings\t" << (subtractOpenings ? 1 : 0) << L"\n" << L"toExcel\t" << (toExcel ? 1 : 0) << L"\n"
 		  << L"zoneLib\t" << zoneLib << L"\n";
 		return o.str ();
 	}
@@ -86,7 +87,7 @@ struct Settings {
 			else if (k == L"floorFromSlab") floorFromSlab = toInt (1) != 0;
 			else if (k == L"floorLayer") floorLayer = v;
 			else if (k == L"subtractOpenings") subtractOpenings = toInt (1) != 0;
-			else if (k == L"openFile") openFile = toInt (1) != 0;
+			else if (k == L"toExcel") toExcel = toInt (1) != 0;
 			else if (k == L"zoneLib" && !otd::Trim (v).empty ()) zoneLib = v;
 		}
 	}
@@ -228,7 +229,7 @@ public:
 		OkId = 1, CancelId = 2,
 		LblSection = 3, EdSection = 4, LblFloors = 5, EdFloors = 6,
 		LblFloor = 7, EdFloor = 8, ChkSlab = 9, EdLayer = 10,
-		LblCeil = 11, EdCeil = 12, ChkOpenings = 13, ChkOpen = 14, BtnRules = 15,
+		LblCeil = 11, EdCeil = 12, ChkOpenings = 13, ChkExcel = 14, BtnRules = 15,
 		LblHint = 16, LblLib = 17, EdLib = 18, Sep = 19
 	};
 
@@ -246,7 +247,7 @@ public:
 		edCeil (GetReference (), EdCeil),
 		chkSlab (GetReference (), ChkSlab),
 		chkOpenings (GetReference (), ChkOpenings),
-		chkOpen (GetReference (), ChkOpen)
+		chkExcel (GetReference (), ChkExcel)
 	{
 		edSection.SetText (au::FromW (st.section));
 		edFloors.SetText (au::FromW (st.floors));
@@ -256,7 +257,7 @@ public:
 		edCeil.SetValue (st.ceilMm);
 		chkSlab.SetState (st.floorFromSlab);
 		chkOpenings.SetState (st.subtractOpenings);
-		chkOpen.SetState (st.openFile);
+		chkExcel.SetState (st.toExcel);
 		UpdateItems ();
 		AttachToAllItems (*this);
 		Attach (*this);
@@ -286,7 +287,7 @@ private:
 			st.ceilMm = (int) edCeil.GetValue ();
 			st.floorFromSlab = chkSlab.IsChecked ();
 			st.subtractOpenings = chkOpenings.IsChecked ();
-			st.openFile = chkOpen.IsChecked ();
+			st.toExcel = chkExcel.IsChecked ();
 			PostCloseRequest (DG::ModalDialog::Accept);
 		} else if (ev.GetSource () == &cancelButton) {
 			PostCloseRequest (DG::ModalDialog::Cancel);
@@ -314,7 +315,7 @@ private:
 	DG::Button		okButton, cancelButton, rulesButton;
 	DG::TextEdit	edSection, edFloors, edLayer, edLib;
 	DG::IntEdit		edFloor, edCeil;
-	DG::CheckBox	chkSlab, chkOpenings, chkOpen;
+	DG::CheckBox	chkSlab, chkOpenings, chkExcel;
 };
 
 // ----------------------------------------------------------------------------- чтение модели
@@ -515,7 +516,10 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::set<int>& f
 		}
 		++rs.zonesUsed;
 		z.number = otd::Trim (au::ToW (GS::UniString (el.zone.roomNoStr)));
-		z.name = otd::Trim (au::ToW (GS::UniString (el.zone.roomName)));
+		z.roomName = otd::Trim (au::ToW (GS::UniString (el.zone.roomName)));
+		z.name = AttrName (API_ZoneCatID, el.zone.catInd);		// наименование — из категории зоны
+		if (z.name.empty ())
+			z.name = z.roomName;
 		z.floor = el.header.floorInd;
 		z.type = P.Int ("iTypeZone", 0);
 		z.ceilFinishRaw = au::ToW (P.Str ("stUpMat"));
@@ -613,6 +617,102 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::set<int>& f
 	return res;
 }
 
+// ----------------------------------------------------------------------------- рабочий лист
+
+// Рабочий лист с таким именем (ищется среди существующих) или новый
+GSErrCode FindOrCreateWorksheet (const std::wstring& name, const std::wstring& ref, API_DatabaseInfo& out, bool& existed)
+{
+	existed = false;
+	API_DatabaseUnId* ids = nullptr;
+	GS::Array<API_DatabaseUnId> arr;
+	if (ACAPI_Database_GetWorksheetDatabases (&ids, &arr) == NoError) {
+		for (const API_DatabaseUnId& id : arr) {
+			API_DatabaseInfo info = {};
+			info.typeID = APIWind_WorksheetID;
+			info.databaseUnId = id;
+			if (ACAPI_Window_GetDatabaseInfo (&info) != NoError)
+				continue;
+			if (otd::SameText (au::ToW (GS::UniString (info.name)), name)) {
+				out = info;
+				existed = true;
+				break;
+			}
+		}
+	}
+	if (ids != nullptr)
+		BMpFree (reinterpret_cast<GSPtr> (ids));
+	if (existed)
+		return NoError;
+	out = {};
+	out.typeID = APIWind_WorksheetID;
+	const GS::UniString wn = au::FromW (name), wr = au::FromW (ref);
+	GS::ucsncpy (out.name, wn.ToUStr (), API_UniLongNameLen - 1);
+	GS::ucsncpy (out.ref, wr.ToUStr (), API_UniLongNameLen - 1);
+	return ACAPI_Database_NewDatabase (&out);
+}
+
+
+// Рисует таблицу в текущей базе (рабочем листе): прежние линии и тексты листа удаляются
+GSErrCode DrawTable (const otd::TableLayout& t, int& nLines, int& nTexts)
+{
+	nLines = nTexts = 0;
+	double scale = 100;
+	if (ACAPI_Drawing_GetDrawingScale (&scale) != NoError || scale <= 0)
+		scale = 100;
+	const double k = scale / 1000.0;		// мм листа -> м модели
+
+	GS::Array<API_Guid> old, part;
+	if (ACAPI_Element_GetElemList (API_ElemType (API_LineID), &part) == NoError) old.Append (part);
+	part.Clear ();
+	if (ACAPI_Element_GetElemList (API_ElemType (API_TextID), &part) == NoError) old.Append (part);
+	if (!old.IsEmpty ())
+		ACAPI_Element_Delete (old);
+
+	API_Element lineDef = {};
+	lineDef.header.type = API_LineID;
+	GSErrCode err = ACAPI_Element_GetDefaults (&lineDef, nullptr);
+	if (err != NoError)
+		return err;
+	for (const otd::TSeg& g : t.segs) {
+		API_Element el = lineDef;
+		el.line.begC.x = g.x1 * k; el.line.begC.y = g.y1 * k;
+		el.line.endC.x = g.x2 * k; el.line.endC.y = g.y2 * k;
+		if (ACAPI_Element_Create (&el, nullptr) == NoError)
+			++nLines;
+	}
+
+	API_Element textDef = {};
+	textDef.header.type = API_TextID;
+	err = ACAPI_Element_GetDefaults (&textDef, nullptr);
+	if (err != NoError)
+		return err;
+	for (const otd::TText& tx : t.texts) {
+		API_Element el = textDef;
+		el.text.loc.x = tx.x * k;
+		el.text.loc.y = tx.y * k;
+		el.text.size = tx.size;
+		el.text.anchor = APIAnc_MM;
+		el.text.just = APIJust_Center;
+		el.text.angle = tx.vertical ? 1.5707963267948966 : 0.0;
+		el.text.faceBits = tx.bold ? APIFace_Bold : APIFace_Plain;
+		el.text.nonBreaking = true;
+		el.text.multiStyle = false;
+		el.text.useEolPos = false;
+		el.text.nLine = 1;
+		el.text.charCode = CC_UniCode;
+		const GS::UniString u = au::FromW (tx.text);
+		API_ElementMemo memo = {};
+		memo.textContent = BMhAllClear ((GSSize) ((u.GetLength () + 1) * sizeof (GS::uchar_t)));
+		if (memo.textContent == nullptr)
+			continue;
+		GS::ucscpy (reinterpret_cast<GS::uchar_t*> (*memo.textContent), u.ToUStr ());
+		if (ACAPI_Element_Create (&el, &memo) == NoError)
+			++nTexts;
+		ACAPI_DisposeElemMemoHdls (&memo);
+	}
+	return NoError;
+}
+
 }	// namespace
 
 // ============================================================================= команда меню
@@ -655,26 +755,57 @@ void DoOtdelka ()
 		return;
 	}
 
-	const otd::Sheet sheet = otd::BuildSheet (zones, rules, st.section.empty () ? std::wstring (L"все") : st.section);
-	std::vector<xlsx::Sheet> book = { otd::MakeVedomostSheet (sheet), otd::MakeDetailsSheet (zones, rules) };
+	const std::wstring secName = st.section.empty () ? std::wstring (L"все") : st.section;
+	const otd::Sheet sheet = otd::BuildSheet (zones, rules, secName);
 
-	std::wstring fname = L"Ведомость отделки - секция " + (st.section.empty () ? std::wstring (L"все") : st.section) + L" - эт. " + st.floors;
-	for (wchar_t& c : fname)
-		if (c == L'\\' || c == L'/' || c == L':' || c == L'*' || c == L'?' || c == L'"' || c == L'<' || c == L'>' || c == L'|' || c == L';')
-			c = L'_';
-	fname += L".xlsx";
-	IO::Location loc;
-	std::wstring outPath;
-	GSErrCode err = DocumentsFile (fname, loc) ? WriteBytes (loc, xlsx::BuildXlsx (book)) : APIERR_GENERAL;
-	if (err == NoError)
-		outPath = PathOf (loc);
+	// ---- таблица на рабочем листе «Ведомость отделки - секция N»
+	const std::wstring wsName = L"Ведомость отделки - секция " + secName;
+	API_DatabaseInfo prev = {};
+	const bool hasPrev = ACAPI_Database_GetCurrentDatabase (&prev) == NoError;
+	API_DatabaseInfo ws = {};
+	bool existed = false;
+	GSErrCode wsErr = FindOrCreateWorksheet (wsName, L"ВО-" + secName, ws, existed);
+	int nLines = 0, nTexts = 0;
+	if (wsErr == NoError) {
+		wsErr = ACAPI_CallUndoableCommand (au::FromW (L"Ведомость отделки: таблица"), [&] () -> GSErrCode {
+			API_DatabaseInfo db = ws;
+			GSErrCode e = ACAPI_Database_ChangeCurrentDatabase (&db);
+			if (e == NoError)
+				e = DrawTable (otd::LayoutSheet (sheet), nLines, nTexts);
+			if (hasPrev) {
+				API_DatabaseInfo back = prev;
+				ACAPI_Database_ChangeCurrentDatabase (&back);
+			}
+			return e;
+		});
+	}
+
+	// ---- Excel (по желанию): ведомость и лист «Расчёт»
+	std::wstring outPath, fname;
+	GSErrCode xlErr = NoError;
+	if (st.toExcel) {
+		std::vector<xlsx::Sheet> book = { otd::MakeVedomostSheet (sheet), otd::MakeDetailsSheet (zones, rules) };
+		fname = L"Ведомость отделки - секция " + secName + L" - эт. " + st.floors;
+		for (wchar_t& c : fname)
+			if (c == L'\\' || c == L'/' || c == L':' || c == L'*' || c == L'?' || c == L'"' || c == L'<' || c == L'>' || c == L'|' || c == L';')
+				c = L'_';
+		fname += L".xlsx";
+		IO::Location loc;
+		xlErr = DocumentsFile (fname, loc) ? WriteBytes (loc, xlsx::BuildXlsx (book)) : APIERR_GENERAL;
+		if (xlErr == NoError)
+			outPath = PathOf (loc);
+	}
 
 	double ceilSum = 0, wall[otd::kWallColumns + 1] = { 0, 0, 0, 0 };
 	for (const auto& row : sheet.rows) {
 		ceilSum += row.ceilArea;
 		for (int c = 0; c <= otd::kWallColumns; ++c) wall[c] += row.wallArea[c];
 	}
-	lines.push_back (L"Ведомость отделки: секция " + (st.section.empty () ? std::wstring (L"все") : st.section) + L", этажи " + st.floors + L".");
+	lines.push_back (L"Ведомость отделки: секция " + secName + L", этажи " + st.floors + L".");
+	if (wsErr == NoError)
+		lines.push_back (L"Таблица построена на рабочем листе «" + wsName + L"»" + (existed ? L" (лист перерисован заново)." : L"."));
+	else
+		lines.push_back (L"Таблицу на рабочем листе построить не удалось (код " + std::to_wstring (wsErr) + L").");
 	lines.push_back (L"Зон в расчёте: " + std::to_wstring (rs.zonesUsed) + L", строк ведомости: " + std::to_wstring (sheet.rows.size ()) + L".");
 	lines.push_back (L"Потолки: " + otd::FormatNum (ceilSum, 1) + L" м². Стены: монолит " + otd::FormatNum (wall[1], 1) +
 					 L", кладка/КБ " + otd::FormatNum (wall[2], 1) + L", ГКЛ " + otd::FormatNum (wall[3], 1) + L" м².");
@@ -689,15 +820,17 @@ void DoOtdelka ()
 	for (const auto& w : warn)
 		lines.push_back (w);
 	lines.push_back (L"");
-	if (err == NoError) {
-		lines.push_back (L"Файл: " + outPath);
-		lines.push_back (L"Лист «Расчёт» — каждая стена каждой зоны, для проверки.");
-	} else {
-		lines.push_back (L"Не удалось записать файл «" + fname + L"» в папку «Документы». Если он открыт в Excel — закройте и запустите расчёт ещё раз.");
+	if (st.toExcel) {
+		if (xlErr == NoError)
+			lines.push_back (L"Excel: " + outPath + L" (лист «Расчёт» — каждая стена каждой зоны, для проверки).");
+		else
+			lines.push_back (L"Не удалось записать «" + fname + L"» в папку «Документы». Если файл открыт в Excel — закройте и запустите расчёт ещё раз.");
 	}
 	if (!rulesPath.empty ())
 		lines.push_back (L"Правила: " + rulesPath);
 	ShowReport (lines);
-	if (err == NoError && st.openFile)
-		OpenInShell (outPath, false);
+	if (wsErr == NoError) {
+		API_WindowInfo wi = ws;
+		ACAPI_Window_ChangeWindow (&wi);
+	}
 }
