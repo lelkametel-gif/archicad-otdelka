@@ -27,8 +27,8 @@ int main (int argc, char** argv)
 	CHECK (warn.empty ());
 	CHECK (r.columnTitle[1] == L"Монолит. ж/б стены; ж/б пилоны");
 	CHECK (r.columnsColumn == 1);
-	CHECK (r.basementGroup == L"Техпомещения (подвал)");
-	CHECK (r.groupByType.at (1) == L"Квартиры");
+	CHECK (r.basementGroup.empty ());
+	CHECK (r.groupByCode.size () == 5);
 	CHECK (r.groupOrder.front () == L"Техпомещения (подвал)");
 	CHECK (r.groupOrder.back () == L"Прочие помещения");
 
@@ -39,7 +39,7 @@ int main (int argc, char** argv)
 		c = MaterialCodes (L"Ст_П_О | ГКЛв С623_ПС50 | <10м");
 		CHECK (c.size () == 2 && c[0] == L"ГКЛв" && c[1] == L"ПС");
 		c = MaterialCodes (L"Ст_П| ПГП-80 | Плитка/- | <3,6м");
-		CHECK (c.size () == 1 && c[0] == L"ПГП");
+		CHECK (!c.empty () && c[0] == L"ПГП");
 	}
 	CHECK (ClassifyWall (L"Ст_В| Ш 15_КБ 190_Ш 15", r) == 2);
 	CHECK (ClassifyWall (L"Ст_В| Ш 15_ЖБ 250", r) == 1);
@@ -54,6 +54,15 @@ int main (int argc, char** argv)
 	CHECK (ClassifyWall (L"Бетон - конструкционный", r) == 1);
 	CHECK (ClassifyWall (L"Ст_Ут_Вш| Ш 10_ЭППС 30", r) == 1);	// Ш найден, ЭППС нет в правилах
 	CHECK (ClassifyWall (L"Стекло", r) == 0);
+	// названия из проекта начинаются с «|»
+	CHECK (ClassifyWall (L"| Ст_В| ЗТ 15_ЖБ 180", r) == 1);
+	CHECK (ClassifyWall (L"| Ст_В| Кирп 250_Ш 15 (стены, перегородки)", r) == 2);
+	CHECK (ClassifyWall (L"| Ст_В| Ш 15_КБ 190_Ш 15", r) == 2);
+	CHECK (ClassifyWall (L"| Ст_Н| Ш 15_Возд 200_УТ 150_Возд 70_Кирп 120 (Альтаир Латте)", r) == 2);
+	CHECK (ClassifyWall (L"| Ст_Н| Ш 15_ГБ 400_Возд 20_Кирп 120 (Альтаир Латте)", r) == 2);
+	CHECK (ClassifyWall (L"| Ст_П_О | ГКЛ 15_Возд 25", r) == 3);
+	CHECK (ClassifyWall (L"Штук | Гипс", r) == 1);
+	CHECK (ShortName (L"МОП_ВхГ_Тамбур") == L"Тамбур" && ShortName (L"Комната") == L"Комната");
 	CHECK (ClassifyWall (L"Ст_П| ПГП-80 | Плитка/- | <3,6м", r) == 2);		// ПГП — как керамзитобетонные перегородки
 	CHECK (ClassifyWall (L"Ст_В| Ш 15_У 50_Кирп 120", r) == 2);			// У — утеплитель, не влияет
 	CHECK (ClassifyWall (L"Ст_Ут| У 100", r) == 0);
@@ -90,10 +99,10 @@ int main (int argc, char** argv)
 
 	// --- ведомость
 	std::vector<ZoneData> zones;
-	auto zone = [&] (const wchar_t* name, int floor, int type, const wchar_t* ceil, const wchar_t* wall, double area,
+	auto zone = [&] (const wchar_t* name, int floor, const wchar_t* code, const wchar_t* ceil, const wchar_t* wall, double area,
 					 std::vector<std::pair<int, double>> walls) {
 		ZoneData z;
-		z.name = name; z.floor = floor; z.type = type; z.ceilFinishRaw = ceil; z.wallFinishRaw = wall; z.ceilArea = area;
+		z.name = name; z.floor = floor; z.catCode = code; z.ceilFinishRaw = ceil; z.wallFinishRaw = wall; z.ceilArea = area;
 		z.number = std::to_wstring (zones.size () + 1);
 		for (auto& w : walls) {
 			WallPiece p;
@@ -103,13 +112,13 @@ int main (int argc, char** argv)
 		}
 		zones.push_back (z);
 	};
-	zone (L"Комната", 2, 1, L"Натяжной потолок", L"02 Обои", 15.0, { { 1, 3.0 }, { 2, 4.0 }, { 3, 2.0 } });
-	zone (L"Спальня", 3, 1, L"Натяжной потолок", L"02 Обои", 12.0, { { 1, 2.0 }, { 3, 4.0 } });
-	zone (L"Кухня", 2, 1, L"Натяжной потолок", L"02 Обои", 10.0, { { 2, 3.0 } });
-	zone (L"Лифтовой холл", 2, 4, L"00 Покраска", L"00 Покраска", 6.0, { { 1, 2.0 } });
-	zone (L"Лифтовой холл", 15, 4, L"Подвесной потолок \"Грильято\"", L"00 Покраска", 5.0, { { 1, 2.0 } });
-	zone (L"Электрощитовая", -1, 4, L"00 Покраска", L"00 Покраска", 8.0, { { 2, 4.0 }, { 0, 1.0 } });
-	zone (L"Мастерская", 2, 5, L"00 Покраска", L"00 Покраска", 20.0, {});
+	zone (L"Комната", 2, L"1010", L"Натяжной потолок", L"02 Обои", 15.0, { { 1, 3.0 }, { 2, 4.0 }, { 3, 2.0 } });
+	zone (L"Кабинет", 3, L"1011", L"Натяжной потолок", L"02 Обои", 12.0, { { 1, 2.0 }, { 3, 4.0 } });
+	zone (L"Кухня", 2, L"1020", L"Натяжной потолок", L"02 Обои", 10.0, { { 2, 3.0 } });
+	zone (L"МОП_Лифтовой холл", 2, L"2050", L"00 Покраска", L"00 Покраска", 6.0, { { 1, 2.0 } });
+	zone (L"МОП_ВхГ_Лифтовой холл", 15, L"2013", L"Подвесной потолок \"Грильято\"", L"00 Покраска", 5.0, { { 1, 2.0 } });
+	zone (L"ТП_Электрощитовая", -1, L"4050", L"00 Покраска", L"00 Покраска", 8.0, { { 2, 4.0 }, { 0, 1.0 } });
+	zone (L"ВПП_Мастерская", 2, L"5099", L"00 Покраска", L"00 Покраска", 20.0, {});
 
 	const Sheet sh = BuildSheet (zones, r, L"1");
 	CHECK (sh.title == L"1 секция. Ведомость отделки помещений жилого дома");
@@ -122,6 +131,7 @@ int main (int argc, char** argv)
 		CHECK (sh.rows[0].title.find (L"Водомерный узел") == 0);
 		NEAR (sh.rows[0].wallArea[0], 2.5);
 		CHECK (sh.rows[1].group == L"Встроенные помещения" && sh.rows[1].title == L"Мастерская");
+		CHECK (sh.rows[0].floors.count (-1) == 1);
 		CHECK (sh.rows[2].title == L"Жилая комната");
 		NEAR (sh.rows[2].ceilArea, 27.0);
 		NEAR (sh.rows[2].wallArea[1], 5 * 2.5);

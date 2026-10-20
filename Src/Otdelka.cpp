@@ -52,7 +52,8 @@ const wchar_t*	kRulesFile		= L"Ведомость отделки - правил�
 struct Settings {
 	std::wstring	section = L"1";
 	std::wstring	floors = L"1";
-	int				floorMm = 80;
+	int				floorMm = 80;			// пол зон прочих категорий
+	int				floorCat[6] = { 80, 80, 80, 0, 80, 80 };	// по первой цифре кода категории: 1 квартиры, 2 МОП, 3 подвал, 4 ТП, 5 ВПП
 	int				ceilMm = 0;
 	bool			floorFromSlab = true;
 	std::wstring	floorLayer = L"Полы";
@@ -65,10 +66,20 @@ struct Settings {
 		std::wostringstream o;
 		o << L"section\t" << section << L"\n" << L"floors\t" << floors << L"\n"
 		  << L"floorMm\t" << floorMm << L"\n" << L"ceilMm\t" << ceilMm << L"\n"
+		  << L"floorCat\t" << floorCat[1] << L";" << floorCat[2] << L";" << floorCat[3] << L";" << floorCat[4] << L";" << floorCat[5] << L"\n"
 		  << L"floorFromSlab\t" << (floorFromSlab ? 1 : 0) << L"\n" << L"floorLayer\t" << floorLayer << L"\n"
 		  << L"subtractOpenings\t" << (subtractOpenings ? 1 : 0) << L"\n" << L"toExcel\t" << (toExcel ? 1 : 0) << L"\n"
 		  << L"zoneLib\t" << zoneLib << L"\n";
 		return o.str ();
+	}
+
+	// Толщина пола по коду категории зоны (первая цифра), мм
+	int FloorFor (const std::wstring& catCode) const
+	{
+		const std::wstring c = otd::Trim (catCode);
+		if (!c.empty () && c[0] >= L'1' && c[0] <= L'5')
+			return floorCat[c[0] - L'0'];
+		return floorMm;
 	}
 
 	void Parse (const std::wstring& text)
@@ -83,6 +94,13 @@ struct Settings {
 			if (k == L"section") section = v;
 			else if (k == L"floors") floors = v;
 			else if (k == L"floorMm") floorMm = toInt (floorMm);
+			else if (k == L"floorCat") {
+				std::wistringstream fs (v);
+				std::wstring item;
+				for (int i = 1; i <= 5 && std::getline (fs, item, L';'); ++i) {
+					try { floorCat[i] = std::stoi (item); } catch (...) {}
+				}
+			}
 			else if (k == L"ceilMm") ceilMm = toInt (ceilMm);
 			else if (k == L"floorFromSlab") floorFromSlab = toInt (1) != 0;
 			else if (k == L"floorLayer") floorLayer = v;
@@ -230,7 +248,9 @@ public:
 		LblSection = 3, EdSection = 4, LblFloors = 5, EdFloors = 6,
 		LblFloor = 7, EdFloor = 8, ChkSlab = 9, EdLayer = 10,
 		LblCeil = 11, EdCeil = 12, ChkOpenings = 13, ChkExcel = 14, BtnRules = 15,
-		LblHint = 16, LblLib = 17, EdLib = 18, Sep = 19
+		LblHint = 16, LblLib = 17, EdLib = 18, Sep = 19,
+		LblCat1 = 20, EdCat1 = 21, LblCat2 = 22, EdCat2 = 23, LblCat3 = 24, EdCat3 = 25,
+		LblCat4 = 26, EdCat4 = 27, LblCat5 = 28, EdCat5 = 29, LblOther = 30
 	};
 
 	OtdDialog (Settings& s) :
@@ -244,6 +264,8 @@ public:
 		edLayer (GetReference (), EdLayer),
 		edLib (GetReference (), EdLib),
 		edFloor (GetReference (), EdFloor),
+		edCat1 (GetReference (), EdCat1), edCat2 (GetReference (), EdCat2), edCat3 (GetReference (), EdCat3),
+		edCat4 (GetReference (), EdCat4), edCat5 (GetReference (), EdCat5),
 		edCeil (GetReference (), EdCeil),
 		chkSlab (GetReference (), ChkSlab),
 		chkOpenings (GetReference (), ChkOpenings),
@@ -254,6 +276,8 @@ public:
 		edLayer.SetText (au::FromW (st.floorLayer));
 		edLib.SetText (au::FromW (st.zoneLib));
 		edFloor.SetValue (st.floorMm);
+		DG::IntEdit* cats[6] = { nullptr, &edCat1, &edCat2, &edCat3, &edCat4, &edCat5 };
+		for (int i = 1; i <= 5; ++i) cats[i]->SetValue (st.floorCat[i]);
 		edCeil.SetValue (st.ceilMm);
 		chkSlab.SetState (st.floorFromSlab);
 		chkOpenings.SetState (st.subtractOpenings);
@@ -284,6 +308,8 @@ private:
 			st.zoneLib = otd::Trim (au::ToW (edLib.GetText ()));
 			if (st.zoneLib.empty ()) st.zoneLib = L"HimeraZone";
 			st.floorMm = (int) edFloor.GetValue ();
+			DG::IntEdit* cats[6] = { nullptr, &edCat1, &edCat2, &edCat3, &edCat4, &edCat5 };
+			for (int i = 1; i <= 5; ++i) st.floorCat[i] = (int) cats[i]->GetValue ();
 			st.ceilMm = (int) edCeil.GetValue ();
 			st.floorFromSlab = chkSlab.IsChecked ();
 			st.subtractOpenings = chkOpenings.IsChecked ();
@@ -314,7 +340,7 @@ private:
 	Settings&		st;
 	DG::Button		okButton, cancelButton, rulesButton;
 	DG::TextEdit	edSection, edFloors, edLayer, edLib;
-	DG::IntEdit		edFloor, edCeil;
+	DG::IntEdit		edFloor, edCat1, edCat2, edCat3, edCat4, edCat5, edCeil;
 	DG::CheckBox	chkSlab, chkOpenings, chkExcel;
 };
 
@@ -474,7 +500,7 @@ std::vector<Edge> ZoneEdges (const API_ElementMemo& memo)
 
 
 struct RunStats {
-	int zonesAll = 0, zonesLib = 0, zonesUsed = 0, floorFromSlab = 0;
+	int zonesAll = 0, zonesLib = 0, zonesUsed = 0, floorFromSlab = 0, floorFromZone = 0;
 	std::map<std::wstring, int> sections;		// какие секции встречаются в зонах выбранных этажей
 	std::map<std::wstring, double> unknown;		// конструкции без столбца -> м²
 };
@@ -487,7 +513,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::set<int>& f
 	if (ACAPI_Element_GetElemList (API_ElemType (API_ZoneID), &list) != NoError)
 		return res;
 	std::map<API_Guid, WallInfo> wallCache;
-	const double floorDef = st.floorMm / 1000.0, ceil = st.ceilMm / 1000.0;
+	const double ceil = st.ceilMm / 1000.0;
 	const std::wstring libPrefix = otd::Lower (st.zoneLib);
 
 	for (const API_Guid& g : list) {
@@ -521,7 +547,13 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::set<int>& f
 		if (z.name.empty ())
 			z.name = z.roomName;
 		z.floor = el.header.floorInd;
-		z.type = P.Int ("iTypeZone", 0);
+		{
+			API_Attribute a = {};
+			a.header.typeID = API_ZoneCatID;
+			a.header.index = el.zone.catInd;
+			if (ACAPI_Attribute_Get (&a) == NoError)
+				z.catCode = otd::Trim (au::ToW (GS::UniString (a.zoneCat.catCode)));
+		}
 		z.ceilFinishRaw = au::ToW (P.Str ("stUpMat"));
 		z.wallFinishRaw = au::ToW (P.Str ("stWallMat"));
 		const std::vector<Edge> edges = ZoneEdges (memo);
@@ -545,10 +577,17 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::set<int>& f
 		API_RoomRelation rel;
 		const bool hasRel = ACAPI_Element_GetRelations (g, API_ElemType (API_ZombieElemID), &rel) == NoError;
 
-		z.floorThick = floorDef;
-		z.floorSource = L"из окна расчёта";
-		if (hasRel && st.floorFromSlab && FloorFromSlabs (rel, st.floorLayer, z.floorThick, z.floorSource))
+		// толщина пола: перекрытие в слое «Полы» -> «Толщина пола» в параметрах зоны -> по категории из окна
+		if (hasRel && st.floorFromSlab && FloorFromSlabs (rel, st.floorLayer, z.floorThick, z.floorSource)) {
 			++rs.floorFromSlab;
+		} else if (el.zone.roomFlThick > 0.0005) {
+			z.floorThick = el.zone.roomFlThick;
+			z.floorSource = L"толщина пола в параметрах зоны";
+			++rs.floorFromZone;
+		} else {
+			z.floorThick = st.FloorFor (z.catCode) / 1000.0;
+			z.floorSource = L"из окна (категория " + z.catCode + L")";
+		}
 
 		if (hasRel) {
 			const std::vector<OpeningInfo> openings = st.subtractOpenings ? ReadOpenings (rel) : std::vector<OpeningInfo> ();
@@ -648,7 +687,15 @@ GSErrCode FindOrCreateWorksheet (const std::wstring& name, const std::wstring& r
 	const GS::UniString wn = au::FromW (name), wr = au::FromW (ref);
 	GS::ucsncpy (out.name, wn.ToUStr (), API_UniLongNameLen - 1);
 	GS::ucsncpy (out.ref, wr.ToUStr (), API_UniLongNameLen - 1);
-	return ACAPI_Database_NewDatabase (&out);
+	GSErrCode err = ACAPI_Database_NewDatabase (&out);
+	if (err == NoError) {
+		API_DatabaseInfo info = {};
+		info.typeID = APIWind_WorksheetID;
+		info.databaseUnId = out.databaseUnId;
+		if (ACAPI_Window_GetDatabaseInfo (&info) == NoError)
+			out = info;
+	}
+	return err;
 }
 
 
@@ -731,6 +778,11 @@ void DoOtdelka ()
 		return NoError;
 	});
 
+	{	// чтение модели — с плана этажа
+		API_DatabaseInfo fp = {};
+		fp.typeID = APIWind_FloorPlanID;
+		ACAPI_Database_ChangeCurrentDatabase (&fp);
+	}
 	std::set<int> floors;
 	otd::ParseFloors (st.floors, floors);
 	std::vector<std::wstring> lines, warn;
@@ -760,23 +812,28 @@ void DoOtdelka ()
 
 	// ---- таблица на рабочем листе «Ведомость отделки - секция N»
 	const std::wstring wsName = L"Ведомость отделки - секция " + secName;
-	API_DatabaseInfo prev = {};
-	const bool hasPrev = ACAPI_Database_GetCurrentDatabase (&prev) == NoError;
 	API_DatabaseInfo ws = {};
 	bool existed = false;
-	GSErrCode wsErr = FindOrCreateWorksheet (wsName, L"ВО-" + secName, ws, existed);
+	std::wstring wsStep = L"создание листа";
 	int nLines = 0, nTexts = 0;
+	GSErrCode wsErr = FindOrCreateWorksheet (wsName, L"ВО-" + secName, ws, existed);
 	if (wsErr == NoError) {
-		wsErr = ACAPI_CallUndoableCommand (au::FromW (L"Ведомость отделки: таблица"), [&] () -> GSErrCode {
+		// открыть лист: дальше элементы создаются в текущей базе — на этом листе
+		wsStep = L"открытие листа";
+		API_WindowInfo wi = ws;
+		wsErr = ACAPI_Window_ChangeWindow (&wi);
+		API_DatabaseInfo cur = {};
+		if (wsErr == NoError && (ACAPI_Database_GetCurrentDatabase (&cur) != NoError || !(cur.databaseUnId == ws.databaseUnId))) {
+			wsStep = L"переход на лист";
 			API_DatabaseInfo db = ws;
-			GSErrCode e = ACAPI_Database_ChangeCurrentDatabase (&db);
-			if (e == NoError)
-				e = DrawTable (otd::LayoutSheet (sheet), nLines, nTexts);
-			if (hasPrev) {
-				API_DatabaseInfo back = prev;
-				ACAPI_Database_ChangeCurrentDatabase (&back);
-			}
-			return e;
+			wsErr = ACAPI_Database_ChangeCurrentDatabase (&db);
+		}
+	}
+	if (wsErr == NoError) {
+		wsStep = L"построение таблицы";
+		const otd::TableLayout layout = otd::LayoutSheet (sheet);
+		wsErr = ACAPI_CallUndoableCommand (au::FromW (L"Ведомость отделки: таблица"), [&] () -> GSErrCode {
+			return DrawTable (layout, nLines, nTexts);
 		});
 	}
 
@@ -805,12 +862,13 @@ void DoOtdelka ()
 	if (wsErr == NoError)
 		lines.push_back (L"Таблица построена на рабочем листе «" + wsName + L"»" + (existed ? L" (лист перерисован заново)." : L"."));
 	else
-		lines.push_back (L"Таблицу на рабочем листе построить не удалось (код " + std::to_wstring (wsErr) + L").");
+		lines.push_back (L"Таблицу на рабочем листе построить не удалось: шаг «" + wsStep + L"», код " + std::to_wstring (wsErr) + L".");
 	lines.push_back (L"Зон в расчёте: " + std::to_wstring (rs.zonesUsed) + L", строк ведомости: " + std::to_wstring (sheet.rows.size ()) + L".");
 	lines.push_back (L"Потолки: " + otd::FormatNum (ceilSum, 1) + L" м². Стены: монолит " + otd::FormatNum (wall[1], 1) +
 					 L", кладка/КБ " + otd::FormatNum (wall[2], 1) + L", ГКЛ " + otd::FormatNum (wall[3], 1) + L" м².");
-	lines.push_back (L"Толщина пола из перекрытий слоя «" + st.floorLayer + L"»: " + std::to_wstring (rs.floorFromSlab) +
-					 L" зон, у остальных — " + std::to_wstring (st.floorMm) + L" мм из окна. Потолок — " + std::to_wstring (st.ceilMm) + L" мм.");
+	lines.push_back (L"Толщина пола: из перекрытий слоя «" + st.floorLayer + L"» — " + std::to_wstring (rs.floorFromSlab) +
+					 L" зон, из параметров зоны — " + std::to_wstring (rs.floorFromZone) + L", у остальных — по категории из окна. Потолок — " +
+					 std::to_wstring (st.ceilMm) + L" мм.");
 	if (!rs.unknown.empty ()) {
 		lines.push_back (L"");
 		lines.push_back (L"Не удалось определить столбец (" + otd::FormatNum (wall[0], 1) + L" м²) — добавьте код в правила, раздел [Материалы]:");
@@ -829,8 +887,4 @@ void DoOtdelka ()
 	if (!rulesPath.empty ())
 		lines.push_back (L"Правила: " + rulesPath);
 	ShowReport (lines);
-	if (wsErr == NoError) {
-		API_WindowInfo wi = ws;
-		ACAPI_Window_ChangeWindow (&wi);
-	}
 }

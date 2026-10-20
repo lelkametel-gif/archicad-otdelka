@@ -39,8 +39,8 @@ struct Rules {
 	std::vector<MatRule>			materials;			// проверяются по порядку
 	int								columnsColumn = 1;	// колонны и пилоны
 	std::vector<std::wstring>		groupOrder;			// порядок групп в ведомости
-	std::map<int, std::wstring>		groupByType;		// тип зоны HimeraZone (iTypeZone) -> группа
-	std::wstring					basementGroup;		// зоны на этажах с номером 0 и ниже
+	std::vector<std::pair<std::wstring, std::wstring>>	groupByCode;	// начало кода категории зоны -> группа
+	std::wstring					basementGroup;		// зоны на этажах с номером 0 и ниже (если задано)
 	std::wstring					otherGroup = L"Прочие помещения";
 	std::vector<RowRule>			rows;
 	std::vector<std::pair<std::wstring, std::wstring>>	finishNames;	// как в зоне -> как в ведомости
@@ -85,7 +85,7 @@ struct ZoneData {
 	std::wstring			name;				// наименование для ведомости (категория зоны)
 	std::wstring			roomName;			// имя зоны (для листа проверки)
 	int						floor = 0;
-	int						type = 0;			// iTypeZone
+	std::wstring			catCode;			// код категории зоны (1010, 2012…)
 	std::wstring			section;
 	std::wstring			ceilFinishRaw, wallFinishRaw;
 	double					ceilArea = 0;		// м²
@@ -112,6 +112,8 @@ struct Sheet {
 };
 
 std::wstring	GroupOf (const ZoneData& z, const Rules& r);
+// «МОП_ВхГ_Тамбур» -> «Тамбур» (часть после последнего «_»)
+std::wstring	ShortName (const std::wstring& category);
 std::wstring	RowTitleOf (const ZoneData& z, const std::wstring& group, const Rules& r);
 Sheet			BuildSheet (const std::vector<ZoneData>& zones, const Rules& r, const std::wstring& section);
 
