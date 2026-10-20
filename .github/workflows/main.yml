@@ -1,0 +1,46 @@
+name: Build Archicad 27 add-on
+
+on:
+  push:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get Graphisoft build tools
+        uses: actions/checkout@v4
+        with:
+          repository: GRAPHISOFT/archicad-addon-cmake-tools
+          ref: 96a8f46ac29e1bfeb4b24ac619b54f8421faf921
+          path: Tools
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Build
+        run: |
+          python Tools/BuildAddOn.py --configFile config.json --acVersion 27 --buildConfig RelWithDebInfo --package
+
+      - name: Collect result
+        run: |
+          mkdir -p out
+          find Build/Package -name "*.apx" -exec cp {} out/ \;
+          ls -la out
+
+      - name: Upload add-on
+        uses: actions/upload-artifact@v4
+        with:
+          name: VedomostOtdelki-AC27-Windows
+          path: out/

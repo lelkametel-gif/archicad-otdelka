@@ -1,0 +1,13 @@
+{
+    "addOnName": "VedomostOtdelki",
+    "defaultLanguage": "INT",
+    "languages": [
+        "INT"
+    ],
+    "version": "0.1.0",
+    "copyright": {
+        "name": "Vedomost otdelki",
+        "year": "%Y"
+    },
+    "description": "Finish schedule of rooms by HimeraZone zones"
+}

@@ -1,0 +1,541 @@
+﻿// Ведомость отделки помещений — логика без API Archicad
+#include "FinishCore.hpp"
+
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <sstream>
+
+namespace otd {
+
+// ============================================================================= строки
+
+std::wstring Trim (const std::wstring& s)
+{
+	size_t b = 0, e = s.size ();
+	while (b < e && (s[b] == L' ' || s[b] == L'\t' || s[b] == L'\r' || s[b] == L'\n' || s[b] == 0xFEFF || s[b] == 0xA0)) ++b;
+	while (e > b && (s[e - 1] == L' ' || s[e - 1] == L'\t' || s[e - 1] == L'\r' || s[e - 1] == L'\n' || s[e - 1] == 0xA0)) --e;
+	return s.substr (b, e - b);
+}
+
+
+std::wstring Lower (const std::wstring& s)
+{
+	std::wstring r (s);
+	for (wchar_t& c : r) {
+		if (c >= L'A' && c <= L'Z') c = (wchar_t) (c + 32);
+		else if (c >= 0x0410 && c <= 0x042F) c = (wchar_t) (c + 32);		// А..Я
+		else if (c == 0x0401) c = 0x0435;									// Ё -> е
+		else if (c == 0x0451) c = 0x0435;									// ё -> е
+	}
+	return r;
+}
+
+
+bool SameText (const std::wstring& a, const std::wstring& b)
+{
+	return Lower (Trim (a)) == Lower (Trim (b));
+}
+
+
+std::string ToUtf8 (const std::wstring& s)
+{
+	std::string r;
+	for (size_t i = 0; i < s.size (); ++i) {
+		unsigned long c = (unsigned long) s[i];
+		if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.size ()) {		// суррогатная пара (Windows)
+			const unsigned long c2 = (unsigned long) s[i + 1];
+			if (c2 >= 0xDC00 && c2 <= 0xDFFF) {
+				c = 0x10000 + ((c - 0xD800) << 10) + (c2 - 0xDC00);
+				++i;
+			}
+		}
+		if (c < 0x80) r += (char) c;
+		else if (c < 0x800) { r += (char) (0xC0 | (c >> 6)); r += (char) (0x80 | (c & 0x3F)); }
+		else if (c < 0x10000) { r += (char) (0xE0 | (c >> 12)); r += (char) (0x80 | ((c >> 6) & 0x3F)); r += (char) (0x80 | (c & 0x3F)); }
+		else { r += (char) (0xF0 | (c >> 18)); r += (char) (0x80 | ((c >> 12) & 0x3F)); r += (char) (0x80 | ((c >> 6) & 0x3F)); r += (char) (0x80 | (c & 0x3F)); }
+	}
+	return r;
+}
+
+
+std::wstring FromUtf8 (const std::string& s)
+{
+	std::wstring r;
+	size_t i = 0;
+	if (s.size () >= 3 && (unsigned char) s[0] == 0xEF && (unsigned char) s[1] == 0xBB && (unsigned char) s[2] == 0xBF)
+		i = 3;
+	while (i < s.size ()) {
+		const unsigned char c = (unsigned char) s[i];
+		unsigned long cp = 0;
+		int n = 0;
+		if (c < 0x80) { cp = c; n = 0; }
+		else if ((c & 0xE0) == 0xC0) { cp = c & 0x1F; n = 1; }
+		else if ((c & 0xF0) == 0xE0) { cp = c & 0x0F; n = 2; }
+		else if ((c & 0xF8) == 0xF0) { cp = c & 0x07; n = 3; }
+		else { ++i; continue; }
+		++i;
+		for (int k = 0; k < n && i < s.size (); ++k, ++i)
+			cp = (cp << 6) | ((unsigned char) s[i] & 0x3F);
+		if (cp >= 0x10000 && sizeof (wchar_t) == 2) {
+			cp -= 0x10000;
+			r += (wchar_t) (0xD800 + (cp >> 10));
+			r += (wchar_t) (0xDC00 + (cp & 0x3FF));
+		} else {
+			r += (wchar_t) cp;
+		}
+	}
+	return r;
+}
+
+
+std::wstring FormatNum (double v, int dec)
+{
+	char buf[64];
+	snprintf (buf, sizeof (buf), "%.*f", dec, v);
+	std::string s (buf);
+	std::string sign;
+	if (!s.empty () && s[0] == '-') { sign = "-"; s = s.substr (1); }
+	const size_t dot = s.find ('.');
+	std::string ip = dot == std::string::npos ? s : s.substr (0, dot);
+	std::string fp = dot == std::string::npos ? "" : s.substr (dot + 1);
+	std::string grouped;
+	for (size_t i = 0; i < ip.size (); ++i) {
+		if (i > 0 && (ip.size () - i) % 3 == 0) grouped += ' ';
+		grouped += ip[i];
+	}
+	std::wstring r = FromUtf8 (sign + grouped);
+	if (!fp.empty ()) r += L"," + FromUtf8 (fp);
+	return r;
+}
+
+// ============================================================================= правила
+
+std::wstring DefaultRulesText ()
+{
+	return
+		L"# Правила ведомости отделки помещений (надстройка «Ведомость отделки», Archicad 27).\n"
+		L"# Строки, начинающиеся с #, — комментарии. Файл можно править в Блокноте;\n"
+		L"# изменения применяются при следующем расчёте. Чтобы вернуть правила по умолчанию — удалите файл.\n"
+		L"\n"
+		L"[Заголовок]\n"
+		L"# {секция} заменяется номером секции из окна расчёта\n"
+		L"{секция} секция. Ведомость отделки помещений жилого дома\n"
+		L"\n"
+		L"[Столбцы]\n"
+		L"1 = Монолит. ж/б стены; ж/б пилоны\n"
+		L"2 = Керамзитобет. перегородки (t=90 мм), керамзитобет. стены (t=190 мм), вентблоки, кирп. шахты\n"
+		L"3 = Межкомнатные перегородки из ГКЛ, зашивка стояков из ГКЛВ\n"
+		L"\n"
+		L"[Материалы]\n"
+		L"# Код слоя из названия многослойной конструкции = номер столбца.\n"
+		L"# Название «Ст_В| Ш 15_КБ 190_Ш 15» делится по «_» на слои «Ш 15», «КБ 190», «Ш 15»;\n"
+		L"# код — буквы в начале слоя (Ш, КБ). У однослойной стены код — первое слово названия\n"
+		L"# строительного материала. Правила проверяются сверху вниз: столбец даёт первое правило,\n"
+		L"# чей код есть в названии. Стена только из штукатурки (отделочная стенка на ж/б стене) — монолит.\n"
+		L"# 0 — не учитывать. Колонны = столбец для колонн и пилонов.\n"
+		L"ГКЛ = 3\n"
+		L"ГКЛв = 3\n"
+		L"ГВЛ = 3\n"
+		L"ПГП = 3\n"
+		L"ЖБ = 1\n"
+		L"Бетон = 1\n"
+		L"Железобетон = 1\n"
+		L"КБ = 2\n"
+		L"Кирп = 2\n"
+		L"Кирпич = 2\n"
+		L"ВБ = 2\n"
+		L"Ш = 1\n"
+		L"Штукатурка = 1\n"
+		L"Колонны = 1\n"
+		L"\n"
+		L"[Группы]\n"
+		L"# Тип зоны HimeraZone (параметр «Тип зоны»: 1-Комнаты, 2-Нежилые, 3-Летние, 4-Общедом., 5-Обществ., 6-Парковка)\n"
+		L"# = группа в ведомости. Подвал = группа для зон на этажах с номером 0 и ниже.\n"
+		L"# Порядок групп в ведомости — как здесь.\n"
+		L"Подвал = Техпомещения (подвал)\n"
+		L"5 = Встроенные помещения\n"
+		L"1 = Квартиры\n"
+		L"2 = Квартиры\n"
+		L"3 = Квартиры\n"
+		L"4 = Общедомовые помещения\n"
+		L"6 = Парковка\n"
+		L"0 = Прочие помещения\n"
+		L"\n"
+		L"[Строки]\n"
+		L"# Группа | Название строки = имя зоны; имя зоны; ...\n"
+		L"# Зоны, которых здесь нет, идут отдельной строкой со своим именем.\n"
+		L"Техпомещения (подвал) | Водомерный узел, электрощитовая, лестничная клетка, приточная вент.камера = Водомерный узел; Электрощитовая; Лестничная клетка; Венткамера; Приточная венткамера; ИТП; Насосная\n"
+		L"Встроенные помещения | Административные помещения = Офис; Помещение; Административное помещение; Кабинет\n"
+		L"Встроенные помещения | С/У, КУИ = С/у; С/у с ПУИ; ПУИ; КУИ\n"
+		L"Квартиры | Жилая комната = Комната; Гостиная; Спальная; Спальня; Кабинет; Столовая\n"
+		L"Квартиры | Кухня-столовая = Кухня; Кухня-столовая; Кухня-ниша; Гостиная-кухня; Гостинная-кухня\n"
+		L"Квартиры | Прихожая, коридор, тамбур, гардероб = Прихожая; Коридор; Холл; Тамбур; Гардероб; Гардеробная; Кладовая\n"
+		L"Квартиры | С/У, совмещ. С/У = С/у; Санузел; Туалет; Ванная; Ванная комната; Совмещенный санузел; Постирочная\n"
+		L"Квартиры | Лоджия = Лоджия; Балкон; Терраса\n"
+		L"Общедомовые помещения | Вестибюль, колясочная, тамбуры = Вестибюль; Колясочная; Тамбур\n"
+		L"Общедомовые помещения | С/У с КУИ = С/у с ПУИ; С/у МГН; ПУИ; КУИ\n"
+		L"Общедомовые помещения | Лифтовой холл (тамбур-шлюз) = Лифтовой холл; Тамбур-шлюз\n"
+		L"Общедомовые помещения | Межквартирный коридор = Коридор общий; Коридор; Межквартирный коридор\n"
+		L"Общедомовые помещения | Лестничная клетка = Лестничная клетка\n"
+		L"\n"
+		L"[Отделка]\n"
+		L"# Как записано в зоне (номер «00» в начале отбрасывается) = как писать в ведомости\n"
+		L"Покраска = Водно-дисперсионная окраска\n"
+		L"Обои = Оклейка обоями светлых тонов\n"
+		L"Винил обои = Оклейка виниловыми обоями\n"
+		L"ГКЛ = Подвесной потолок из ГКЛ с окраской водно-дисперсионной краской\n";
+}
+
+
+static std::vector<std::wstring> SplitBy (const std::wstring& s, wchar_t sep)
+{
+	std::vector<std::wstring> res;
+	std::wstring cur;
+	for (wchar_t c : s) {
+		if (c == sep) { res.push_back (cur); cur.clear (); }
+		else cur += c;
+	}
+	res.push_back (cur);
+	return res;
+}
+
+
+static bool ToInt (const std::wstring& s, int& v)
+{
+	const std::wstring t = Trim (s);
+	if (t.empty ()) return false;
+	size_t i = 0;
+	bool neg = false;
+	if (t[0] == L'-' || t[0] == L'+' || t[0] == 0x2212) { neg = (t[0] != L'+'); i = 1; }
+	if (i >= t.size ()) return false;
+	long r = 0;
+	for (; i < t.size (); ++i) {
+		if (t[i] < L'0' || t[i] > L'9') return false;
+		r = r * 10 + (t[i] - L'0');
+		if (r > 100000) return false;
+	}
+	v = (int) (neg ? -r : r);
+	return true;
+}
+
+
+Rules ParseRules (const std::wstring& text, std::vector<std::wstring>* warnings)
+{
+	Rules r;
+	enum Sec { None, Title, Cols, Mats, Groups, Rows, Finish } sec = None;
+	auto warn = [&] (int line, const std::wstring& msg) {
+		if (warnings != nullptr)
+			warnings->push_back (L"Правила, строка " + std::to_wstring (line) + L": " + msg);
+	};
+	auto addGroup = [&r] (const std::wstring& g) {
+		for (const auto& x : r.groupOrder)
+			if (SameText (x, g)) return;
+		r.groupOrder.push_back (g);
+	};
+
+	const std::vector<std::wstring> lines = SplitBy (text, L'\n');
+	for (size_t li = 0; li < lines.size (); ++li) {
+		const int lineNo = (int) li + 1;
+		const std::wstring line = Trim (lines[li]);
+		if (line.empty () || line[0] == L'#')
+			continue;
+		if (line[0] == L'[') {
+			const std::wstring name = Lower (Trim (line.substr (1, line.find (L']') == std::wstring::npos ? std::wstring::npos : line.find (L']') - 1)));
+			if (name == L"заголовок") sec = Title;
+			else if (name == L"столбцы") sec = Cols;
+			else if (name == L"материалы") sec = Mats;
+			else if (name == L"группы") sec = Groups;
+			else if (name == L"строки") sec = Rows;
+			else if (name == L"отделка") sec = Finish;
+			else { sec = None; warn (lineNo, L"неизвестный раздел " + line); }
+			continue;
+		}
+		if (sec == Title) {
+			r.title = line;
+			continue;
+		}
+		const size_t eq = line.find (L'=');
+		if (eq == std::wstring::npos) {
+			warn (lineNo, L"нет знака «=»: " + line);
+			continue;
+		}
+		const std::wstring key = Trim (line.substr (0, eq));
+		const std::wstring val = Trim (line.substr (eq + 1));
+		int n = 0;
+		switch (sec) {
+			case Cols:
+				if (ToInt (key, n) && n >= 1 && n <= kWallColumns) r.columnTitle[n] = val;
+				else warn (lineNo, L"номер столбца должен быть от 1 до 3");
+				break;
+			case Mats:
+				if (!ToInt (val, n) || n < 0 || n > kWallColumns) { warn (lineNo, L"столбец должен быть от 0 до 3"); break; }
+				if (SameText (key, L"Колонны")) r.columnsColumn = n;
+				else if (!key.empty ()) r.materials.push_back ({ key, n });
+				break;
+			case Groups:
+				if (SameText (key, L"Подвал")) { r.basementGroup = val; addGroup (val); }
+				else if (ToInt (key, n)) { r.groupByType[n] = val; addGroup (val); }
+				else warn (lineNo, L"ожидается номер типа зоны или «Подвал»");
+				break;
+			case Rows: {
+				RowRule rr;
+				const size_t bar = key.find (L'|');
+				if (bar != std::wstring::npos) {
+					rr.group = Trim (key.substr (0, bar));
+					rr.title = Trim (key.substr (bar + 1));
+				} else {
+					rr.title = key;
+				}
+				for (const auto& nm : SplitBy (val, L';'))
+					if (!Trim (nm).empty ()) rr.names.push_back (Trim (nm));
+				if (rr.title.empty ()) warn (lineNo, L"пустое название строки");
+				else r.rows.push_back (rr);
+				break;
+			}
+			case Finish:
+				if (!key.empty ()) r.finishNames.push_back ({ key, val });
+				break;
+			default:
+				warn (lineNo, L"строка вне раздела");
+				break;
+		}
+	}
+	for (int c = 1; c <= kWallColumns; ++c)
+		if (r.columnTitle[c].empty ())
+			r.columnTitle[c] = L"Стены, столбец " + std::to_wstring (c);
+	addGroup (r.otherGroup);
+	return r;
+}
+
+// ============================================================================= материалы
+
+static bool IsLetter (wchar_t c)
+{
+	return (c >= L'A' && c <= L'Z') || (c >= L'a' && c <= L'z') || (c >= 0x0400 && c <= 0x04FF);
+}
+
+
+std::vector<std::wstring> MaterialCodes (const std::wstring& name)
+{
+	// Часть после первого «|» и до следующего «|» (у «Ст_П_О | ГКЛв С623_ПС50 | <10м» — «ГКЛв С623_ПС50»)
+	std::wstring body = name;
+	const size_t p1 = body.find (L'|');
+	if (p1 != std::wstring::npos) {
+		body = body.substr (p1 + 1);
+		const size_t p2 = body.find (L'|');
+		if (p2 != std::wstring::npos)
+			body = body.substr (0, p2);
+	}
+	std::vector<std::wstring> res;
+	for (const auto& part : SplitBy (body, L'_')) {
+		const std::wstring t = Trim (part);
+		std::wstring code;
+		for (wchar_t c : t) {
+			if (!IsLetter (c)) break;
+			code += c;
+		}
+		if (!code.empty ())
+			res.push_back (code);
+	}
+	return res;
+}
+
+
+int ClassifyWall (const std::wstring& name, const Rules& r)
+{
+	const std::vector<std::wstring> codes = MaterialCodes (name);
+	for (const MatRule& m : r.materials) {
+		for (const auto& c : codes)
+			if (SameText (c, m.code))
+				return m.column;
+	}
+	return 0;
+}
+
+
+std::wstring CleanFinish (const std::wstring& raw, const Rules& r)
+{
+	std::wstring s = Trim (raw);
+	// «00 Покраска» -> «Покраска»
+	size_t i = 0;
+	while (i < s.size () && s[i] >= L'0' && s[i] <= L'9') ++i;
+	if (i > 0 && i < s.size () && s[i] == L' ')
+		s = Trim (s.substr (i));
+	for (const auto& f : r.finishNames)
+		if (SameText (f.first, s))
+			return f.second;
+	return s;
+}
+
+// ============================================================================= этажи
+
+bool ParseFloors (const std::wstring& text, std::set<int>& out)
+{
+	out.clear ();
+	std::wstring t;
+	for (wchar_t c : text) t += (c == L',') ? L';' : c;
+	for (const auto& tok0 : SplitBy (t, L';')) {
+		const std::wstring tok = Trim (tok0);
+		if (tok.empty ()) continue;
+		// разделитель диапазона — «-» или «..» не в начале и после цифры
+		size_t sep = std::wstring::npos;
+		size_t sepLen = 1;
+		for (size_t i = 1; i < tok.size (); ++i) {
+			if ((tok[i] == L'-' || tok[i] == 0x2013 || tok[i] == 0x2014) && tok[i - 1] >= L'0' && tok[i - 1] <= L'9') { sep = i; break; }
+			if (tok[i] == L'.' && i + 1 < tok.size () && tok[i + 1] == L'.') { sep = i; sepLen = 2; break; }
+		}
+		int a = 0, b = 0;
+		if (sep == std::wstring::npos) {
+			if (!ToInt (tok, a)) return false;
+			b = a;
+		} else {
+			if (!ToInt (tok.substr (0, sep), a) || !ToInt (tok.substr (sep + sepLen), b)) return false;
+		}
+		if (a > b) std::swap (a, b);
+		if (b - a > 1000) return false;
+		for (int k = a; k <= b; ++k) out.insert (k);
+	}
+	return !out.empty ();
+}
+
+
+std::wstring FloorsLabel (const std::set<int>& floors)
+{
+	if (floors.empty ()) return std::wstring ();
+	std::wstring res;
+	auto it = floors.begin ();
+	while (it != floors.end ()) {
+		const int a = *it;
+		int b = a;
+		auto nx = std::next (it);
+		while (nx != floors.end () && *nx == b + 1) { b = *nx; ++nx; }
+		if (!res.empty ()) res += L", ";
+		res += std::to_wstring (a);
+		if (b > a) res += L"-" + std::to_wstring (b);
+		it = nx;
+	}
+	return res + L" эт.";
+}
+
+// ============================================================================= площади
+
+double OpeningOverlap (double lower, double h, double lo, double hi)
+{
+	const double a = std::max (lower, lo);
+	const double b = std::min (lower + h, hi);
+	return b > a ? b - a : 0.0;
+}
+
+
+double WallPiece::Area () const
+{
+	const double a = length * finishHeight - openings;
+	return a > 0 ? a : 0.0;
+}
+
+// ============================================================================= ведомость
+
+std::wstring GroupOf (const ZoneData& z, const Rules& r)
+{
+	if (z.floor <= 0 && !r.basementGroup.empty ())
+		return r.basementGroup;
+	auto it = r.groupByType.find (z.type);
+	if (it != r.groupByType.end () && !it->second.empty ())
+		return it->second;
+	return r.otherGroup;
+}
+
+
+std::wstring RowTitleOf (const ZoneData& z, const std::wstring& group, const Rules& r)
+{
+	for (const RowRule& rr : r.rows) {
+		if (!rr.group.empty () && !SameText (rr.group, group))
+			continue;
+		for (const auto& n : rr.names)
+			if (SameText (n, z.name))
+				return rr.title;
+	}
+	return Trim (z.name).empty () ? std::wstring (L"(без имени)") : Trim (z.name);
+}
+
+
+Sheet BuildSheet (const std::vector<ZoneData>& zones, const Rules& r, const std::wstring& section)
+{
+	Sheet sh;
+	sh.title = r.title;
+	const std::wstring key = L"{секция}";
+	const size_t p = sh.title.find (key);
+	if (p != std::wstring::npos)
+		sh.title.replace (p, key.size (), section);
+	for (int c = 0; c <= kWallColumns; ++c)
+		sh.columnTitle[c] = r.columnTitle[c];
+
+	// варианты строк: группа + строка + отделка потолка + отделка стен
+	struct Key { std::wstring group, title, ceil, wall; };
+	std::vector<SheetRow> rows;
+	auto findRow = [&rows] (const Key& k) -> SheetRow* {
+		for (auto& row : rows)
+			if (row.group == k.group && row.title == k.title && row.ceilFinish == k.ceil && row.wallFinish == k.wall)
+				return &row;
+		return nullptr;
+	};
+
+	for (const ZoneData& z : zones) {
+		Key k;
+		k.group = GroupOf (z, r);
+		k.title = RowTitleOf (z, k.group, r);
+		k.ceil = CleanFinish (z.ceilFinishRaw, r);
+		k.wall = CleanFinish (z.wallFinishRaw, r);
+		SheetRow* row = findRow (k);
+		if (row == nullptr) {
+			SheetRow nr;
+			nr.group = k.group; nr.title = k.title; nr.ceilFinish = k.ceil; nr.wallFinish = k.wall;
+			rows.push_back (nr);
+			row = &rows.back ();
+		}
+		row->ceilArea += z.ceilArea;
+		row->floors.insert (z.floor);
+		row->zones += 1;
+		for (const WallPiece& w : z.pieces) {
+			const int c = (w.column >= 1 && w.column <= kWallColumns) ? w.column : 0;
+			row->wallArea[c] += w.Area ();
+			if (c == 0) sh.unknownArea += w.Area ();
+		}
+	}
+
+	// порядок: группы как в правилах; внутри — строки как в правилах, потом остальные по алфавиту
+	auto groupIdx = [&r] (const std::wstring& g) {
+		for (size_t i = 0; i < r.groupOrder.size (); ++i)
+			if (SameText (r.groupOrder[i], g)) return (int) i;
+		return (int) r.groupOrder.size ();
+	};
+	auto rowIdx = [&r] (const SheetRow& row) {
+		for (size_t i = 0; i < r.rows.size (); ++i)
+			if ((r.rows[i].group.empty () || SameText (r.rows[i].group, row.group)) && r.rows[i].title == row.title)
+				return (int) i;
+		return (int) r.rows.size ();
+	};
+	std::stable_sort (rows.begin (), rows.end (), [&] (const SheetRow& a, const SheetRow& b) {
+		const int ga = groupIdx (a.group), gb = groupIdx (b.group);
+		if (ga != gb) return ga < gb;
+		if (a.group != b.group) return a.group < b.group;
+		const int ra = rowIdx (a), rb = rowIdx (b);
+		if (ra != rb) return ra < rb;
+		if (a.title != b.title) return Lower (a.title) < Lower (b.title);
+		return *a.floors.begin () < *b.floors.begin ();
+	});
+
+	// одна строка с разной отделкой на разных этажах — дописать этажи
+	std::vector<int> same (rows.size (), 0);
+	for (size_t i = 0; i < rows.size (); ++i)
+		for (const auto& o : rows)
+			if (o.group == rows[i].group && o.title == rows[i].title) ++same[i];
+	for (size_t i = 0; i < rows.size (); ++i)
+		if (same[i] > 1)
+			rows[i].title += L" (" + FloorsLabel (rows[i].floors) + L")";
+	sh.rows = rows;
+	return sh;
+}
+
+}	// namespace otd
