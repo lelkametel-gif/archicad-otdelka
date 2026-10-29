@@ -208,7 +208,19 @@ otd::Rules LoadRules (std::vector<std::wstring>& warnings, std::wstring& path)
 		WriteBytes (loc, "\xEF\xBB\xBF" + otd::ToUtf8 (crlf));
 		return otd::ParseRules (text, &warnings);
 	}
-	return otd::ParseRules (otd::FromUtf8 (bytes), &warnings);
+	const std::wstring text = otd::FromUtf8 (bytes);
+	if (otd::RulesVersion (text) < otd::kRulesVersion) {
+		IO::Location old;
+		if (DocumentsFile (L"Ведомость отделки - правила (старые).txt", old))
+			WriteBytes (old, bytes);
+		std::wstring def = otd::DefaultRulesText ();
+		std::wstring crlf;
+		for (wchar_t c : def) { if (c == L'\n') crlf += L'\r'; crlf += c; }
+		WriteBytes (loc, "\xEF\xBB\xBF" + otd::ToUtf8 (crlf));
+		warnings.push_back (L"Файл правил был устаревшим — заменён правилами по умолчанию. Прежний сохранён как «Ведомость отделки - правила (старые).txt»: свои правки перенесите из него.");
+		return otd::ParseRules (def, &warnings);
+	}
+	return otd::ParseRules (text, &warnings);
 }
 
 
@@ -541,6 +553,7 @@ struct RunStats {
 	std::map<int, int> usedFloors;				// взяты в расчёт: этаж -> шт
 	std::map<std::wstring, int> usedCats;		// взяты в расчёт: «код категория» -> шт
 	int fromHotlink = 0;						// взяты в расчёт из модулей (hotlink)
+	int secFromProp = 0;						// секция взята из свойства
 };
 
 
@@ -557,28 +570,125 @@ std::wstring JoinCounts (const std::map<std::wstring, int>& m, size_t maxItems =
 }
 
 
-std::wstring StoryName (int floorInd)
+// ----------------------------------------------------------------------------- этажи проекта
+// Номер этажа в окне — как в названии этажа («Этаж 1» -> 1). Если такого названия нет — индекс этажа.
+struct StoryRec {
+	int				index = 0;
+	std::wstring	name;
+	bool			hasNum = false;
+	int				num = 0;			// последнее число в названии
+};
+
+bool LastNumber (const std::wstring& s, int& out)
 {
+	int i = (int) s.size () - 1;
+	while (i >= 0 && !(s[(size_t) i] >= L'0' && s[(size_t) i] <= L'9')) --i;
+	if (i < 0) return false;
+	int e = i;
+	while (i >= 0 && s[(size_t) i] >= L'0' && s[(size_t) i] <= L'9') --i;
+	try { out = std::stoi (s.substr ((size_t) i + 1, (size_t) (e - i))); } catch (...) { return false; }
+	if (i >= 0 && (s[(size_t) i] == L'-' || s[(size_t) i] == 0x2212) && (i == 0 || s[(size_t) i - 1] == L' '))
+		out = -out;
+	return true;
+}
+
+std::vector<StoryRec> LoadStories (int* actStory = nullptr)
+{
+	std::vector<StoryRec> res;
 	API_StoryInfo si = {};
-	std::wstring res = std::to_wstring (floorInd);
 	if (ACAPI_ProjectSetting_GetStorySettings (&si) != NoError || si.data == nullptr)
 		return res;
+	if (actStory != nullptr) *actStory = si.actStory;
 	const Int32 n = si.lastStory - si.firstStory + 1;
 	for (Int32 i = 0; i < n; ++i) {
-		const API_StoryType& s = (*si.data)[i];
-		if (s.index == floorInd) {
-			const std::wstring nm = otd::Trim (au::ToW (GS::UniString (s.uName)));
-			if (!nm.empty ())
-				res += L". " + nm;
-			break;
-		}
+		const API_StoryType& st = (*si.data)[i];
+		StoryRec r;
+		r.index = st.index;
+		r.name = otd::Trim (au::ToW (GS::UniString (st.uName)));
+		r.hasNum = LastNumber (r.name, r.num);
+		res.push_back (r);
 	}
 	BMKillHandle (reinterpret_cast<GSHandle*> (&si.data));
 	return res;
 }
 
+std::wstring StoryLabel (const std::vector<StoryRec>& stories, int index)
+{
+	for (const auto& r : stories)
+		if (r.index == index)
+			return L"«" + r.name + L"» (индекс " + std::to_wstring (index) + L")";
+	return L"индекс " + std::to_wstring (index);
+}
 
-std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::set<int>& floors, const otd::Rules& rules, RunStats& rs)
+// Номера этажей из окна -> индексы этажей Archicad (и обратно — номер для ведомости)
+std::map<int, int> ResolveFloors (const std::set<int>& wanted, const std::vector<StoryRec>& stories)
+{
+	std::map<int, int> idxToNum;
+	for (int n : wanted) {
+		bool byName = false;
+		for (const auto& r : stories)
+			if (r.hasNum && r.num == n) { idxToNum[r.index] = n; byName = true; }
+		if (!byName)
+			idxToNum[n] = n;
+	}
+	return idxToNum;
+}
+
+// ----------------------------------------------------------------------------- свойство «Секция №»
+API_Guid FindPropertyDef (const std::vector<std::wstring>& names, std::wstring& found)
+{
+	GS::Array<API_PropertyGroup> groups;
+	if (ACAPI_Property_GetPropertyGroups (groups) != NoError)
+		return APINULLGuid;
+	for (const auto& n : names) {
+		for (const API_PropertyGroup& g : groups) {
+			GS::Array<API_PropertyDefinition> defs;
+			if (ACAPI_Property_GetPropertyDefinitions (g.guid, defs) != NoError)
+				continue;
+			for (const API_PropertyDefinition& d : defs) {
+				if (otd::SameText (au::ToW (d.name), n)) {
+					found = au::ToW (g.name) + L" / " + au::ToW (d.name);
+					return d.guid;
+				}
+			}
+		}
+	}
+	return APINULLGuid;
+}
+
+std::wstring VariantText (const API_Variant& v)
+{
+	switch (v.type) {
+		case API_PropertyStringValueType:	return otd::Trim (au::ToW (v.uniStringValue));
+		case API_PropertyIntegerValueType:	return std::to_wstring (v.intValue);
+		case API_PropertyRealValueType:		return otd::FormatNum (v.doubleValue, std::fabs (v.doubleValue - std::round (v.doubleValue)) < 1e-9 ? 0 : 2);
+		case API_PropertyBooleanValueType:	return v.boolValue ? L"1" : L"0";
+		default:							return std::wstring ();
+	}
+}
+
+bool ReadPropertyText (const API_Guid& elem, const API_Guid& def, std::wstring& out)
+{
+	API_Property prop;
+	if (ACAPI_Element_GetPropertyValue (elem, def, prop) != NoError)
+		return false;
+	if (prop.value.variantStatus != API_VariantStatusNormal)
+		return false;
+	const API_Variant& v = prop.value.singleVariant.variant;
+	if (v.type == API_PropertyGuidValueType) {		// перечисление: ключ -> показываемое значение
+		for (const auto& e : prop.definition.possibleEnumValues)
+			if (e.keyVariant.type == API_PropertyGuidValueType && e.keyVariant.guidValue == v.guidValue) {
+				out = VariantText (e.displayVariant);
+				return true;
+			}
+		return false;
+	}
+	out = VariantText (v);
+	return true;
+}
+
+
+std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, int>& floors, const API_Guid& secProp, const otd::Rules& rules, RunStats& rs)
 {
 	std::vector<otd::ZoneData> res;
 	GS::Array<API_Guid> list;
@@ -618,7 +728,13 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::set<int>& f
 			continue;
 		au::Params P (memo.params);
 		otd::ZoneData z;
-		z.section = otd::Trim (au::ToW (P.Str ("asAddOn_stStaircaseCode")));
+		std::wstring sec;
+		if (secProp != APINULLGuid && ReadPropertyText (g, secProp, sec)) {
+			z.section = sec;
+			++rs.secFromProp;
+		} else {
+			z.section = otd::Trim (au::ToW (P.Str ("asAddOn_stStaircaseCode")));
+		}
 		rs.sections[z.section] += 1;
 		if (!st.section.empty () && !otd::SameText (z.section, st.section)) {
 			ACAPI_DisposeElemMemoHdls (&memo);
@@ -634,7 +750,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::set<int>& f
 		z.name = AttrName (API_ZoneCatID, el.zone.catInd);		// наименование — из категории зоны
 		if (z.name.empty ())
 			z.name = z.roomName;
-		z.floor = el.header.floorInd;
+		z.floor = floors.at (el.header.floorInd);		// номер этажа как в названии
 		{
 			API_Attribute a = {};
 			a.header.typeID = API_ZoneCatID;
@@ -892,17 +1008,30 @@ void DoOtdelka ()
 		fp.typeID = APIWind_FloorPlanID;
 		ACAPI_Database_ChangeCurrentDatabase (&fp);
 	}
-	std::set<int> floors;
-	otd::ParseFloors (st.floors, floors);
+	std::set<int> wanted;
+	otd::ParseFloors (st.floors, wanted);
+	int actStory = 0;
+	const std::vector<StoryRec> stories = LoadStories (&actStory);
+	const std::map<int, int> floors = ResolveFloors (wanted, stories);
+	std::wstring secPropName;
+	const API_Guid secProp = FindPropertyDef ({ L"Секция №", L"Секция", L"Номер секции" }, secPropName);
 	std::vector<std::wstring> lines, warn;
 	std::wstring rulesPath;
 	const otd::Rules rules = LoadRules (warn, rulesPath);
 
 	RunStats rs;
-	const std::vector<otd::ZoneData> zones = ReadZones (st, floors, rules, rs);
+	const std::vector<otd::ZoneData> zones = ReadZones (st, floors, secProp, rules, rs);
+
+	std::wstring floorsInfo;
+	for (const auto& kv : floors)
+		floorsInfo += (floorsInfo.empty () ? L"" : L", ") + std::to_wstring (kv.second) + L" -> " + StoryLabel (stories, kv.first);
+	const std::wstring secInfo = secProp != APINULLGuid ? L"Секция — из свойства «" + secPropName + L"» (у " + std::to_wstring (rs.secFromProp) +
+		L" зон), иначе из параметра зоны." : L"Секция — из параметра зоны «Секция» (свойство «Секция №» в проекте не найдено).";
 
 	if (zones.empty ()) {
 		lines.push_back (L"Зоны для ведомости не найдены.");
+		lines.push_back (L"Этажи: " + floorsInfo + L". Открытый этаж: " + StoryLabel (stories, actStory) + L".");
+		lines.push_back (secInfo);
 		lines.push_back (L"Зон в проекте: " + std::to_wstring (rs.zonesAll) + L", из них «" + st.zoneLib + L"…»: " + std::to_wstring (rs.zonesLib) + L".");
 		if (!rs.sections.empty ()) {
 			std::wstring s;
@@ -983,11 +1112,12 @@ void DoOtdelka ()
 			lines.push_back (L"   Слой «" + dr.layer + L"» скрыт — включите его, чтобы увидеть таблицу.");
 	} else
 		lines.push_back (L"Таблицу на рабочем листе построить не удалось: шаг «" + wsStep + L"», код " + std::to_wstring (wsErr) + L".");
+	lines.push_back (L"Этажи: " + floorsInfo + L". " + secInfo);
 	lines.push_back (L"Зон в расчёте: " + std::to_wstring (rs.zonesUsed) + L", строк ведомости: " + std::to_wstring (sheet.rows.size ()) + L".");
 	{
 		std::wstring fl;
 		for (const auto& kv : rs.usedFloors)
-			fl += (fl.empty () ? L"" : L", ") + StoryName (kv.first) + L" — " + std::to_wstring (kv.second);
+			fl += (fl.empty () ? L"" : L", ") + StoryLabel (stories, kv.first) + L" — " + std::to_wstring (kv.second);
 		lines.push_back (L"   по этажам: " + fl + L";");
 		lines.push_back (L"   по слоям: " + JoinCounts (rs.usedLayers) + L";");
 		lines.push_back (L"   по категориям: " + JoinCounts (rs.usedCats, 12) + L".");

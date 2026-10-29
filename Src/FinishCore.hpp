@@ -46,7 +46,9 @@ struct Rules {
 	std::vector<std::pair<std::wstring, std::wstring>>	finishNames;	// как в зоне -> как в ведомости
 };
 
+const int		kRulesVersion = 2;
 std::wstring	DefaultRulesText ();
+int				RulesVersion (const std::wstring& text);	// «# Версия правил: N»; нет строки — 1
 Rules			ParseRules (const std::wstring& text, std::vector<std::wstring>* warnings = nullptr);
 
 // Коды слоёв из названия конструкции «Ст_В| Ш 15_КБ 190_Ш 15» -> {Ш, КБ, Ш}

@@ -28,6 +28,13 @@ int main (int argc, char** argv)
 	CHECK (r.columnTitle[1] == L"Монолит. ж/б стены; ж/б пилоны");
 	CHECK (r.columnsColumn == 1);
 	CHECK (r.basementGroup.empty ());
+	CHECK (RulesVersion (DefaultRulesText ()) == kRulesVersion);
+	CHECK (RulesVersion (L"[Материалы]\nКБ = 2\n") == 1);
+	CHECK (ClassifyWall (L"Штук | Гипс", r) == 1);
+	{
+		ZoneData mz; mz.catCode = L"2020"; mz.floor = 1;
+		CHECK (GroupOf (mz, r) == L"Общедомовые помещения");
+	}
 	CHECK (r.groupByCode.size () == 5);
 	CHECK (r.groupOrder.front () == L"Техпомещения (подвал)");
 	CHECK (r.groupOrder.back () == L"Прочие помещения");
