@@ -59,6 +59,7 @@ struct Settings {
 	std::wstring	floorLayer = L"Полы";
 	bool			subtractOpenings = true;
 	bool			toExcel = true;		// также сохранить в Excel (с листом «Расчёт»)
+	bool			skipHidden = true;	// пропускать зоны на скрытых слоях
 	std::wstring	zoneLib = L"HimeraZone";
 
 	std::wstring Serialize () const
@@ -69,6 +70,7 @@ struct Settings {
 		  << L"floorCat\t" << floorCat[1] << L";" << floorCat[2] << L";" << floorCat[3] << L";" << floorCat[4] << L";" << floorCat[5] << L"\n"
 		  << L"floorFromSlab\t" << (floorFromSlab ? 1 : 0) << L"\n" << L"floorLayer\t" << floorLayer << L"\n"
 		  << L"subtractOpenings\t" << (subtractOpenings ? 1 : 0) << L"\n" << L"toExcel\t" << (toExcel ? 1 : 0) << L"\n"
+		  << L"skipHidden\t" << (skipHidden ? 1 : 0) << L"\n"
 		  << L"zoneLib\t" << zoneLib << L"\n";
 		return o.str ();
 	}
@@ -106,6 +108,7 @@ struct Settings {
 			else if (k == L"floorLayer") floorLayer = v;
 			else if (k == L"subtractOpenings") subtractOpenings = toInt (1) != 0;
 			else if (k == L"toExcel") toExcel = toInt (1) != 0;
+			else if (k == L"skipHidden") skipHidden = toInt (1) != 0;
 			else if (k == L"zoneLib" && !otd::Trim (v).empty ()) zoneLib = v;
 		}
 	}
@@ -250,7 +253,8 @@ public:
 		LblCeil = 11, EdCeil = 12, ChkOpenings = 13, ChkExcel = 14, BtnRules = 15,
 		LblHint = 16, LblLib = 17, EdLib = 18, Sep = 19,
 		LblCat1 = 20, EdCat1 = 21, LblCat2 = 22, EdCat2 = 23, LblCat3 = 24, EdCat3 = 25,
-		LblCat4 = 26, EdCat4 = 27, LblCat5 = 28, EdCat5 = 29, LblOther = 30
+		LblCat4 = 26, EdCat4 = 27, LblCat5 = 28, EdCat5 = 29, LblOther = 30,
+		ChkHidden = 31
 	};
 
 	OtdDialog (Settings& s) :
@@ -269,7 +273,8 @@ public:
 		edCeil (GetReference (), EdCeil),
 		chkSlab (GetReference (), ChkSlab),
 		chkOpenings (GetReference (), ChkOpenings),
-		chkExcel (GetReference (), ChkExcel)
+		chkExcel (GetReference (), ChkExcel),
+		chkHidden (GetReference (), ChkHidden)
 	{
 		edSection.SetText (au::FromW (st.section));
 		edFloors.SetText (au::FromW (st.floors));
@@ -282,6 +287,7 @@ public:
 		chkSlab.SetState (st.floorFromSlab);
 		chkOpenings.SetState (st.subtractOpenings);
 		chkExcel.SetState (st.toExcel);
+		chkHidden.SetState (st.skipHidden);
 		UpdateItems ();
 		AttachToAllItems (*this);
 		Attach (*this);
@@ -314,6 +320,7 @@ private:
 			st.floorFromSlab = chkSlab.IsChecked ();
 			st.subtractOpenings = chkOpenings.IsChecked ();
 			st.toExcel = chkExcel.IsChecked ();
+			st.skipHidden = chkHidden.IsChecked ();
 			PostCloseRequest (DG::ModalDialog::Accept);
 		} else if (ev.GetSource () == &cancelButton) {
 			PostCloseRequest (DG::ModalDialog::Cancel);
@@ -341,7 +348,7 @@ private:
 	DG::Button		okButton, cancelButton, rulesButton;
 	DG::TextEdit	edSection, edFloors, edLayer, edLib;
 	DG::IntEdit		edFloor, edCat1, edCat2, edCat3, edCat4, edCat5, edCeil;
-	DG::CheckBox	chkSlab, chkOpenings, chkExcel;
+	DG::CheckBox	chkSlab, chkOpenings, chkExcel, chkHidden;
 };
 
 // ----------------------------------------------------------------------------- чтение модели
@@ -356,6 +363,30 @@ std::wstring AttrName (API_AttrTypeID type, const API_AttributeIndex& idx)
 	if (ACAPI_Attribute_Get (&a) != NoError)
 		return std::wstring ();
 	return otd::Trim (au::ToW (name));
+}
+
+
+struct LayerInfo { std::wstring name; bool hidden = false; };
+
+using LayerCache = std::vector<std::pair<API_AttributeIndex, LayerInfo>>;
+
+LayerInfo ReadLayer (const API_AttributeIndex& idx, LayerCache& cache)
+{
+	for (const auto& kv : cache)
+		if (kv.first == idx)
+			return kv.second;
+	LayerInfo li;
+	API_Attribute a = {};
+	a.header.typeID = API_LayerID;
+	a.header.index = idx;
+	GS::UniString name;
+	a.header.uniStringNamePtr = &name;
+	if (ACAPI_Attribute_Get (&a) == NoError) {
+		li.name = otd::Trim (au::ToW (name));
+		li.hidden = (a.layer.head.flags & APILay_Hidden) != 0;
+	}
+	cache.push_back ({ idx, li });
+	return li;
 }
 
 
@@ -501,9 +532,50 @@ std::vector<Edge> ZoneEdges (const API_ElementMemo& memo)
 
 struct RunStats {
 	int zonesAll = 0, zonesLib = 0, zonesUsed = 0, floorFromSlab = 0, floorFromZone = 0;
+	int onFloors = 0;							// зон любого объекта на выбранных этажах
 	std::map<std::wstring, int> sections;		// какие секции встречаются в зонах выбранных этажей
 	std::map<std::wstring, double> unknown;		// конструкции без столбца -> м²
+	std::map<std::wstring, int> otherLib;		// зоны выбранных этажей другого объекта: имя объекта -> шт
+	std::map<std::wstring, int> hiddenLayers;	// пропущены (скрытый слой): слой -> шт
+	std::map<std::wstring, int> usedLayers;		// взяты в расчёт: слой -> шт
+	std::map<int, int> usedFloors;				// взяты в расчёт: этаж -> шт
+	std::map<std::wstring, int> usedCats;		// взяты в расчёт: «код категория» -> шт
+	int fromHotlink = 0;						// взяты в расчёт из модулей (hotlink)
 };
+
+
+std::wstring JoinCounts (const std::map<std::wstring, int>& m, size_t maxItems = 8)
+{
+	std::vector<std::pair<std::wstring, int>> v (m.begin (), m.end ());
+	std::stable_sort (v.begin (), v.end (), [] (const auto& a, const auto& b) { return a.second > b.second; });
+	std::wstring s;
+	for (size_t i = 0; i < v.size () && i < maxItems; ++i)
+		s += (s.empty () ? L"" : L", ") + (v[i].first.empty () ? std::wstring (L"(пусто)") : v[i].first) + L" — " + std::to_wstring (v[i].second);
+	if (v.size () > maxItems)
+		s += L" и ещё " + std::to_wstring (v.size () - maxItems);
+	return s;
+}
+
+
+std::wstring StoryName (int floorInd)
+{
+	API_StoryInfo si = {};
+	std::wstring res = std::to_wstring (floorInd);
+	if (ACAPI_ProjectSetting_GetStorySettings (&si) != NoError || si.data == nullptr)
+		return res;
+	const Int32 n = si.lastStory - si.firstStory + 1;
+	for (Int32 i = 0; i < n; ++i) {
+		const API_StoryType& s = (*si.data)[i];
+		if (s.index == floorInd) {
+			const std::wstring nm = otd::Trim (au::ToW (GS::UniString (s.uName)));
+			if (!nm.empty ())
+				res += L". " + nm;
+			break;
+		}
+	}
+	BMKillHandle (reinterpret_cast<GSHandle*> (&si.data));
+	return res;
+}
 
 
 std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::set<int>& floors, const otd::Rules& rules, RunStats& rs)
@@ -515,6 +587,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::set<int>& f
 	std::map<API_Guid, WallInfo> wallCache;
 	const double ceil = st.ceilMm / 1000.0;
 	const std::wstring libPrefix = otd::Lower (st.zoneLib);
+	LayerCache layerCache;
 
 	for (const API_Guid& g : list) {
 		++rs.zonesAll;
@@ -522,12 +595,23 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::set<int>& f
 		el.header.guid = g;
 		if (ACAPI_Element_Get (&el) != NoError)
 			continue;
-		const std::wstring lib = otd::Lower (au::ToW (au::LibPartName (el.zone.libInd)));
-		if (lib.compare (0, libPrefix.size (), libPrefix) != 0)
+		const bool onFloors = floors.count (el.header.floorInd) != 0;
+		if (onFloors) ++rs.onFloors;
+		const std::wstring libName = otd::Trim (au::ToW (au::LibPartName (el.zone.libInd)));
+		const std::wstring lib = otd::Lower (libName);
+		if (lib.compare (0, libPrefix.size (), libPrefix) != 0) {
+			if (onFloors)
+				rs.otherLib[libName.empty () ? std::wstring (L"(без объекта)") : libName] += 1;
 			continue;
+		}
 		++rs.zonesLib;
-		if (floors.count (el.header.floorInd) == 0)
+		if (!onFloors)
 			continue;
+		const LayerInfo layer = ReadLayer (el.header.layer, layerCache);
+		if (st.skipHidden && layer.hidden) {
+			rs.hiddenLayers[layer.name] += 1;
+			continue;
+		}
 
 		API_ElementMemo memo = {};
 		if (ACAPI_Element_GetMemo (g, &memo, APIMemoMask_AddPars | APIMemoMask_Polygon) != NoError)
@@ -541,6 +625,10 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::set<int>& f
 			continue;
 		}
 		++rs.zonesUsed;
+		rs.usedLayers[layer.name] += 1;
+		rs.usedFloors[el.header.floorInd] += 1;
+		if (el.header.hotlinkGuid != APINULLGuid)
+			++rs.fromHotlink;
 		z.number = otd::Trim (au::ToW (GS::UniString (el.zone.roomNoStr)));
 		z.roomName = otd::Trim (au::ToW (GS::UniString (el.zone.roomName)));
 		z.name = AttrName (API_ZoneCatID, el.zone.catInd);		// наименование — из категории зоны
@@ -554,6 +642,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::set<int>& f
 			if (ACAPI_Attribute_Get (&a) == NoError)
 				z.catCode = otd::Trim (au::ToW (GS::UniString (a.zoneCat.catCode)));
 		}
+		rs.usedCats[(z.catCode.empty () ? std::wstring () : z.catCode + L" ") + z.name] += 1;
 		z.ceilFinishRaw = au::ToW (P.Str ("stUpMat"));
 		z.wallFinishRaw = au::ToW (P.Str ("stWallMat"));
 		const std::vector<Edge> edges = ZoneEdges (memo);
@@ -699,10 +788,18 @@ GSErrCode FindOrCreateWorksheet (const std::wstring& name, const std::wstring& r
 }
 
 
-// Рисует таблицу в текущей базе (рабочем листе): прежние линии и тексты листа удаляются
-GSErrCode DrawTable (const otd::TableLayout& t, int& nLines, int& nTexts)
+// Рисует таблицу в текущей базе (рабочем листе): прежние линии и тексты листа удаляются.
+// Линии кладутся в слой текстов (слой линий по умолчанию бывает скрыт на рабочем листе).
+struct DrawResult {
+	int				lines = 0, texts = 0, lineErrs = 0, textErrs = 0;
+	GSErrCode		lineErr = NoError, textErr = NoError;
+	std::wstring	layer;
+	bool			layerHidden = false;
+};
+
+GSErrCode DrawTable (const otd::TableLayout& t, DrawResult& dr)
 {
-	nLines = nTexts = 0;
+	dr = DrawResult ();
 	double scale = 100;
 	if (ACAPI_Drawing_GetDrawingScale (&scale) != NoError || scale <= 0)
 		scale = 100;
@@ -715,26 +812,37 @@ GSErrCode DrawTable (const otd::TableLayout& t, int& nLines, int& nTexts)
 	if (!old.IsEmpty ())
 		ACAPI_Element_Delete (old);
 
-	API_Element lineDef = {};
-	lineDef.header.type = API_LineID;
-	GSErrCode err = ACAPI_Element_GetDefaults (&lineDef, nullptr);
-	if (err != NoError)
-		return err;
-	for (const otd::TSeg& g : t.segs) {
-		API_Element el = lineDef;
-		el.line.begC.x = g.x1 * k; el.line.begC.y = g.y1 * k;
-		el.line.endC.x = g.x2 * k; el.line.endC.y = g.y2 * k;
-		if (ACAPI_Element_Create (&el, nullptr) == NoError)
-			++nLines;
-	}
-
 	API_Element textDef = {};
 	textDef.header.type = API_TextID;
-	err = ACAPI_Element_GetDefaults (&textDef, nullptr);
+	GSErrCode err = ACAPI_Element_GetDefaults (&textDef, nullptr);
 	if (err != NoError)
 		return err;
+	API_Element lineDef = {};
+	lineDef.header.type = API_LineID;
+	err = ACAPI_Element_GetDefaults (&lineDef, nullptr);
+	if (err != NoError)
+		return err;
+	lineDef.header.layer = textDef.header.layer;
+	{
+		LayerCache lc;
+		const LayerInfo li = ReadLayer (textDef.header.layer, lc);
+		dr.layer = li.name;
+		dr.layerHidden = li.hidden;
+	}
+
+	for (const otd::TSeg& g : t.segs) {
+		API_Element el = lineDef;
+		el.header.guid = APINULLGuid;
+		el.line.begC.x = g.x1 * k; el.line.begC.y = g.y1 * k;
+		el.line.endC.x = g.x2 * k; el.line.endC.y = g.y2 * k;
+		const GSErrCode e = ACAPI_Element_Create (&el, nullptr);
+		if (e == NoError) ++dr.lines;
+		else { if (dr.lineErrs++ == 0) dr.lineErr = e; }
+	}
+
 	for (const otd::TText& tx : t.texts) {
 		API_Element el = textDef;
+		el.header.guid = APINULLGuid;
 		el.text.loc.x = tx.x * k;
 		el.text.loc.y = tx.y * k;
 		el.text.size = tx.size;
@@ -753,8 +861,9 @@ GSErrCode DrawTable (const otd::TableLayout& t, int& nLines, int& nTexts)
 		if (memo.textContent == nullptr)
 			continue;
 		GS::ucscpy (reinterpret_cast<GS::uchar_t*> (*memo.textContent), u.ToUStr ());
-		if (ACAPI_Element_Create (&el, &memo) == NoError)
-			++nTexts;
+		const GSErrCode e = ACAPI_Element_Create (&el, &memo);
+		if (e == NoError) ++dr.texts;
+		else { if (dr.textErrs++ == 0) dr.textErr = e; }
 		ACAPI_DisposeElemMemoHdls (&memo);
 	}
 	return NoError;
@@ -801,8 +910,12 @@ void DoOtdelka ()
 				s += (s.empty () ? L"" : L", ") + (kv.first.empty () ? std::wstring (L"(пусто)") : kv.first) + L" — " + std::to_wstring (kv.second);
 			lines.push_back (L"На этажах " + st.floors + L" в параметре зоны «Секция» записано: " + s + L".");
 		} else {
-			lines.push_back (L"На этажах " + st.floors + L" зон нет. Номер этажа — как в навигаторе (1. Этаж 1 -> 1).");
+			lines.push_back (L"На этажах " + st.floors + L" зон «" + st.zoneLib + L"» нет. Номер этажа — как в навигаторе (1. Этаж 1 -> 1).");
 		}
+		if (!rs.otherLib.empty ())
+			lines.push_back (L"Зоны других объектов на этих этажах: " + JoinCounts (rs.otherLib) + L".");
+		if (!rs.hiddenLayers.empty ())
+			lines.push_back (L"Пропущены зоны на скрытых слоях: " + JoinCounts (rs.hiddenLayers) + L".");
 		ShowReport (lines);
 		return;
 	}
@@ -815,7 +928,7 @@ void DoOtdelka ()
 	API_DatabaseInfo ws = {};
 	bool existed = false;
 	std::wstring wsStep = L"создание листа";
-	int nLines = 0, nTexts = 0;
+	DrawResult dr;
 	GSErrCode wsErr = FindOrCreateWorksheet (wsName, L"ВО-" + secName, ws, existed);
 	if (wsErr == NoError) {
 		// открыть лист: дальше элементы создаются в текущей базе — на этом листе
@@ -833,7 +946,7 @@ void DoOtdelka ()
 		wsStep = L"построение таблицы";
 		const otd::TableLayout layout = otd::LayoutSheet (sheet);
 		wsErr = ACAPI_CallUndoableCommand (au::FromW (L"Ведомость отделки: таблица"), [&] () -> GSErrCode {
-			return DrawTable (layout, nLines, nTexts);
+			return DrawTable (layout, dr);
 		});
 	}
 
@@ -859,11 +972,39 @@ void DoOtdelka ()
 		for (int c = 0; c <= otd::kWallColumns; ++c) wall[c] += row.wallArea[c];
 	}
 	lines.push_back (L"Ведомость отделки: секция " + secName + L", этажи " + st.floors + L".");
-	if (wsErr == NoError)
-		lines.push_back (L"Таблица построена на рабочем листе «" + wsName + L"»" + (existed ? L" (лист перерисован заново)." : L"."));
-	else
+	if (wsErr == NoError) {
+		lines.push_back (L"Таблица построена на рабочем листе «" + wsName + L"»" + (existed ? L" (лист перерисован заново)" : L"") +
+						 L": линий " + std::to_wstring (dr.lines) + L", текстов " + std::to_wstring (dr.texts) + L", слой «" + dr.layer + L"».");
+		if (dr.lineErrs > 0)
+			lines.push_back (L"   Не создано линий: " + std::to_wstring (dr.lineErrs) + L" (код " + std::to_wstring (dr.lineErr) + L").");
+		if (dr.textErrs > 0)
+			lines.push_back (L"   Не создано текстов: " + std::to_wstring (dr.textErrs) + L" (код " + std::to_wstring (dr.textErr) + L").");
+		if (dr.layerHidden)
+			lines.push_back (L"   Слой «" + dr.layer + L"» скрыт — включите его, чтобы увидеть таблицу.");
+	} else
 		lines.push_back (L"Таблицу на рабочем листе построить не удалось: шаг «" + wsStep + L"», код " + std::to_wstring (wsErr) + L".");
 	lines.push_back (L"Зон в расчёте: " + std::to_wstring (rs.zonesUsed) + L", строк ведомости: " + std::to_wstring (sheet.rows.size ()) + L".");
+	{
+		std::wstring fl;
+		for (const auto& kv : rs.usedFloors)
+			fl += (fl.empty () ? L"" : L", ") + StoryName (kv.first) + L" — " + std::to_wstring (kv.second);
+		lines.push_back (L"   по этажам: " + fl + L";");
+		lines.push_back (L"   по слоям: " + JoinCounts (rs.usedLayers) + L";");
+		lines.push_back (L"   по категориям: " + JoinCounts (rs.usedCats, 12) + L".");
+		if (rs.fromHotlink > 0)
+			lines.push_back (L"   Из них из модулей (hotlink): " + std::to_wstring (rs.fromHotlink) + L".");
+	}
+	if (!rs.hiddenLayers.empty ())
+		lines.push_back (L"Пропущены зоны на скрытых слоях: " + JoinCounts (rs.hiddenLayers) + L".");
+	{
+		std::map<std::wstring, int> other;
+		for (const auto& kv : rs.sections)
+			if (!otd::SameText (kv.first, st.section)) other[kv.first] = kv.second;
+		if (!st.section.empty () && !other.empty ())
+			lines.push_back (L"На этих этажах есть зоны других секций (не вошли): " + JoinCounts (other) + L".");
+	}
+	if (!rs.otherLib.empty ())
+		lines.push_back (L"Зоны других объектов (не «" + st.zoneLib + L"…», не вошли): " + JoinCounts (rs.otherLib) + L".");
 	lines.push_back (L"Потолки: " + otd::FormatNum (ceilSum, 1) + L" м². Стены: монолит " + otd::FormatNum (wall[1], 1) +
 					 L", кладка/КБ " + otd::FormatNum (wall[2], 1) + L", ГКЛ " + otd::FormatNum (wall[3], 1) + L" м².");
 	lines.push_back (L"Толщина пола: из перекрытий слоя «" + st.floorLayer + L"» — " + std::to_wstring (rs.floorFromSlab) +
