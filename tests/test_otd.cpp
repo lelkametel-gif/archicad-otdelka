@@ -37,7 +37,7 @@ int main (int argc, char** argv)
 	}
 	CHECK (r.groupByCode.size () == 9);
 	CHECK (r.groupOrder.front () == L"Тех.помещения (подвал)");
-	CHECK (r.groupOrder.size () == 7);		// 6 подкатегорий + «Прочие»
+	CHECK (r.groupOrder.size () == 8);		// 7 подкатегорий + «Прочие»
 	{
 		auto G = [&r] (const wchar_t* code, const wchar_t* name = L"") {
 			ZoneData q; q.catCode = code; q.name = name; q.floor = 1; return GroupOf (q, r);
@@ -45,7 +45,7 @@ int main (int argc, char** argv)
 		CHECK (G (L"3010") == L"Тех.помещения (подвал)");
 		CHECK (G (L"1010") == L"Квартиры");
 		CHECK (G (L"2050") == L"Общедомовые помещения");
-		CHECK (G (L"5020") == L"Общедомовые помещения");
+		CHECK (G (L"5020") == L"Встроенные помещения");
 		CHECK (G (L"4001") == L"1 этаж");
 		CHECK (G (L"6001") == L"Типовой этаж");
 		CHECK (G (L"7001") == L"Чердак");
@@ -151,6 +151,7 @@ int main (int argc, char** argv)
 	zones.back ().roomName = L"Лифтовый холл";
 	zone (L"ТП_Электрощитовая", -1, L"3050", L"00 Покраска", L"00 Покраска", 8.0, { { 2, 4.0 }, { 0, 1.0 } });
 	zones.back ().roomName = L"Электрощитовая";
+	zones.back ().guid = L"G-electro";
 	zone (L"ТП_Санузел", -1, L"3051", L"00 Покраска", L"00 Покраска", 2.0, {});
 	zones.back ().roomName = L"С/У";
 	zone (L"ВПП_Административное помещение", 1, L"4099", L"00 Покраска", L"00 Покраска", 20.0, {});
@@ -237,6 +238,9 @@ int main (int argc, char** argv)
 			if (tx.text.find (L"не входит: 1") != std::wstring::npos) hasOut = true;
 		}
 		CHECK (hasSum && hasOut);
+		size_t tagged = 0;
+		for (const auto& tx : ct.texts) if (tx.tag == L"G-electro") ++tagged;
+		CHECK (tagged >= 6);		// все тексты строки зоны помечены её GUID
 		if (argc > 3) {
 			std::ofstream svg (argv[3], std::ios::binary);
 			const std::string s = LayoutSvg (both);

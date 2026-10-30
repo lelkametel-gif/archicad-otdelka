@@ -18,6 +18,7 @@ struct TText {
 	double			size = 2.5;			// высота шрифта, мм
 	bool			vertical = false;	// повёрнут на 90°
 	bool			bold = false;
+	std::wstring	tag;				// GUID зоны строки таблицы проверки (пусто — нет)
 };
 
 struct TableStyle {
@@ -44,7 +45,7 @@ TableLayout		LayoutSheet (const Sheet& sh, const TableStyle& st = TableStyle ())
 // Таблица проверки: каждая зона — этаж, номер, имя, категория, площадь, подкатегория и строка ведомости
 struct CheckRow {
 	int				floor = 0;
-	std::wstring	floorName, number, zoneName, category, code, group, row;
+	std::wstring	floorName, number, zoneName, category, code, group, row, guid;
 	double			area = 0;
 	bool			excluded = false;
 };

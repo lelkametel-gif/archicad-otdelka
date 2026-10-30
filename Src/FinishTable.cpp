@@ -52,6 +52,7 @@ struct GCell {
 	std::wstring	text;
 	bool			vertical = false;
 	bool			bold = false;
+	std::wstring	tag;
 };
 
 }	// namespace
@@ -172,7 +173,7 @@ static TableLayout Render (const std::vector<GCell>& cells, int nRows, int heade
 				TText tx;
 				tx.x = cx;
 				tx.y = cy + (n - 1) / 2 * lineH - (double) li * lineH;
-				tx.text = lines[li]; tx.size = st.textSize; tx.bold = g.bold;
+				tx.text = lines[li]; tx.size = st.textSize; tx.bold = g.bold; tx.tag = g.tag;
 				t.texts.push_back (tx);
 			}
 		}
@@ -246,6 +247,7 @@ std::vector<CheckRow> CheckRows (const std::vector<ZoneData>& zones, const Rules
 		c.floor = z.floor;
 		c.floorName = z.floorName.empty () ? std::to_wstring (z.floor) + L" эт." : z.floorName;
 		c.number = z.number;
+		c.guid = z.guid;
 		c.zoneName = ZoneTitle (z);
 		c.category = z.name;
 		c.code = CatCodeOf (z);
@@ -298,6 +300,7 @@ TableLayout LayoutCheck (const std::vector<ZoneData>& zones, const Rules& r, con
 		const std::wstring fname = rows[i].floorName;
 		while (i < rows.size () && rows[i].floor == floor) {
 			const CheckRow& c = rows[i];
+			const size_t firstCell = cells.size ();
 			add (row, 1, row, 1, c.number.empty () ? L"-" : c.number);
 			add (row, 2, row, 2, c.zoneName.empty () ? L"-" : c.zoneName);
 			add (row, 3, row, 3, c.category);
@@ -305,6 +308,8 @@ TableLayout LayoutCheck (const std::vector<ZoneData>& zones, const Rules& r, con
 			add (row, 5, row, 5, FormatNum (c.area, 1));
 			add (row, 6, row, 6, c.group);
 			add (row, 7, row, 7, c.row);
+			for (size_t k = firstCell; k < cells.size (); ++k)
+				cells[k].tag = c.guid;		// любой текст строки -> зона на плане
 			++row; ++i;
 		}
 		add (first, 0, row - 1, 0, fname, true);

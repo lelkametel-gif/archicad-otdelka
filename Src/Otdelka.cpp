@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <map>
 #include <set>
 #include <sstream>
@@ -751,6 +752,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 		if (el.header.hotlinkGuid != APINULLGuid)
 			++rs.fromHotlink;
 		z.number = otd::Trim (au::ToW (GS::UniString (el.zone.roomNoStr)));
+		z.guid = au::ToW (APIGuidToString (g));
 		z.roomName = otd::Trim (au::ToW (GS::UniString (el.zone.roomName)));
 		z.name = AttrName (API_ZoneCatID, el.zone.catInd);		// наименование — из категории зоны
 		if (z.name.empty ())
@@ -914,6 +916,49 @@ GSErrCode FindOrCreateWorksheet (const std::wstring& name, const std::wstring& r
 }
 
 
+// ----------------------------------------------------------------------------- метка зоны на тексте таблицы проверки
+const char* kZoneTag = "OTDZONE:";
+
+void SetZoneTag (const API_Guid& textGuid, const std::wstring& zoneGuid)
+{
+	const std::string data = std::string (kZoneTag) + otd::ToUtf8 (zoneGuid);
+	API_Elem_Head head = {};
+	head.guid = textGuid;
+	if (ACAPI_Element_GetHeader (&head) != NoError)
+		return;
+	API_ElementUserData ud = {};
+	ud.dataVersion = 1;
+	ud.platformSign = GS::Act_Platform_Sign;
+	ud.flags = 0;
+	ud.dataHdl = BMAllocateHandle ((GSSize) data.size (), ALLOCATE_CLEAR, 0);
+	if (ud.dataHdl == nullptr)
+		return;
+	memcpy (*ud.dataHdl, data.data (), data.size ());
+	ACAPI_Element_SetUserData (&head, &ud);
+	BMKillHandle (&ud.dataHdl);
+}
+
+
+bool GetZoneTag (const API_Guid& elemGuid, API_Guid& zone)
+{
+	API_Elem_Head head = {};
+	head.guid = elemGuid;
+	if (ACAPI_Element_GetHeader (&head) != NoError)
+		return false;
+	API_ElementUserData ud = {};
+	if (ACAPI_Element_GetUserData (&head, &ud) != NoError || ud.dataHdl == nullptr)
+		return false;
+	const std::string data (*ud.dataHdl, (size_t) BMGetHandleSize (ud.dataHdl));
+	BMKillHandle (&ud.dataHdl);
+	const size_t n = strlen (kZoneTag);
+	if (data.compare (0, n, kZoneTag) != 0)
+		return false;
+	const std::string g = data.substr (n);
+	zone = APIGuidFromString (g.c_str ());
+	return zone != APINULLGuid;
+}
+
+
 // Рисует таблицу в текущей базе (рабочем листе): прежние линии и тексты листа удаляются.
 // Линии кладутся в слой текстов (слой линий по умолчанию бывает скрыт на рабочем листе).
 struct DrawResult {
@@ -988,7 +1033,11 @@ GSErrCode DrawTable (const otd::TableLayout& t, DrawResult& dr)
 			continue;
 		GS::ucscpy (reinterpret_cast<GS::uchar_t*> (*memo.textContent), u.ToUStr ());
 		const GSErrCode e = ACAPI_Element_Create (&el, &memo);
-		if (e == NoError) ++dr.texts;
+		if (e == NoError) {
+			++dr.texts;
+			if (!tx.tag.empty ())
+				SetZoneTag (el.header.guid, tx.tag);
+		}
 		else { if (dr.textErrs++ == 0) dr.textErr = e; }
 		ACAPI_DisposeElemMemoHdls (&memo);
 	}
@@ -1180,4 +1229,71 @@ void DoOtdelka (bool checkOnly)
 	if (!rulesPath.empty ())
 		lines.push_back (L"Правила: " + rulesPath);
 	ShowReport (lines);
+}
+
+// ============================================================================= выбор зон из таблицы проверки
+// На рабочем листе выделите тексты строк таблицы проверки (имя зоны, номер — любой текст строки)
+// и запустите команду: план нужного этажа открывается, зоны выделяются и показываются крупно.
+
+void DoSelectZones ()
+{
+	API_SelectionInfo selInfo = {};
+	GS::Array<API_Neig> sel;
+	ACAPI_Selection_Get (&selInfo, &sel, false);
+	BMKillHandle ((GSHandle*) &selInfo.marquee.coords);
+
+	std::vector<API_Guid> zones;
+	for (const API_Neig& n : sel) {
+		API_Guid z;
+		if (GetZoneTag (n.guid, z) && std::find (zones.begin (), zones.end (), z) == zones.end ())
+			zones.push_back (z);
+	}
+	if (zones.empty ()) {
+		ShowReport ({ L"Выделите на рабочем листе «Ведомость отделки - секция N» текст строки таблицы проверки",
+					  L"(имя или номер зоны; можно несколько строк) и снова запустите команду.",
+					  L"Таблица проверки строится кнопкой «Рассчитать + проверка зон»." });
+		return;
+	}
+
+	{	// план этажа
+		API_WindowInfo wi = {};
+		wi.typeID = APIWind_FloorPlanID;
+		ACAPI_Window_ChangeWindow (&wi);
+	}
+	// этаж — первой найденной зоны; зоны на других этажах — в отчёт
+	GS::Array<API_Neig> neigs;
+	short story = 0;
+	bool hasStory = false;
+	std::vector<std::wstring> other;
+	int missing = 0;
+	for (const API_Guid& g : zones) {
+		API_Elem_Head h = {};
+		h.guid = g;
+		if (ACAPI_Element_GetHeader (&h) != NoError) { ++missing; continue; }
+		if (!hasStory) { story = h.floorInd; hasStory = true; }
+		if (h.floorInd != story) { other.push_back (std::to_wstring (h.floorInd)); continue; }
+		neigs.Push (API_Neig (g));
+	}
+	if (!hasStory) {
+		ShowReport ({ L"Зоны из выделенных строк в проекте не найдены (удалены?). Пересчитайте таблицу проверки." });
+		return;
+	}
+	API_StoryCmdType cmd = {};
+	cmd.action = APIStory_GoTo;
+	cmd.index = story;
+	ACAPI_ProjectSetting_ChangeStorySettings (&cmd);
+
+	ACAPI_Selection_DeselectAll ();
+	ACAPI_Selection_Select (neigs, true);
+	ACAPI_View_ZoomToSelected ();
+
+	if (!other.empty () || missing > 0) {
+		std::vector<std::wstring> lines;
+		lines.push_back (L"Выделено зон: " + std::to_wstring (neigs.GetSize ()) + L" (этаж с индексом " + std::to_wstring (story) + L").");
+		if (!other.empty ())
+			lines.push_back (L"Зоны на других этажах (выделите их строки отдельно): " + std::to_wstring (other.size ()) + L".");
+		if (missing > 0)
+			lines.push_back (L"Не найдено в проекте: " + std::to_wstring (missing) + L" — пересчитайте таблицу проверки.");
+		ShowReport (lines);
+	}
 }

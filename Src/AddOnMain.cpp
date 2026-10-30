@@ -21,6 +21,7 @@ static GSErrCode MenuCommandHandler (const API_MenuParams* menuParams)
 	if (menuParams->menuItemRef.menuResID == AddOnMenuID) {
 		if (menuParams->menuItemRef.itemIndex == 1) DoOtdelka (false);
 		else if (menuParams->menuItemRef.itemIndex == 2) DoOtdelka (true);
+		else if (menuParams->menuItemRef.itemIndex == 3) DoSelectZones ();
 	}
 	return NoError;
 }

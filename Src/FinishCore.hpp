@@ -46,7 +46,7 @@ struct Rules {
 	std::vector<std::pair<std::wstring, std::wstring>>	finishNames;	// как в зоне -> как в ведомости
 };
 
-const int		kRulesVersion = 4;
+const int		kRulesVersion = 5;
 extern const wchar_t* const kExcludedGroup;		// «-»: зона не входит в ведомость
 std::wstring	DefaultRulesText ();
 int				RulesVersion (const std::wstring& text);	// «# Версия правил: N»; нет строки — 1
@@ -90,6 +90,7 @@ struct ZoneData {
 	int						floor = 0;
 	std::wstring			catCode;			// код категории зоны (1010, 2012…)
 	std::wstring			section;
+	std::wstring			guid;				// GUID зоны (для выбора на плане из таблицы проверки)
 	std::wstring			floorName;			// название этажа («Этаж 1»), для таблицы проверки
 	std::wstring			ceilFinishRaw, wallFinishRaw;
 	double					ceilArea = 0;		// м²
