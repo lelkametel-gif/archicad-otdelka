@@ -130,7 +130,7 @@ std::wstring DefaultRulesText ()
 		L"# Правила ведомости отделки помещений (надстройка «Ведомость отделки», Archicad 27).\n"
 		L"# Строки, начинающиеся с #, — комментарии. Файл можно править в Блокноте;\n"
 		L"# изменения применяются при следующем расчёте. Чтобы вернуть правила по умолчанию — удалите файл.\n"
-		L"# Версия правил: 3 (более старый файл заменяется новым, старый сохраняется рядом с пометкой «старые»)\n"
+		L"# Версия правил: 4 (более старый файл заменяется новым, старый сохраняется рядом с пометкой «старые»)\n"
 		L"\n"
 		L"[Заголовок]\n"
 		L"# {секция} заменяется номером секции из окна расчёта\n"
@@ -187,21 +187,6 @@ std::wstring DefaultRulesText ()
 		L"7 = Чердак\n"
 		L"8 = -\n"
 		L"9 = -\n"
-		L"\n"
-		L"[Строки]\n"
-		L"# Группа | Название строки = категория зоны; категория зоны; ...\n"
-		L"# Наименование помещения берётся из категории зоны. Категории, которых здесь нет,\n"
-		L"# идут отдельной строкой: название категории после последнего «_» (МОП_Коридор -> Коридор).\n"
-		L"Тех.помещения (подвал) | Водомерный узел, электрощитовая, лестничная клетка, приточная вент.камера = ТП_Водомерный узел; ТП_Электрощитовая; ТП_Венткамера приточная; ТП_Венткамера; ТП_Венткамера вытяжная; ТП_Насосная; ТП_АУПТ-насосная пожаротушения; ТП_Помещение водоочистки; ТП_ГРЩ; ТП_ИТП; ТП_Пространство для прокладки коммуникаций; Подвал_Техническое подполье; Подвал_Тамбур; Подвал_Коридор; Подвал_Машинное помещение лифтов; Подвал_Пожаробезопасная зона\n"
-		L"Квартиры | Жилая комната = Комната; Кабинет\n"
-		L"Квартиры | Кухня-столовая = Кухня; Зона кухни; Кухня-столовая\n"
-		L"Квартиры | Прихожая, коридор, тамбур, гардероб = Холл; Прихожая; Тамбур; Коридор; Гардеробная; Кладовая; Постирочная\n"
-		L"Квартиры | С/У, совмещ. С/У = Совмещенный санузел; Санузел; Ванная; Душевая\n"
-		L"Квартиры | Лоджия = Лоджия; Балкон; Терраса\n"
-		L"Общедомовые помещения | Вестибюль, колясочная, тамбуры = МОП_ВхГ_Колясочная; МОП_ВхГ_Вестибюль; МОП_ВхГ_Тамбур\n"
-		L"Общедомовые помещения | Лифтовой холл (тамбур-шлюз) = МОП_ВхГ_Лифтовой холл; МОП_Лифтовой холл; МОП_Лифтовый холл; МОП_Тамбур-шлюз\n"
-		L"Общедомовые помещения | Межквартирный коридор = МОП_Коридор; МОП_Тамбур\n"
-		L"Общедомовые помещения | Лестничная клетка = МОП_Лестничная клетка задымляемая; МОП_Лестничная клетка незадымляемая; МОП_Лестничная клетка незадымляемая (копия)\n"
 		L"\n"
 		L"[Отделка]\n"
 		L"# Как записано в зоне (номер «00» в начале отбрасывается) = как писать в ведомости\n"
@@ -517,16 +502,48 @@ std::wstring ShortName (const std::wstring& category)
 }
 
 
-std::wstring RowTitleOf (const ZoneData& z, const std::wstring& group, const Rules& r)
+std::wstring CleanZoneName (const std::wstring& raw)
 {
-	for (const RowRule& rr : r.rows) {
-		if (!rr.group.empty () && !SameText (rr.group, group))
-			continue;
-		for (const auto& n : rr.names)
-			if (SameText (n, z.name))
-				return rr.title;
+	// «Административное\nпомещение» — «\n» (перенос строки в маркере зоны) -> пробел
+	std::wstring s;
+	for (size_t i = 0; i < raw.size (); ++i) {
+		const wchar_t c = raw[i];
+		if (c == L'\\' && i + 1 < raw.size () && (raw[i + 1] == L'n' || raw[i + 1] == L'N' || raw[i + 1] == L'п')) { s += L' '; ++i; continue; }
+		if (c == L'\n' || c == L'\r' || c == L'\t' || c == 0xA0) { s += L' '; continue; }
+		s += c;
 	}
+	std::wstring res;
+	for (wchar_t c : s)
+		if (!(c == L' ' && (res.empty () || res.back () == L' '))) res += c;
+	return Trim (res);
+}
+
+
+std::wstring ZoneTitle (const ZoneData& z)
+{
+	const std::wstring n = CleanZoneName (z.roomName);
+	if (!n.empty ()) return n;
 	return Trim (z.name).empty () ? std::wstring (L"(без имени)") : ShortName (z.name);
+}
+
+
+std::wstring JoinNames (const std::vector<std::wstring>& names)
+{
+	std::wstring res;
+	for (size_t i = 0; i < names.size (); ++i) {
+		std::wstring n = names[i];
+		// со строчной буквы, кроме аббревиатур (С/У, КУИ, МОП)
+		if (i > 0 && n.size () >= 2 && Lower (n.substr (1, 1)) == n.substr (1, 1) && Lower (n.substr (1, 1)) != L"/" && IsLetter (n[1]))
+			n = Lower (n.substr (0, 1)) + n.substr (1);
+		res += (i == 0 ? L"" : L", ") + n;
+	}
+	return res;
+}
+
+
+std::wstring RowTitleOf (const ZoneData& z, const std::wstring&, const Rules&)
+{
+	return ZoneTitle (z);
 }
 
 
@@ -541,12 +558,12 @@ Sheet BuildSheet (const std::vector<ZoneData>& zones, const Rules& r, const std:
 	for (int c = 0; c <= kWallColumns; ++c)
 		sh.columnTitle[c] = r.columnTitle[c];
 
-	// варианты строк: группа + строка + отделка потолка + отделка стен
-	struct Key { std::wstring group, title, ceil, wall; };
+	// строка ведомости = подкатегория + отделка потолка + отделка стен; наименование — перечень имён зон
+	struct Key { std::wstring group, ceil, wall; };
 	std::vector<SheetRow> rows;
 	auto findRow = [&rows] (const Key& k) -> SheetRow* {
 		for (auto& row : rows)
-			if (row.group == k.group && row.title == k.title && row.ceilFinish == k.ceil && row.wallFinish == k.wall)
+			if (row.group == k.group && row.ceilFinish == k.ceil && row.wallFinish == k.wall)
 				return &row;
 		return nullptr;
 	};
@@ -556,15 +573,20 @@ Sheet BuildSheet (const std::vector<ZoneData>& zones, const Rules& r, const std:
 		k.group = GroupOf (z, r);
 		if (k.group == kExcludedGroup)
 			continue;
-		k.title = RowTitleOf (z, k.group, r);
 		k.ceil = CleanFinish (z.ceilFinishRaw, r);
 		k.wall = CleanFinish (z.wallFinishRaw, r);
 		SheetRow* row = findRow (k);
 		if (row == nullptr) {
 			SheetRow nr;
-			nr.group = k.group; nr.title = k.title; nr.ceilFinish = k.ceil; nr.wallFinish = k.wall;
+			nr.group = k.group; nr.ceilFinish = k.ceil; nr.wallFinish = k.wall;
 			rows.push_back (nr);
 			row = &rows.back ();
+		}
+		{
+			const std::wstring n = ZoneTitle (z);
+			bool has = false;
+			for (const auto& x : row->names) if (SameText (x, n)) { has = true; break; }
+			if (!has) row->names.push_back (n);
 		}
 		row->ceilArea += z.ceilArea;
 		row->floors.insert (z.floor);
@@ -576,26 +598,21 @@ Sheet BuildSheet (const std::vector<ZoneData>& zones, const Rules& r, const std:
 		}
 	}
 
-	// порядок: группы как в правилах; внутри — строки как в правилах, потом остальные по алфавиту
+	for (auto& row : rows)
+		row.title = JoinNames (row.names);
+
+	// порядок: группы как в правилах; внутри — по первому этажу, потом по наименованию
 	auto groupIdx = [&r] (const std::wstring& g) {
 		for (size_t i = 0; i < r.groupOrder.size (); ++i)
 			if (SameText (r.groupOrder[i], g)) return (int) i;
 		return (int) r.groupOrder.size ();
 	};
-	auto rowIdx = [&r] (const SheetRow& row) {
-		for (size_t i = 0; i < r.rows.size (); ++i)
-			if ((r.rows[i].group.empty () || SameText (r.rows[i].group, row.group)) && r.rows[i].title == row.title)
-				return (int) i;
-		return (int) r.rows.size ();
-	};
 	std::stable_sort (rows.begin (), rows.end (), [&] (const SheetRow& a, const SheetRow& b) {
 		const int ga = groupIdx (a.group), gb = groupIdx (b.group);
 		if (ga != gb) return ga < gb;
 		if (a.group != b.group) return a.group < b.group;
-		const int ra = rowIdx (a), rb = rowIdx (b);
-		if (ra != rb) return ra < rb;
-		if (a.title != b.title) return Lower (a.title) < Lower (b.title);
-		return *a.floors.begin () < *b.floors.begin ();
+		if (*a.floors.begin () != *b.floors.begin ()) return *a.floors.begin () < *b.floors.begin ();
+		return Lower (a.title) < Lower (b.title);
 	});
 
 	// одна строка с разной отделкой на разных этажах — дописать этажи

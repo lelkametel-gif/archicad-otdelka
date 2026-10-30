@@ -246,13 +246,14 @@ std::vector<CheckRow> CheckRows (const std::vector<ZoneData>& zones, const Rules
 		c.floor = z.floor;
 		c.floorName = z.floorName.empty () ? std::to_wstring (z.floor) + L" эт." : z.floorName;
 		c.number = z.number;
-		c.zoneName = z.roomName;
+		c.zoneName = ZoneTitle (z);
 		c.category = z.name;
 		c.code = CatCodeOf (z);
 		c.area = z.ceilArea;
 		c.excluded = IsExcluded (z, r);
 		c.group = c.excluded ? std::wstring (L"не входит") : GroupOf (z, r);
-		c.row = c.excluded ? std::wstring (L"-") : RowTitleOf (z, c.group, r);
+		const std::wstring cf = CleanFinish (z.ceilFinishRaw, r), wf = CleanFinish (z.wallFinishRaw, r);
+		c.row = (cf.empty () ? L"-" : cf) + L" / " + (wf.empty () ? L"-" : wf);
 		res.push_back (c);
 	}
 	auto groupIdx = [&r] (const CheckRow& c) {
@@ -279,13 +280,13 @@ std::vector<CheckRow> CheckRows (const std::vector<ZoneData>& zones, const Rules
 TableLayout LayoutCheck (const std::vector<ZoneData>& zones, const Rules& r, const std::wstring& title, const TableStyle& st)
 {
 	// Этаж | № зоны | Имя зоны | Категория зоны | Код | Площадь, м² | Подкатегория | Строка ведомости
-	const std::vector<double> colW = { 12, 14, 40, 44, 14, 18, 34, 44 };
+	const std::vector<double> colW = { 12, 14, 44, 44, 14, 18, 34, 60 };
 	std::vector<GCell> cells;
 	auto add = [&cells] (int r1, int c1, int r2, int c2, const std::wstring& t, bool vert = false, bool bold = false) {
 		GCell g; g.r1 = r1; g.c1 = c1; g.r2 = r2; g.c2 = c2; g.text = t; g.vertical = vert; g.bold = bold;
 		cells.push_back (g);
 	};
-	const wchar_t* head[] = { L"Этаж", L"№ зоны", L"Имя зоны", L"Категория зоны", L"Код", L"Площадь, м²", L"Подкатегория ведомости", L"Строка ведомости" };
+	const wchar_t* head[] = { L"Этаж", L"№ зоны", L"Имя зоны", L"Категория зоны", L"Код", L"Площадь, м²", L"Подкатегория ведомости", L"Отделка: потолок / стены" };
 	for (int c = 0; c < 8; ++c)
 		add (0, c, 0, c, head[c]);
 

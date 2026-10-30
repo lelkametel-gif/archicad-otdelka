@@ -46,7 +46,7 @@ struct Rules {
 	std::vector<std::pair<std::wstring, std::wstring>>	finishNames;	// как в зоне -> как в ведомости
 };
 
-const int		kRulesVersion = 3;
+const int		kRulesVersion = 4;
 extern const wchar_t* const kExcludedGroup;		// «-»: зона не входит в ведомость
 std::wstring	DefaultRulesText ();
 int				RulesVersion (const std::wstring& text);	// «# Версия правил: N»; нет строки — 1
@@ -106,6 +106,7 @@ struct SheetRow {
 	double			wallArea[kWallColumns + 1] = { 0, 0, 0, 0 };	// [0] — не определён столбец
 	std::set<int>	floors;
 	int				zones = 0;
+	std::vector<std::wstring>	names;		// имена зон строки (без повторов)
 };
 
 struct Sheet {
@@ -121,7 +122,12 @@ std::wstring	GroupOf (const ZoneData& z, const Rules& r);	// kExcludedGroup — 
 bool			IsExcluded (const ZoneData& z, const Rules& r);
 // «МОП_ВхГ_Тамбур» -> «Тамбур» (часть после последнего «_»)
 std::wstring	ShortName (const std::wstring& category);
-std::wstring	RowTitleOf (const ZoneData& z, const std::wstring& group, const Rules& r);
+// Имя зоны для ведомости: «Административное\nпомещение» -> «Административное помещение»; пустое — из категории
+std::wstring	CleanZoneName (const std::wstring& raw);
+std::wstring	ZoneTitle (const ZoneData& z);
+// {«Электрощитовая», «Лестничная клетка», «С/У»} -> «Электрощитовая, лестничная клетка, С/У»
+std::wstring	JoinNames (const std::vector<std::wstring>& names);
+std::wstring	RowTitleOf (const ZoneData& z, const std::wstring& group, const Rules& r);	// = ZoneTitle
 Sheet			BuildSheet (const std::vector<ZoneData>& zones, const Rules& r, const std::wstring& section);
 
 }	// namespace otd

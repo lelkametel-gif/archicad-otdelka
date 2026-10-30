@@ -138,34 +138,49 @@ int main (int argc, char** argv)
 		zones.push_back (z);
 	};
 	zone (L"Комната", 2, L"1010", L"Натяжной потолок", L"02 Обои", 15.0, { { 1, 3.0 }, { 2, 4.0 }, { 3, 2.0 } });
+	zones.back ().roomName = L"Жилая комната";
 	zone (L"Кабинет", 3, L"1011", L"Натяжной потолок", L"02 Обои", 12.0, { { 1, 2.0 }, { 3, 4.0 } });
+	zones.back ().roomName = L"Кабинет";
 	zone (L"Кухня", 2, L"1020", L"Натяжной потолок", L"02 Обои", 10.0, { { 2, 3.0 } });
+	zones.back ().roomName = L"Кухня-столовая";
+	zone (L"Комната", 3, L"1010", L"Натяжной потолок", L"02 Обои", 14.0, { { 1, 1.0 } });
+	zones.back ().roomName = L"жилая комната";		// повтор имени — не дублируется
 	zone (L"МОП_Лифтовой холл", 2, L"2050", L"00 Покраска", L"00 Покраска", 6.0, { { 1, 2.0 } });
+	zones.back ().roomName = L"Лифтовый холл";
 	zone (L"МОП_ВхГ_Лифтовой холл", 15, L"2013", L"Подвесной потолок \"Грильято\"", L"00 Покраска", 5.0, { { 1, 2.0 } });
+	zones.back ().roomName = L"Лифтовый холл";
 	zone (L"ТП_Электрощитовая", -1, L"3050", L"00 Покраска", L"00 Покраска", 8.0, { { 2, 4.0 }, { 0, 1.0 } });
-	zone (L"Мастерская", 1, L"4099", L"00 Покраска", L"00 Покраска", 20.0, {});
+	zones.back ().roomName = L"Электрощитовая";
+	zone (L"ТП_Санузел", -1, L"3051", L"00 Покраска", L"00 Покраска", 2.0, {});
+	zones.back ().roomName = L"С/У";
+	zone (L"ВПП_Административное помещение", 1, L"4099", L"00 Покраска", L"00 Покраска", 20.0, {});
+	zones.back ().roomName = L"Административное\\nпомещение";
 	zone (L"Венткамера на кровле", 16, L"8010", L"00 Покраска", L"00 Покраска", 30.0, { { 1, 5.0 } });
+
+	CHECK (CleanZoneName (L"Административное\\nпомещение") == L"Административное помещение");
+	CHECK (CleanZoneName (L" Холл\n 2 ") == L"Холл 2");
+	CHECK (JoinNames ({ L"Электрощитовая", L"Лестничная клетка", L"С/У", L"КУИ" }) == L"Электрощитовая, лестничная клетка, С/У, КУИ");
 
 	const Sheet sh = BuildSheet (zones, r, L"1");
 	CHECK (sh.title == L"1 секция. Ведомость отделки помещений жилого дома");
-	CHECK (sh.rows.size () == 6);
+	CHECK (sh.rows.size () == 5);
 	for (const auto& row : sh.rows)
 		std::printf ("  %-24s | %-48s | %-34s %6.2f | %6.2f %6.2f %6.2f [%5.2f]\n", U (row.group).c_str (), U (row.title).c_str (),
 					 U (row.ceilFinish).c_str (), row.ceilArea, row.wallArea[1], row.wallArea[2], row.wallArea[3], row.wallArea[0]);
-	if (sh.rows.size () == 6) {
+	if (sh.rows.size () == 5) {
 		CHECK (sh.rows[0].group == L"Тех.помещения (подвал)");
-		CHECK (sh.rows[0].title.find (L"Водомерный узел") == 0);
+		CHECK (sh.rows[0].title == L"Электрощитовая, С/У");
 		NEAR (sh.rows[0].wallArea[0], 2.5);
 		CHECK (sh.rows[0].floors.count (-1) == 1);
-		CHECK (sh.rows[1].title == L"Жилая комната");
-		NEAR (sh.rows[1].ceilArea, 27.0);
-		NEAR (sh.rows[1].wallArea[1], 5 * 2.5);
+		CHECK (sh.rows[1].group == L"Квартиры");
+		CHECK (sh.rows[1].title == L"Жилая комната, кабинет, кухня-столовая");
+		NEAR (sh.rows[1].ceilArea, 51.0);
+		NEAR (sh.rows[1].wallArea[1], 6 * 2.5);
 		NEAR (sh.rows[1].wallArea[3], 6 * 2.5);
 		CHECK (sh.rows[1].wallFinish == L"Оклейка обоями светлых тонов");
-		CHECK (sh.rows[2].title == L"Кухня-столовая");
-		CHECK (sh.rows[3].title == L"Лифтовой холл (тамбур-шлюз) (2 эт.)");
-		CHECK (sh.rows[4].title == L"Лифтовой холл (тамбур-шлюз) (15 эт.)");
-		CHECK (sh.rows[5].group == L"1 этаж" && sh.rows[5].title == L"Мастерская");
+		CHECK (sh.rows[2].title == L"Лифтовый холл (2 эт.)");
+		CHECK (sh.rows[3].title == L"Лифтовый холл (15 эт.)");
+		CHECK (sh.rows[4].group == L"1 этаж" && sh.rows[4].title == L"Административное помещение");
 		NEAR (sh.unknownArea, 2.5);
 	}
 
@@ -199,7 +214,7 @@ int main (int argc, char** argv)
 		CHECK (WrapText (L"", 30, 2.5, 0.62).size () == 1);
 		const TableLayout t = LayoutSheet (sh);
 		CHECK (t.width > 200 && t.height > 40);
-		CHECK (t.segs.size () > 20);
+		CHECK (t.segs.size () > 15);
 		bool hasTitle = false, hasVert = false;
 		for (const auto& tx : t.texts) {
 			if (tx.text == sh.title) hasTitle = true;
