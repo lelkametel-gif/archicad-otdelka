@@ -202,6 +202,7 @@ int main (int argc, char** argv)
 	zone (L"ТП_Электрощитовая", -1, L"3050", L"00 Покраска", L"00 Покраска", 8.0, { { 2, 4.0 }, { 0, 1.0 } });
 	zones.back ().roomName = L"Электрощитовая";
 	zones.back ().guid = L"G-electro";
+	zones.back ().notes.push_back (L"по плану (не связан с зоной): стена СТН-018 — 5,81 м");
 	zone (L"ТП_Санузел", -1, L"3051", L"00 Покраска", L"00 Покраска", 2.0, {});
 	zones.back ().roomName = L"С/У";
 	zone (L"ВПП_Административное помещение", 1, L"4099", L"00 Покраска", L"00 Покраска", 20.0, {});
@@ -288,6 +289,9 @@ int main (int argc, char** argv)
 			if (tx.text.find (L"не входит: 1") != std::wstring::npos) hasOut = true;
 		}
 		CHECK (hasSum && hasOut);
+		bool hasNote = false;
+		for (const auto& tx : ct.texts) if (tx.text.find (L"СТН-018") != std::wstring::npos && tx.bold) hasNote = true;
+		CHECK (hasNote);
 		size_t tagged = 0;
 		for (const auto& tx : ct.texts) if (tx.tag == L"G-electro") ++tagged;
 		CHECK (tagged >= 6);		// все тексты строки зоны помечены её GUID

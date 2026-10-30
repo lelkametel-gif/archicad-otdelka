@@ -894,13 +894,19 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 			nearElems.push_back (&e);
 			boxes.push_back ({ e.x1, e.y1, e.x2, e.y2 });
 		}
-		std::vector<API_Guid> relWalls;
-		if (hasRel)
-			for (const API_WallPart& part : rel.wallPart) relWalls.push_back (part.guid);
-		std::set<API_Guid> doneGeo;					// стены, посчитанные по плану
+		// Основное — связи зоны: стены зоны считаются ниже по связям. По плану добавляются только
+		// элементы, которые ограничивают зону, но не связаны с ней (о них — заметка в таблице проверки),
+		// и колонны зоны (их открытые грани).
+		std::set<API_Guid> relWalls, relCols;
+		if (hasRel) {
+			for (const API_WallPart& part : rel.wallPart) relWalls.insert (part.guid);
+			const API_ElemType ct (API_ColumnID);
+			if (rel.elementsGroupedByType.ContainsKey (ct))
+				for (const API_Guid& cg : rel.elementsGroupedByType[ct]) relCols.insert (cg);
+		}
 		for (size_t i = 0; i < nearElems.size (); ++i) {
 			const ElemGeo& e = *nearElems[i];
-			if (!e.ortho)
+			if (!e.ortho || (!e.isColumn && relWalls.count (e.guid) != 0))
 				continue;
 			const std::vector<otd::FaceRun> runs = otd::ExposedFaces (polys, boxes, i);
 			double len = 0;
@@ -918,13 +924,13 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 				p.construction = L"колонна / пилон";
 				p.isColumn = true;
 				p.column = rules.columnsColumn;
+				p.byContour = relCols.count (e.guid) == 0;
 			} else {
 				const WallInfo wi = ReadWall (e.guid, rules, wallCache);
 				p.elemId = wi.id;
 				p.construction = wi.construction;
 				p.column = wi.column;
-				p.byContour = std::find (relWalls.begin (), relWalls.end (), e.guid) == relWalls.end ();
-				doneGeo.insert (e.guid);
+				p.byContour = true;
 				if (st.subtractOpenings) {
 					auto it = openCache.find (e.guid);
 					if (it == openCache.end ()) it = openCache.emplace (e.guid, WallOpenings (e.guid)).first;
@@ -947,19 +953,21 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 						}
 					}
 				}
-				if (p.byContour) ++rs.byContour;
+			}
+			if (p.byContour) {
+				++rs.byContour;
+				z.notes.push_back (L"по плану (не связан с зоной): " + std::wstring (p.isColumn ? L"колонна " : L"стена ") +
+								   (p.elemId.empty () ? std::wstring (L"без ID") : p.elemId) + L" — " + otd::FormatNum (p.length, 2) + L" м");
 			}
 			z.pieces.push_back (p);
 			if (p.column == 0)
 				rs.unknown[p.construction.empty () ? std::wstring (L"(без названия)") : p.construction] += p.Area ();
 		}
 
-		// ---- стены из связей зоны, которые по плану не посчитаны (косые, дуговые, многоугольные)
+		// ---- стены из связей зоны (основной расчёт)
 		if (hasRel) {
 			const std::vector<OpeningInfo> openings = st.subtractOpenings ? ReadOpenings (rel) : std::vector<OpeningInfo> ();
 			for (const API_WallPart& part : rel.wallPart) {
-				if (doneGeo.count (part.guid) != 0)
-					continue;
 				const WallInfo w = ReadWall (part.guid, rules, wallCache);
 				if (!w.ok)
 					continue;
@@ -1327,8 +1335,8 @@ void DoOtdelka (bool checkOnly)
 			lines.push_back (L"Не входят в ведомость (раздел [Группы], «-»): " + JoinCounts (excl) + L".");
 	}
 	if (rs.byContour > 0)
-		lines.push_back (L"Стены по контуру зоны (Archicad не связал их с зоной, добавлены по геометрии): " + std::to_wstring (rs.byContour) +
-						 L" участков — на листе «Расчёт» помечены «по контуру».");
+		lines.push_back (L"Добавлено по плану (элементы ограничивают зону, но не связаны с ней): " + std::to_wstring (rs.byContour) +
+						 L" — проверьте: в таблице проверки — столбец «Примечание», на листе «Расчёт» — «по контуру».");
 	if (rs.zonesWithGaps > 0)
 		lines.push_back (L"Зон с участками контура без стен: " + std::to_wstring (rs.zonesWithGaps) + L" — см. лист «Расчёт» (проходы, проёмы без стены или элементы не-стены).");
 	if (!rs.hiddenLayers.empty ())

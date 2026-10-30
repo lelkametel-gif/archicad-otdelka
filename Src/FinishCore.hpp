@@ -131,6 +131,7 @@ struct ZoneData {
 	double					floorThick = 0;		// м, принятая толщина пола
 	std::wstring			floorSource;		// «перекрытие …» / «из настроек»
 	std::vector<WallPiece>	pieces;
+	std::vector<std::wstring>	notes;			// что добавлено по плану — проверить
 	std::vector<double>		gaps;				// участки контура без стен, м (проходы, проёмы без стены, несвязанные элементы)
 };
 

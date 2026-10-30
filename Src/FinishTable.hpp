@@ -45,7 +45,7 @@ TableLayout		LayoutSheet (const Sheet& sh, const TableStyle& st = TableStyle ())
 // Таблица проверки: каждая зона — этаж, номер, имя, категория, площадь, подкатегория и строка ведомости
 struct CheckRow {
 	int				floor = 0;
-	std::wstring	floorName, number, zoneName, category, code, group, row, guid;
+	std::wstring	floorName, number, zoneName, category, code, group, row, guid, note;
 	double			area = 0;
 	bool			excluded = false;
 };
