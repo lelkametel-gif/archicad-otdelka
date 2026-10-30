@@ -266,8 +266,10 @@ public:
 		LblHint = 16, LblLib = 17, EdLib = 18, Sep = 19,
 		LblCat1 = 20, EdCat1 = 21, LblCat2 = 22, EdCat2 = 23, LblCat3 = 24, EdCat3 = 25,
 		LblCat4 = 26, EdCat4 = 27, LblCat5 = 28, EdCat5 = 29, LblOther = 30,
-		ChkHidden = 31
+		ChkHidden = 31, BtnCheck = 32
 	};
+
+	bool withCheck = false;		// нажата «Рассчитать + проверка зон»
 
 	OtdDialog (Settings& s) :
 		DG::ModalDialog (ACAPI_GetOwnResModule (), ID_OTD_DLG, ACAPI_GetOwnResModule ()),
@@ -275,6 +277,7 @@ public:
 		okButton (GetReference (), OkId),
 		cancelButton (GetReference (), CancelId),
 		rulesButton (GetReference (), BtnRules),
+		checkButton (GetReference (), BtnCheck),
 		edSection (GetReference (), EdSection),
 		edFloors (GetReference (), EdFloors),
 		edLayer (GetReference (), EdLayer),
@@ -314,7 +317,8 @@ public:
 private:
 	virtual void ButtonClicked (const DG::ButtonClickEvent& ev) override
 	{
-		if (ev.GetSource () == &okButton) {
+		if (ev.GetSource () == &okButton || ev.GetSource () == &checkButton) {
+			withCheck = ev.GetSource () == &checkButton;
 			std::set<int> f;
 			if (!otd::ParseFloors (au::ToW (edFloors.GetText ()), f)) {
 				ACAPI_WriteReport (au::FromW (L"Не удалось разобрать номера этажей.\nПишите так: 1   или   2-14   или   1; 3; 5-7"), true);
@@ -357,7 +361,7 @@ private:
 	}
 
 	Settings&		st;
-	DG::Button		okButton, cancelButton, rulesButton;
+	DG::Button		okButton, cancelButton, rulesButton, checkButton;
 	DG::TextEdit	edSection, edFloors, edLayer, edLib;
 	DG::IntEdit		edFloor, edCat1, edCat2, edCat3, edCat4, edCat5, edCeil;
 	DG::CheckBox	chkSlab, chkOpenings, chkExcel, chkHidden;
@@ -688,7 +692,8 @@ bool ReadPropertyText (const API_Guid& elem, const API_Guid& def, std::wstring& 
 }
 
 
-std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, int>& floors, const API_Guid& secProp, const otd::Rules& rules, RunStats& rs)
+std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, int>& floors, const std::vector<StoryRec>& stories,
+									 const API_Guid& secProp, const otd::Rules& rules, RunStats& rs)
 {
 	std::vector<otd::ZoneData> res;
 	GS::Array<API_Guid> list;
@@ -751,6 +756,8 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 		if (z.name.empty ())
 			z.name = z.roomName;
 		z.floor = floors.at (el.header.floorInd);		// номер этажа как в названии
+		for (const auto& sr : stories)
+			if (sr.index == el.header.floorInd) { z.floorName = sr.name; break; }
 		{
 			API_Attribute a = {};
 			a.header.typeID = API_ZoneCatID;
@@ -758,7 +765,10 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 			if (ACAPI_Attribute_Get (&a) == NoError)
 				z.catCode = otd::Trim (au::ToW (GS::UniString (a.zoneCat.catCode)));
 		}
-		rs.usedCats[(z.catCode.empty () ? std::wstring () : z.catCode + L" ") + z.name] += 1;
+		{
+			const std::wstring code = otd::CatCodeOf (z);
+			rs.usedCats[(code.empty () ? std::wstring () : code + L" ") + z.name] += 1;
+		}
 		z.ceilFinishRaw = au::ToW (P.Str ("stUpMat"));
 		z.wallFinishRaw = au::ToW (P.Str ("stWallMat"));
 		const std::vector<Edge> edges = ZoneEdges (memo);
@@ -989,14 +999,16 @@ GSErrCode DrawTable (const otd::TableLayout& t, DrawResult& dr)
 
 // ============================================================================= команда меню
 
-void DoOtdelka ()
+void DoOtdelka (bool checkOnly)
 {
 	Settings st;
 	st.Parse (LoadModulText (kSettingsKey));
-	{
+	bool withCheck = checkOnly;
+	if (!checkOnly) {		// из меню «Ведомость + таблица проверки зон» — без окна, с последними настройками
 		OtdDialog dlg (st);
 		if (!dlg.Invoke ())
 			return;
+		withCheck = dlg.withCheck;
 	}
 	ACAPI_CallUndoableCommand (au::FromW (L"Ведомость отделки: настройки"), [&] () -> GSErrCode {
 		StoreModulText (kSettingsKey, st.Serialize ());
@@ -1020,7 +1032,7 @@ void DoOtdelka ()
 	const otd::Rules rules = LoadRules (warn, rulesPath);
 
 	RunStats rs;
-	const std::vector<otd::ZoneData> zones = ReadZones (st, floors, secProp, rules, rs);
+	const std::vector<otd::ZoneData> zones = ReadZones (st, floors, stories, secProp, rules, rs);
 
 	std::wstring floorsInfo;
 	for (const auto& kv : floors)
@@ -1073,7 +1085,10 @@ void DoOtdelka ()
 	}
 	if (wsErr == NoError) {
 		wsStep = L"построение таблицы";
-		const otd::TableLayout layout = otd::LayoutSheet (sheet);
+		otd::TableLayout layout = otd::LayoutSheet (sheet);
+		if (withCheck)		// таблица проверки — справа от ведомости
+			otd::AppendLayout (layout, otd::LayoutCheck (zones, rules,
+				L"Проверка: зоны секции " + secName + L" по подкатегориям (этажи " + st.floors + L")"), 20);
 		wsErr = ACAPI_CallUndoableCommand (au::FromW (L"Ведомость отделки: таблица"), [&] () -> GSErrCode {
 			return DrawTable (layout, dr);
 		});
@@ -1123,6 +1138,13 @@ void DoOtdelka ()
 		lines.push_back (L"   по категориям: " + JoinCounts (rs.usedCats, 12) + L".");
 		if (rs.fromHotlink > 0)
 			lines.push_back (L"   Из них из модулей (hotlink): " + std::to_wstring (rs.fromHotlink) + L".");
+	}
+	{
+		std::map<std::wstring, int> excl;
+		for (const auto& z : zones)
+			if (otd::IsExcluded (z, rules)) excl[otd::CatCodeOf (z) + L" " + z.name] += 1;
+		if (!excl.empty ())
+			lines.push_back (L"Не входят в ведомость (раздел [Группы], «-»): " + JoinCounts (excl) + L".");
 	}
 	if (!rs.hiddenLayers.empty ())
 		lines.push_back (L"Пропущены зоны на скрытых слоях: " + JoinCounts (rs.hiddenLayers) + L".");

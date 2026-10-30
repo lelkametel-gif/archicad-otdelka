@@ -2,6 +2,7 @@
 #ifndef OTDELKA_HPP
 #define OTDELKA_HPP
 
-void DoOtdelka ();
+// checkOnly — меню «Ведомость + таблица проверки зон»: без окна, с последними настройками
+void DoOtdelka (bool checkOnly = false);
 
 #endif

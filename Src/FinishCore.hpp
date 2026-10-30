@@ -46,7 +46,8 @@ struct Rules {
 	std::vector<std::pair<std::wstring, std::wstring>>	finishNames;	// как в зоне -> как в ведомости
 };
 
-const int		kRulesVersion = 2;
+const int		kRulesVersion = 3;
+extern const wchar_t* const kExcludedGroup;		// «-»: зона не входит в ведомость
 std::wstring	DefaultRulesText ();
 int				RulesVersion (const std::wstring& text);	// «# Версия правил: N»; нет строки — 1
 Rules			ParseRules (const std::wstring& text, std::vector<std::wstring>* warnings = nullptr);
@@ -89,6 +90,7 @@ struct ZoneData {
 	int						floor = 0;
 	std::wstring			catCode;			// код категории зоны (1010, 2012…)
 	std::wstring			section;
+	std::wstring			floorName;			// название этажа («Этаж 1»), для таблицы проверки
 	std::wstring			ceilFinishRaw, wallFinishRaw;
 	double					ceilArea = 0;		// м²
 	double					floorThick = 0;		// м, принятая толщина пола
@@ -113,7 +115,10 @@ struct Sheet {
 	double					unknownArea = 0;	// стены без столбца
 };
 
-std::wstring	GroupOf (const ZoneData& z, const Rules& r);
+// Код категории зоны: код категории, иначе первое число в названии категории
+std::wstring	CatCodeOf (const ZoneData& z);
+std::wstring	GroupOf (const ZoneData& z, const Rules& r);	// kExcludedGroup — не входит в ведомость
+bool			IsExcluded (const ZoneData& z, const Rules& r);
 // «МОП_ВхГ_Тамбур» -> «Тамбур» (часть после последнего «_»)
 std::wstring	ShortName (const std::wstring& category);
 std::wstring	RowTitleOf (const ZoneData& z, const std::wstring& group, const Rules& r);

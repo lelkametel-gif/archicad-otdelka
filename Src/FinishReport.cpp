@@ -102,13 +102,14 @@ xlsx::Sheet MakeDetailsSheet (const std::vector<ZoneData>& zones, const Rules& r
 	double total[kWallColumns + 1] = { 0, 0, 0, 0 };
 	double totalCeil = 0;
 	for (const ZoneData& z : zones) {
-		const std::wstring g = GroupOf (z, rules);
+		const bool excl = IsExcluded (z, rules);
+		const std::wstring g = excl ? std::wstring (L"не входит в ведомость (код " + CatCodeOf (z) + L")") : GroupOf (z, rules);
 		auto zoneCols = [&] (int row) {
 			x.SetNum (row, 0, z.floor, xlsx::Default);
 			x.Set (row, 1, z.number, xlsx::Plain);
 			x.Set (row, 2, z.name + (z.roomName.empty () || z.roomName == z.name ? L"" : L" (" + z.roomName + L")"), xlsx::Plain);
 			x.Set (row, 3, g, xlsx::Plain);
-			x.Set (row, 4, RowTitleOf (z, g, rules), xlsx::Plain);
+			x.Set (row, 4, excl ? std::wstring () : RowTitleOf (z, g, rules), xlsx::Plain);
 			x.Set (row, 5, z.ceilFinishRaw, xlsx::Plain);
 			x.Set (row, 6, z.wallFinishRaw, xlsx::Plain);
 		};
@@ -116,7 +117,7 @@ xlsx::Sheet MakeDetailsSheet (const std::vector<ZoneData>& zones, const Rules& r
 		x.SetNum (r, 7, z.ceilArea, xlsx::Num2);
 		x.SetNum (r, 8, z.floorThick, xlsx::Num2);
 		x.Set (r, 9, z.floorSource, xlsx::Plain);
-		totalCeil += z.ceilArea;
+		if (!excl) totalCeil += z.ceilArea;
 		if (z.pieces.empty ()) {
 			x.Set (r, 11, L"(стены у зоны не найдены)", xlsx::Plain);
 			++r;
@@ -135,7 +136,7 @@ xlsx::Sheet MakeDetailsSheet (const std::vector<ZoneData>& zones, const Rules& r
 			x.SetNum (r, 16, w.nOpenings, xlsx::Default);
 			x.SetNum (r, 17, w.openings, xlsx::Num2);
 			x.SetNum (r, 18, w.Area (), xlsx::Num2);
-			total[(w.column >= 1 && w.column <= kWallColumns) ? w.column : 0] += w.Area ();
+			if (!excl) total[(w.column >= 1 && w.column <= kWallColumns) ? w.column : 0] += w.Area ();
 			++r;
 		}
 	}

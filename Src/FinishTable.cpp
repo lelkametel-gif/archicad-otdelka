@@ -57,6 +57,10 @@ struct GCell {
 }	// namespace
 
 
+static TableLayout Render (const std::vector<GCell>& cells, int nRows, int headerRows, const std::vector<double>& colW,
+						   const TableStyle& st, const std::wstring& title);
+
+
 TableLayout LayoutSheet (const Sheet& sh, const TableStyle& st)
 {
 	const int nCols = (int) st.colW.size ();		// 2 + 2 + 2*3 + 1 = 11
@@ -98,17 +102,24 @@ TableLayout LayoutSheet (const Sheet& sh, const TableStyle& st)
 		}
 		add (first, 0, r - 1, 0, g, true);
 	}
-	const int nRows = r;
+	return Render (cells, r, 2, st.colW, st, sh.title);
+}
+
+
+static TableLayout Render (const std::vector<GCell>& cells, int nRows, int headerRows, const std::vector<double>& colW,
+						   const TableStyle& st, const std::wstring& title)
+{
+	const int nCols = (int) colW.size ();
 
 	// ---- высоты строк
 	const double lineH = st.textSize * st.lineFactor;
-	auto spanW = [&st] (const GCell& g) {
+	auto spanW = [&colW] (const GCell& g) {
 		double w = 0;
-		for (int c = g.c1; c <= g.c2; ++c) w += st.colW[(size_t) c];
+		for (int c = g.c1; c <= g.c2; ++c) w += colW[(size_t) c];
 		return w;
 	};
 	std::vector<double> rowH ((size_t) nRows, st.minRow);
-	for (int k = 0; k < 2 && k < nRows; ++k) rowH[(size_t) k] = 7;
+	for (int k = 0; k < headerRows && k < nRows; ++k) rowH[(size_t) k] = 7;
 	for (const GCell& g : cells) {
 		if (g.r1 != g.r2 || g.vertical) continue;
 		const size_t n = WrapText (g.text, spanW (g) - 2 * st.pad, st.textSize, st.charFactor).size ();
@@ -131,7 +142,7 @@ TableLayout LayoutSheet (const Sheet& sh, const TableStyle& st)
 	}
 
 	std::vector<double> xs ((size_t) nCols + 1, 0.0), ys ((size_t) nRows + 1, 0.0);
-	for (int c = 0; c < nCols; ++c) xs[(size_t) c + 1] = xs[(size_t) c] + st.colW[(size_t) c];
+	for (int c = 0; c < nCols; ++c) xs[(size_t) c + 1] = xs[(size_t) c] + colW[(size_t) c];
 	for (int k = 0; k < nRows; ++k) ys[(size_t) k + 1] = ys[(size_t) k] - rowH[(size_t) k];
 
 	TableLayout t;
@@ -161,7 +172,7 @@ TableLayout LayoutSheet (const Sheet& sh, const TableStyle& st)
 				TText tx;
 				tx.x = cx;
 				tx.y = cy + (n - 1) / 2 * lineH - (double) li * lineH;
-				tx.text = lines[li]; tx.size = st.textSize;
+				tx.text = lines[li]; tx.size = st.textSize; tx.bold = g.bold;
 				t.texts.push_back (tx);
 			}
 		}
@@ -171,7 +182,7 @@ TableLayout LayoutSheet (const Sheet& sh, const TableStyle& st)
 		TText tx;
 		tx.x = t.width / 2;
 		tx.y = st.titleSize * 1.5;
-		tx.text = sh.title; tx.size = st.titleSize; tx.bold = true;
+		tx.text = title; tx.size = st.titleSize; tx.bold = true;
 		t.texts.push_back (tx);
 	}
 
@@ -206,6 +217,135 @@ TableLayout LayoutSheet (const Sheet& sh, const TableStyle& st)
 		}
 	}
 	return t;
+}
+
+
+void ShiftLayout (TableLayout& t, double dx, double dy)
+{
+	for (TSeg& g : t.segs) { g.x1 += dx; g.x2 += dx; g.y1 += dy; g.y2 += dy; }
+	for (TText& x : t.texts) { x.x += dx; x.y += dy; }
+}
+
+
+void AppendLayout (TableLayout& to, const TableLayout& from, double gap)
+{
+	TableLayout f = from;
+	ShiftLayout (f, to.width + gap, 0);
+	to.segs.insert (to.segs.end (), f.segs.begin (), f.segs.end ());
+	to.texts.insert (to.texts.end (), f.texts.begin (), f.texts.end ());
+	to.width += gap + f.width;
+	to.height = std::max (to.height, f.height);
+}
+
+
+std::vector<CheckRow> CheckRows (const std::vector<ZoneData>& zones, const Rules& r)
+{
+	std::vector<CheckRow> res;
+	for (const ZoneData& z : zones) {
+		CheckRow c;
+		c.floor = z.floor;
+		c.floorName = z.floorName.empty () ? std::to_wstring (z.floor) + L" эт." : z.floorName;
+		c.number = z.number;
+		c.zoneName = z.roomName;
+		c.category = z.name;
+		c.code = CatCodeOf (z);
+		c.area = z.ceilArea;
+		c.excluded = IsExcluded (z, r);
+		c.group = c.excluded ? std::wstring (L"не входит") : GroupOf (z, r);
+		c.row = c.excluded ? std::wstring (L"-") : RowTitleOf (z, c.group, r);
+		res.push_back (c);
+	}
+	auto groupIdx = [&r] (const CheckRow& c) {
+		if (c.excluded) return (int) r.groupOrder.size () + 1;
+		for (size_t i = 0; i < r.groupOrder.size (); ++i)
+			if (SameText (r.groupOrder[i], c.group)) return (int) i;
+		return (int) r.groupOrder.size ();
+	};
+	auto numLess = [] (const std::wstring& a, const std::wstring& b) {
+		if (a.size () != b.size ()) return a.size () < b.size ();		// «2» раньше «10»
+		return a < b;
+	};
+	std::stable_sort (res.begin (), res.end (), [&] (const CheckRow& a, const CheckRow& b) {
+		if (a.floor != b.floor) return a.floor < b.floor;
+		const int ga = groupIdx (a), gb = groupIdx (b);
+		if (ga != gb) return ga < gb;
+		if (a.number != b.number) return numLess (a.number, b.number);
+		return a.zoneName < b.zoneName;
+	});
+	return res;
+}
+
+
+TableLayout LayoutCheck (const std::vector<ZoneData>& zones, const Rules& r, const std::wstring& title, const TableStyle& st)
+{
+	// Этаж | № зоны | Имя зоны | Категория зоны | Код | Площадь, м² | Подкатегория | Строка ведомости
+	const std::vector<double> colW = { 12, 14, 40, 44, 14, 18, 34, 44 };
+	std::vector<GCell> cells;
+	auto add = [&cells] (int r1, int c1, int r2, int c2, const std::wstring& t, bool vert = false, bool bold = false) {
+		GCell g; g.r1 = r1; g.c1 = c1; g.r2 = r2; g.c2 = c2; g.text = t; g.vertical = vert; g.bold = bold;
+		cells.push_back (g);
+	};
+	const wchar_t* head[] = { L"Этаж", L"№ зоны", L"Имя зоны", L"Категория зоны", L"Код", L"Площадь, м²", L"Подкатегория ведомости", L"Строка ведомости" };
+	for (int c = 0; c < 8; ++c)
+		add (0, c, 0, c, head[c]);
+
+	const std::vector<CheckRow> rows = CheckRows (zones, r);
+	int row = 1;
+	size_t i = 0;
+	while (i < rows.size ()) {
+		const int floor = rows[i].floor, first = row;
+		const std::wstring fname = rows[i].floorName;
+		while (i < rows.size () && rows[i].floor == floor) {
+			const CheckRow& c = rows[i];
+			add (row, 1, row, 1, c.number.empty () ? L"-" : c.number);
+			add (row, 2, row, 2, c.zoneName.empty () ? L"-" : c.zoneName);
+			add (row, 3, row, 3, c.category);
+			add (row, 4, row, 4, c.code.empty () ? L"-" : c.code);
+			add (row, 5, row, 5, FormatNum (c.area, 1));
+			add (row, 6, row, 6, c.group);
+			add (row, 7, row, 7, c.row);
+			++row; ++i;
+		}
+		add (first, 0, row - 1, 0, fname, true);
+	}
+
+	// итоги по подкатегориям — сверка с потолками основной таблицы
+	std::vector<std::pair<std::wstring, std::pair<int, double>>> sums;
+	for (const CheckRow& c : rows) {
+		if (c.excluded) continue;
+		auto it = std::find_if (sums.begin (), sums.end (), [&c] (const auto& kv) { return kv.first == c.group; });
+		if (it == sums.end ()) { sums.push_back ({ c.group, { 0, 0.0 } }); it = sums.end () - 1; }
+		it->second.first += 1;
+		it->second.second += c.area;
+	}
+	std::stable_sort (sums.begin (), sums.end (), [&r] (const auto& a, const auto& b) {
+		auto idx = [&r] (const std::wstring& g) {
+			for (size_t k = 0; k < r.groupOrder.size (); ++k) if (SameText (r.groupOrder[k], g)) return (int) k;
+			return (int) r.groupOrder.size ();
+		};
+		return idx (a.first) < idx (b.first);
+	});
+	if (!sums.empty ()) {
+		add (row, 0, row, 7, L"Итого по подкатегориям (площадь = потолок в ведомости)", false, true);
+		++row;
+		int nIn = 0, nOut = 0;
+		double aIn = 0;
+		for (const auto& kv : sums) {
+			add (row, 0, row, 5, kv.first);
+			add (row, 6, row, 6, FormatNum (kv.second.second, 1) + L" м²");
+			add (row, 7, row, 7, L"зон: " + std::to_wstring (kv.second.first));
+			nIn += kv.second.first; aIn += kv.second.second;
+			++row;
+		}
+		for (const CheckRow& c : rows) if (c.excluded) ++nOut;
+		add (row, 0, row, 5, L"Всего в ведомости", false, true);
+		add (row, 6, row, 6, FormatNum (aIn, 1) + L" м²", false, true);
+		add (row, 7, row, 7, L"зон: " + std::to_wstring (nIn) + (nOut > 0 ? L", не входит: " + std::to_wstring (nOut) : L""), false, true);
+		++row;
+	}
+	TableStyle s2 = st;
+	s2.minRow = 6;
+	return Render (cells, row, 1, colW, s2, title);
 }
 
 

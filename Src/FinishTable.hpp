@@ -41,6 +41,20 @@ std::vector<std::wstring>	WrapText (const std::wstring& text, double widthMm, do
 
 TableLayout		LayoutSheet (const Sheet& sh, const TableStyle& st = TableStyle ());
 
+// Таблица проверки: каждая зона — этаж, номер, имя, категория, площадь, подкатегория и строка ведомости
+struct CheckRow {
+	int				floor = 0;
+	std::wstring	floorName, number, zoneName, category, code, group, row;
+	double			area = 0;
+	bool			excluded = false;
+};
+std::vector<CheckRow>	CheckRows (const std::vector<ZoneData>& zones, const Rules& r);
+TableLayout		LayoutCheck (const std::vector<ZoneData>& zones, const Rules& r, const std::wstring& title,
+							 const TableStyle& st = TableStyle ());
+void			ShiftLayout (TableLayout& t, double dx, double dy);
+// Приставить таблицу справа через промежуток gap, мм
+void			AppendLayout (TableLayout& to, const TableLayout& from, double gap);
+
 // SVG для проверки на Linux
 std::string		LayoutSvg (const TableLayout& t);
 

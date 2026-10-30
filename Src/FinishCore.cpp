@@ -130,7 +130,7 @@ std::wstring DefaultRulesText ()
 		L"# Правила ведомости отделки помещений (надстройка «Ведомость отделки», Archicad 27).\n"
 		L"# Строки, начинающиеся с #, — комментарии. Файл можно править в Блокноте;\n"
 		L"# изменения применяются при следующем расчёте. Чтобы вернуть правила по умолчанию — удалите файл.\n"
-		L"# Версия правил: 2 (более старый файл заменяется новым, старый сохраняется рядом с пометкой «старые»)\n"
+		L"# Версия правил: 3 (более старый файл заменяется новым, старый сохраняется рядом с пометкой «старые»)\n"
 		L"\n"
 		L"[Заголовок]\n"
 		L"# {секция} заменяется номером секции из окна расчёта\n"
@@ -176,17 +176,23 @@ std::wstring DefaultRulesText ()
 		L"# Начало кода категории зоны = группа (подраздел) ведомости. Порядок групп в ведомости — как здесь.\n"
 		L"# Можно уточнять: 2061 = Общедомовые помещения (самое длинное совпадение главнее).\n"
 		L"# Подвал = группа — все зоны на этажах с номером 0 и ниже (строка не обязательна).\n"
-		L"3 = Техпомещения (подвал)\n"
-		L"4 = Техпомещения (подвал)\n"
-		L"5 = Встроенные помещения\n"
+		L"# Код категории — код в настройках категории, а если он пустой — первое число в названии категории.\n"
+		L"# «-» — зоны с таким кодом в ведомость не входят.\n"
+		L"3 = Тех.помещения (подвал)\n"
 		L"1 = Квартиры\n"
 		L"2 = Общедомовые помещения\n"
+		L"5 = Общедомовые помещения\n"
+		L"4 = 1 этаж\n"
+		L"6 = Типовой этаж\n"
+		L"7 = Чердак\n"
+		L"8 = -\n"
+		L"9 = -\n"
 		L"\n"
 		L"[Строки]\n"
 		L"# Группа | Название строки = категория зоны; категория зоны; ...\n"
 		L"# Наименование помещения берётся из категории зоны. Категории, которых здесь нет,\n"
 		L"# идут отдельной строкой: название категории после последнего «_» (МОП_Коридор -> Коридор).\n"
-		L"Техпомещения (подвал) | Водомерный узел, электрощитовая, лестничная клетка, приточная вент.камера = ТП_Водомерный узел; ТП_Электрощитовая; ТП_Венткамера приточная; ТП_Венткамера; ТП_Венткамера вытяжная; ТП_Насосная; ТП_АУПТ-насосная пожаротушения; ТП_Помещение водоочистки; ТП_ГРЩ; ТП_ИТП; ТП_Пространство для прокладки коммуникаций; Подвал_Техническое подполье; Подвал_Тамбур; Подвал_Коридор; Подвал_Машинное помещение лифтов; Подвал_Пожаробезопасная зона\n"
+		L"Тех.помещения (подвал) | Водомерный узел, электрощитовая, лестничная клетка, приточная вент.камера = ТП_Водомерный узел; ТП_Электрощитовая; ТП_Венткамера приточная; ТП_Венткамера; ТП_Венткамера вытяжная; ТП_Насосная; ТП_АУПТ-насосная пожаротушения; ТП_Помещение водоочистки; ТП_ГРЩ; ТП_ИТП; ТП_Пространство для прокладки коммуникаций; Подвал_Техническое подполье; Подвал_Тамбур; Подвал_Коридор; Подвал_Машинное помещение лифтов; Подвал_Пожаробезопасная зона\n"
 		L"Квартиры | Жилая комната = Комната; Кабинет\n"
 		L"Квартиры | Кухня-столовая = Кухня; Зона кухни; Кухня-столовая\n"
 		L"Квартиры | Прихожая, коридор, тамбур, гардероб = Холл; Прихожая; Тамбур; Коридор; Гардеробная; Кладовая; Постирочная\n"
@@ -293,7 +299,11 @@ Rules ParseRules (const std::wstring& text, std::vector<std::wstring>* warnings)
 				break;
 			case Groups:
 				if (SameText (key, L"Подвал")) { r.basementGroup = val; addGroup (val); }
-				else if (!key.empty ()) { r.groupByCode.push_back ({ key, val }); addGroup (val); }
+				else if (!key.empty ()) {
+					const bool excl = val == L"-" || val == L"—" || SameText (val, L"не включать") || SameText (val, L"исключить");
+					r.groupByCode.push_back ({ key, excl ? std::wstring (kExcludedGroup) : val });
+					if (!excl) addGroup (val);
+				}
 				else warn (lineNo, L"ожидается начало кода категории зоны");
 				break;
 			case Rows: {
@@ -455,13 +465,34 @@ double WallPiece::Area () const
 
 // ============================================================================= ведомость
 
+const wchar_t* const kExcludedGroup = L"-";
+
+
+std::wstring CatCodeOf (const ZoneData& z)
+{
+	const std::wstring c = Trim (z.catCode);
+	if (!c.empty ())
+		return c;
+	const std::wstring& n = z.name;
+	size_t i = 0;
+	while (i < n.size () && !(n[i] >= L'0' && n[i] <= L'9')) ++i;
+	size_t e = i;
+	while (e < n.size () && n[e] >= L'0' && n[e] <= L'9') ++e;
+	return n.substr (i, e - i);
+}
+
+
+bool IsExcluded (const ZoneData& z, const Rules& r)
+{
+	return GroupOf (z, r) == kExcludedGroup;
+}
+
+
 std::wstring GroupOf (const ZoneData& z, const Rules& r)
 {
-	if (z.floor <= 0 && !r.basementGroup.empty ())
-		return r.basementGroup;
 	size_t best = 0;
 	std::wstring g;
-	const std::wstring code = Trim (z.catCode);
+	const std::wstring code = CatCodeOf (z);
 	for (const auto& kv : r.groupByCode) {
 		const std::wstring pre = Trim (kv.first);
 		if (pre.size () > best && code.compare (0, pre.size (), pre) == 0) {
@@ -469,6 +500,10 @@ std::wstring GroupOf (const ZoneData& z, const Rules& r)
 			g = kv.second;
 		}
 	}
+	if (g == kExcludedGroup)
+		return g;
+	if (z.floor <= 0 && !r.basementGroup.empty ())
+		return r.basementGroup;
 	return g.empty () ? r.otherGroup : g;
 }
 
@@ -519,6 +554,8 @@ Sheet BuildSheet (const std::vector<ZoneData>& zones, const Rules& r, const std:
 	for (const ZoneData& z : zones) {
 		Key k;
 		k.group = GroupOf (z, r);
+		if (k.group == kExcludedGroup)
+			continue;
 		k.title = RowTitleOf (z, k.group, r);
 		k.ceil = CleanFinish (z.ceilFinishRaw, r);
 		k.wall = CleanFinish (z.wallFinishRaw, r);

@@ -35,8 +35,26 @@ int main (int argc, char** argv)
 		ZoneData mz; mz.catCode = L"2020"; mz.floor = 1;
 		CHECK (GroupOf (mz, r) == L"Общедомовые помещения");
 	}
-	CHECK (r.groupByCode.size () == 5);
-	CHECK (r.groupOrder.front () == L"Техпомещения (подвал)");
+	CHECK (r.groupByCode.size () == 9);
+	CHECK (r.groupOrder.front () == L"Тех.помещения (подвал)");
+	CHECK (r.groupOrder.size () == 7);		// 6 подкатегорий + «Прочие»
+	{
+		auto G = [&r] (const wchar_t* code, const wchar_t* name = L"") {
+			ZoneData q; q.catCode = code; q.name = name; q.floor = 1; return GroupOf (q, r);
+		};
+		CHECK (G (L"3010") == L"Тех.помещения (подвал)");
+		CHECK (G (L"1010") == L"Квартиры");
+		CHECK (G (L"2050") == L"Общедомовые помещения");
+		CHECK (G (L"5020") == L"Общедомовые помещения");
+		CHECK (G (L"4001") == L"1 этаж");
+		CHECK (G (L"6001") == L"Типовой этаж");
+		CHECK (G (L"7001") == L"Чердак");
+		CHECK (G (L"8001") == kExcludedGroup);
+		CHECK (G (L"9100") == kExcludedGroup);
+		CHECK (G (L"", L"6020 Кладовая") == L"Типовой этаж");		// код из названия категории
+		ZoneData q; q.catCode = L"8001";
+		CHECK (IsExcluded (q, r));
+	}
 	CHECK (r.groupOrder.back () == L"Прочие помещения");
 
 	// --- коды и столбцы по названиям конструкций со скриншота
@@ -124,8 +142,9 @@ int main (int argc, char** argv)
 	zone (L"Кухня", 2, L"1020", L"Натяжной потолок", L"02 Обои", 10.0, { { 2, 3.0 } });
 	zone (L"МОП_Лифтовой холл", 2, L"2050", L"00 Покраска", L"00 Покраска", 6.0, { { 1, 2.0 } });
 	zone (L"МОП_ВхГ_Лифтовой холл", 15, L"2013", L"Подвесной потолок \"Грильято\"", L"00 Покраска", 5.0, { { 1, 2.0 } });
-	zone (L"ТП_Электрощитовая", -1, L"4050", L"00 Покраска", L"00 Покраска", 8.0, { { 2, 4.0 }, { 0, 1.0 } });
-	zone (L"ВПП_Мастерская", 2, L"5099", L"00 Покраска", L"00 Покраска", 20.0, {});
+	zone (L"ТП_Электрощитовая", -1, L"3050", L"00 Покраска", L"00 Покраска", 8.0, { { 2, 4.0 }, { 0, 1.0 } });
+	zone (L"Мастерская", 1, L"4099", L"00 Покраска", L"00 Покраска", 20.0, {});
+	zone (L"Венткамера на кровле", 16, L"8010", L"00 Покраска", L"00 Покраска", 30.0, { { 1, 5.0 } });
 
 	const Sheet sh = BuildSheet (zones, r, L"1");
 	CHECK (sh.title == L"1 секция. Ведомость отделки помещений жилого дома");
@@ -134,19 +153,19 @@ int main (int argc, char** argv)
 		std::printf ("  %-24s | %-48s | %-34s %6.2f | %6.2f %6.2f %6.2f [%5.2f]\n", U (row.group).c_str (), U (row.title).c_str (),
 					 U (row.ceilFinish).c_str (), row.ceilArea, row.wallArea[1], row.wallArea[2], row.wallArea[3], row.wallArea[0]);
 	if (sh.rows.size () == 6) {
-		CHECK (sh.rows[0].group == L"Техпомещения (подвал)");
+		CHECK (sh.rows[0].group == L"Тех.помещения (подвал)");
 		CHECK (sh.rows[0].title.find (L"Водомерный узел") == 0);
 		NEAR (sh.rows[0].wallArea[0], 2.5);
-		CHECK (sh.rows[1].group == L"Встроенные помещения" && sh.rows[1].title == L"Мастерская");
 		CHECK (sh.rows[0].floors.count (-1) == 1);
-		CHECK (sh.rows[2].title == L"Жилая комната");
-		NEAR (sh.rows[2].ceilArea, 27.0);
-		NEAR (sh.rows[2].wallArea[1], 5 * 2.5);
-		NEAR (sh.rows[2].wallArea[3], 6 * 2.5);
-		CHECK (sh.rows[2].wallFinish == L"Оклейка обоями светлых тонов");
-		CHECK (sh.rows[3].title == L"Кухня-столовая");
-		CHECK (sh.rows[4].title == L"Лифтовой холл (тамбур-шлюз) (2 эт.)");
-		CHECK (sh.rows[5].title == L"Лифтовой холл (тамбур-шлюз) (15 эт.)");
+		CHECK (sh.rows[1].title == L"Жилая комната");
+		NEAR (sh.rows[1].ceilArea, 27.0);
+		NEAR (sh.rows[1].wallArea[1], 5 * 2.5);
+		NEAR (sh.rows[1].wallArea[3], 6 * 2.5);
+		CHECK (sh.rows[1].wallFinish == L"Оклейка обоями светлых тонов");
+		CHECK (sh.rows[2].title == L"Кухня-столовая");
+		CHECK (sh.rows[3].title == L"Лифтовой холл (тамбур-шлюз) (2 эт.)");
+		CHECK (sh.rows[4].title == L"Лифтовой холл (тамбур-шлюз) (15 эт.)");
+		CHECK (sh.rows[5].group == L"1 этаж" && sh.rows[5].title == L"Мастерская");
 		NEAR (sh.unknownArea, 2.5);
 	}
 
@@ -187,6 +206,27 @@ int main (int argc, char** argv)
 			if (tx.vertical) hasVert = true;
 		}
 		CHECK (hasTitle && hasVert);
+
+		const std::vector<CheckRow> cr = CheckRows (zones, r);
+		CHECK (cr.size () == zones.size ());
+		CHECK (cr.front ().floor == -1 && cr.back ().floor == 16 && cr.back ().excluded);
+		TableLayout both = t;
+		const double w0 = both.width;
+		const TableLayout ct = LayoutCheck (zones, r, L"Проверка: зоны по подкатегориям");
+		CHECK (ct.width > 100 && ct.segs.size () > 20);
+		AppendLayout (both, ct, 20);
+		CHECK (std::fabs (both.width - (w0 + 20 + ct.width)) < 1e-9);
+		bool hasSum = false, hasOut = false;
+		for (const auto& tx : ct.texts) {
+			if (tx.text.find (L"Всего в ведомости") == 0) hasSum = true;
+			if (tx.text.find (L"не входит: 1") != std::wstring::npos) hasOut = true;
+		}
+		CHECK (hasSum && hasOut);
+		if (argc > 3) {
+			std::ofstream svg (argv[3], std::ios::binary);
+			const std::string s = LayoutSvg (both);
+			svg.write (s.data (), (std::streamsize) s.size ());
+		}
 		if (argc > 2) {
 			std::ofstream svg (argv[2], std::ios::binary);
 			const std::string s = LayoutSvg (t);

@@ -18,8 +18,10 @@ static const short		AddOnMenuID		= ID_ADDON_MENU;
 
 static GSErrCode MenuCommandHandler (const API_MenuParams* menuParams)
 {
-	if (menuParams->menuItemRef.menuResID == AddOnMenuID && menuParams->menuItemRef.itemIndex == 1)
-		DoOtdelka ();
+	if (menuParams->menuItemRef.menuResID == AddOnMenuID) {
+		if (menuParams->menuItemRef.itemIndex == 1) DoOtdelka (false);
+		else if (menuParams->menuItemRef.itemIndex == 2) DoOtdelka (true);
+	}
 	return NoError;
 }
 
