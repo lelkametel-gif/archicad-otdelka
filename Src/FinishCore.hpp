@@ -46,7 +46,7 @@ struct Rules {
 	std::vector<std::pair<std::wstring, std::wstring>>	finishNames;	// как в зоне -> как в ведомости
 };
 
-const int		kRulesVersion = 5;
+const int		kRulesVersion = 6;
 extern const wchar_t* const kExcludedGroup;		// «-»: зона не входит в ведомость
 std::wstring	DefaultRulesText ();
 int				RulesVersion (const std::wstring& text);	// «# Версия правил: N»; нет строки — 1
@@ -66,6 +66,19 @@ bool			ParseFloors (const std::wstring& text, std::set<int>& out);
 // {2..14} -> «2-14 эт.», {1,3} -> «1, 3 эт.»
 std::wstring	FloorsLabel (const std::set<int>& floors);
 
+// ----------------------------------------------------------------------------- контур зоны
+struct Seg { double x1 = 0, y1 = 0, x2 = 0, y2 = 0; double Length () const; };
+// Ребро контура горизонтально или вертикально (с допуском)
+bool			IsAxisEdge (const Seg& e, double tol = 1e-3);
+// Часть ребра, лежащая на грани прямоугольника [bx1..bx2]×[by1..by2] (стена, колонна): расстояния от начала ребра
+bool			EdgeOnBox (const Seg& e, double bx1, double by1, double bx2, double by2, double tol, double& a, double& b);
+// Объединение отрезков [a,b]
+std::vector<std::pair<double, double>>	UnionIntervals (std::vector<std::pair<double, double>> v);
+// Длина [a,b] за вычетом покрытых отрезков
+double			UncoveredLength (double a, double b, const std::vector<std::pair<double, double>>& covered);
+// Непокрытые участки [0,len] длиннее minLen
+std::vector<std::pair<double, double>>	Gaps (double len, const std::vector<std::pair<double, double>>& covered, double minLen);
+
 // ----------------------------------------------------------------------------- площади
 // Часть проёма (низ lower, высота h) внутри полосы отделки [lo, hi]
 double			OpeningOverlap (double lower, double h, double lo, double hi);
@@ -80,6 +93,7 @@ struct WallPiece {
 	double			finishHeight = 0;	// высота отделки = высота стены − пол − потолок
 	double			openings = 0;	// м², вычтенные проёмы
 	int				nOpenings = 0;
+	bool			byContour = false;	// найдена по контуру зоны (Archicad не связал стену с зоной)
 	double			Area () const;
 };
 
@@ -97,6 +111,7 @@ struct ZoneData {
 	double					floorThick = 0;		// м, принятая толщина пола
 	std::wstring			floorSource;		// «перекрытие …» / «из настроек»
 	std::vector<WallPiece>	pieces;
+	std::vector<double>		gaps;				// участки контура без стен, м (проходы, проёмы без стены, несвязанные элементы)
 };
 
 struct SheetRow {

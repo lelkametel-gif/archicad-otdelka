@@ -110,6 +110,28 @@ int main (int argc, char** argv)
 	CHECK (FloorsLabel ({ 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 }) == L"2-14 эт.");
 	CHECK (FloorsLabel ({ 1, 3, 4 }) == L"1, 3-4 эт.");
 
+	// --- контур зоны
+	{
+		CHECK (ClassifyWall (L"Керамзитобетон", r) == 2);
+		Seg e; e.x1 = 0; e.y1 = 0; e.x2 = 0; e.y2 = 6;			// левое ребро коридора, x = 0
+		double a = 0, b = 0;
+		// стена 200 мм слева от ребра: x от -0.2 до 0, по y от -0.3 до 4
+		CHECK (EdgeOnBox (e, -0.2, -0.3, 0.0, 4.0, 0.01, a, b));
+		NEAR (a, 0.0); NEAR (b, 4.0);
+		CHECK (!EdgeOnBox (e, 0.5, 0, 0.7, 6, 0.01, a, b));		// стена в стороне
+		CHECK (EdgeOnBox (e, 0.0, 5, 0.25, 7, 0.01, a, b));		// справа, примыкает гранью
+		NEAR (a, 5.0); NEAR (b, 6.0);
+		Seg d; d.x1 = 0; d.y1 = 0; d.x2 = 3; d.y2 = 4;
+		CHECK (!IsAxisEdge (d) && !EdgeOnBox (d, -1, -1, 5, 5, 0.01, a, b));
+		const std::vector<std::pair<double, double>> cov = { { 0.0, 1.0 }, { 0.5, 2.0 }, { 4.0, 5.0 } };
+		NEAR (UncoveredLength (0, 6, cov), 2.0 + 1.0);
+		NEAR (UncoveredLength (1.5, 4.5, cov), 2.0);
+		const auto g = Gaps (6, cov, 0.05);
+		CHECK (g.size () == 2);
+		if (g.size () == 2) { NEAR (g[0].first, 2.0); NEAR (g[0].second, 4.0); NEAR (g[1].second, 6.0); }
+		CHECK (Gaps (6, { { 0, 5.98 } }, 0.05).empty ());
+	}
+
 	// --- площади
 	NEAR (OpeningOverlap (0, 2.1, 0.08, 2.9), 2.02);
 	NEAR (OpeningOverlap (0.9, 1.5, 0.08, 2.9), 1.5);

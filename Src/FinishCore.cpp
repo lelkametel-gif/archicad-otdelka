@@ -130,7 +130,7 @@ std::wstring DefaultRulesText ()
 		L"# Правила ведомости отделки помещений (надстройка «Ведомость отделки», Archicad 27).\n"
 		L"# Строки, начинающиеся с #, — комментарии. Файл можно править в Блокноте;\n"
 		L"# изменения применяются при следующем расчёте. Чтобы вернуть правила по умолчанию — удалите файл.\n"
-		L"# Версия правил: 5 (более старый файл заменяется новым, старый сохраняется рядом с пометкой «старые»)\n"
+		L"# Версия правил: 6 (более старый файл заменяется новым, старый сохраняется рядом с пометкой «старые»)\n"
 		L"\n"
 		L"[Заголовок]\n"
 		L"# {секция} заменяется номером секции из окна расчёта\n"
@@ -158,6 +158,9 @@ std::wstring DefaultRulesText ()
 		L"ПГП = 2\n"
 		L"Кирп = 2\n"
 		L"Кирпич = 2\n"
+		L"Керамзитобетон = 2\n"
+		L"Газобетон = 2\n"
+		L"Пенобетон = 2\n"
 		L"ГБ = 2\n"
 		L"ВБ = 2\n"
 		L"Ш = 1\n"
@@ -625,6 +628,74 @@ Sheet BuildSheet (const std::vector<ZoneData>& zones, const Rules& r, const std:
 			rows[i].title += L" (" + FloorsLabel (rows[i].floors) + L")";
 	sh.rows = rows;
 	return sh;
+}
+
+// ============================================================================= контур зоны
+
+double Seg::Length () const { return std::hypot (x2 - x1, y2 - y1); }
+
+
+bool IsAxisEdge (const Seg& e, double tol)
+{
+	return std::fabs (e.x2 - e.x1) < tol || std::fabs (e.y2 - e.y1) < tol;
+}
+
+
+bool EdgeOnBox (const Seg& e, double bx1, double by1, double bx2, double by2, double tol, double& a, double& b)
+{
+	const double len = e.Length ();
+	if (len < 1e-6 || !IsAxisEdge (e))
+		return false;
+	const bool horiz = std::fabs (e.y2 - e.y1) < 1e-3;
+	const double c = horiz ? (e.y1 + e.y2) / 2 : (e.x1 + e.x2) / 2;		// линия ребра
+	const double f1 = horiz ? by1 : bx1, f2 = horiz ? by2 : bx2;		// грани поперёк
+	if (!(std::fabs (c - f1) <= tol || std::fabs (c - f2) <= tol || (c > f1 && c < f2)))
+		return false;
+	const double s = horiz ? e.x1 : e.y1, t = horiz ? e.x2 : e.y2;
+	const double lo = std::max (std::min (s, t), horiz ? bx1 : by1);
+	const double hi = std::min (std::max (s, t), horiz ? bx2 : by2);
+	if (hi - lo < 0.005)
+		return false;
+	a = std::fabs (lo - s);
+	b = std::fabs (hi - s);
+	if (a > b) std::swap (a, b);
+	return true;
+}
+
+
+std::vector<std::pair<double, double>> UnionIntervals (std::vector<std::pair<double, double>> v)
+{
+	std::sort (v.begin (), v.end ());
+	std::vector<std::pair<double, double>> res;
+	for (const auto& x : v) {
+		if (!res.empty () && x.first <= res.back ().second + 1e-6) res.back ().second = std::max (res.back ().second, x.second);
+		else res.push_back (x);
+	}
+	return res;
+}
+
+
+double UncoveredLength (double a, double b, const std::vector<std::pair<double, double>>& covered)
+{
+	double free = b - a;
+	for (const auto& c : UnionIntervals (covered)) {
+		const double lo = std::max (a, c.first), hi = std::min (b, c.second);
+		if (hi > lo) free -= hi - lo;
+	}
+	return std::max (0.0, free);
+}
+
+
+std::vector<std::pair<double, double>> Gaps (double len, const std::vector<std::pair<double, double>>& covered, double minLen)
+{
+	std::vector<std::pair<double, double>> res;
+	double pos = 0;
+	for (const auto& c : UnionIntervals (covered)) {
+		if (c.first - pos >= minLen) res.push_back ({ pos, c.first });
+		pos = std::max (pos, c.second);
+	}
+	if (len - pos >= minLen) res.push_back ({ pos, len });
+	return res;
 }
 
 }	// namespace otd

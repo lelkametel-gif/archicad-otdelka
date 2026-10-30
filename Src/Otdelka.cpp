@@ -559,6 +559,8 @@ struct RunStats {
 	std::map<std::wstring, int> usedCats;		// взяты в расчёт: «код категория» -> шт
 	int fromHotlink = 0;						// взяты в расчёт из модулей (hotlink)
 	int secFromProp = 0;						// секция взята из свойства
+	int byContour = 0;							// участков стен найдено по контуру зоны
+	int zonesWithGaps = 0;						// зон с участками контура без стен
 };
 
 
@@ -582,6 +584,7 @@ struct StoryRec {
 	std::wstring	name;
 	bool			hasNum = false;
 	int				num = 0;			// последнее число в названии
+	double			level = 0;			// отметка этажа, м
 };
 
 bool LastNumber (const std::wstring& s, int& out)
@@ -609,6 +612,7 @@ std::vector<StoryRec> LoadStories (int* actStory = nullptr)
 		const API_StoryType& st = (*si.data)[i];
 		StoryRec r;
 		r.index = st.index;
+		r.level = st.level;
 		r.name = otd::Trim (au::ToW (GS::UniString (st.uName)));
 		r.hasNum = LastNumber (r.name, r.num);
 		res.push_back (r);
@@ -693,6 +697,75 @@ bool ReadPropertyText (const API_Guid& elem, const API_Guid& def, std::wstring& 
 }
 
 
+// ----------------------------------------------------------------------------- стены по контуру зоны
+// Стены, которые Archicad не связал с зоной (другой этаж, «не влияет на зоны» и т. п.), ищутся по геометрии:
+// грань прямой ортогональной стены лежит на ребре контура зоны и стена проходит по высоте зоны.
+struct WallGeo {
+	API_Guid	guid = APINULLGuid;
+	double		x1 = 0, y1 = 0, x2 = 0, y2 = 0;		// габарит в плане
+	double		bot = 0, top = 0;					// абсолютные отметки, м
+	API_Coord	begC = {}, endC = {};
+	bool		ortho = false;
+};
+
+std::vector<WallGeo> LoadWallGeo (const std::vector<StoryRec>& stories)
+{
+	std::vector<WallGeo> res;
+	GS::Array<API_Guid> list;
+	if (ACAPI_Element_GetElemList (API_ElemType (API_WallID), &list) != NoError)
+		return res;
+	std::map<int, double> lev;
+	for (const auto& r : stories) lev[r.index] = r.level;
+	for (const API_Guid& g : list) {
+		API_Element el = {};
+		el.header.guid = g;
+		if (ACAPI_Element_Get (&el) != NoError)
+			continue;
+		WallGeo w;
+		w.guid = g;
+		w.begC = el.wall.begC;
+		w.endC = el.wall.endC;
+		w.ortho = el.wall.type == APIWtyp_Normal && std::fabs (el.wall.angle) < 1e-6 &&
+				  (std::fabs (w.begC.x - w.endC.x) < 1e-3 || std::fabs (w.begC.y - w.endC.y) < 1e-3);
+		API_Box3D box = {};
+		if (ACAPI_Element_CalcBounds (&el.header, &box) != NoError)
+			continue;
+		w.x1 = box.xMin; w.y1 = box.yMin; w.x2 = box.xMax; w.y2 = box.yMax;
+		const auto it = lev.find (el.header.floorInd);
+		w.bot = (it != lev.end () ? it->second : 0.0) + el.wall.bottomOffset;
+		w.top = w.bot + el.wall.height;
+		res.push_back (w);
+	}
+	return res;
+}
+
+
+std::vector<OpeningInfo> WallOpenings (const API_Guid& wall)
+{
+	std::vector<OpeningInfo> res;
+	for (API_ElemTypeID t : { API_WindowID, API_DoorID }) {
+		GS::Array<API_Guid> list;
+		if (ACAPI_Grouping_GetConnectedElements (wall, API_ElemType (t), &list) != NoError)
+			continue;
+		for (const API_Guid& g : list) {
+			API_Element el = {};
+			el.header.guid = g;
+			if (ACAPI_Element_Get (&el) != NoError)
+				continue;
+			const API_WindowType& w = (t == API_WindowID) ? el.window : el.door;
+			OpeningInfo o;
+			o.owner = wall;
+			o.loc = w.objLoc;
+			o.width = w.openingBase.width;
+			o.height = w.openingBase.height;
+			o.lower = w.lower;
+			res.push_back (o);
+		}
+	}
+	return res;
+}
+
+
 std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, int>& floors, const std::vector<StoryRec>& stories,
 									 const API_Guid& secProp, const otd::Rules& rules, RunStats& rs)
 {
@@ -704,6 +777,9 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 	const double ceil = st.ceilMm / 1000.0;
 	const std::wstring libPrefix = otd::Lower (st.zoneLib);
 	LayerCache layerCache;
+	const std::vector<WallGeo> allWalls = LoadWallGeo (stories);
+	std::map<int, double> storyLevel;
+	for (const auto& sr : stories) storyLevel[sr.index] = sr.level;
 
 	for (const API_Guid& g : list) {
 		++rs.zonesAll;
@@ -862,8 +938,84 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 					break;
 				}
 			}
+
+			// стены по контуру зоны, которых нет в связях зоны; участки контура без стен
+			std::vector<API_Guid> relWalls;
+			for (const API_WallPart& part : rel.wallPart) relWalls.push_back (part.guid);
+			const double zBot = (storyLevel.count (el.header.floorInd) ? storyLevel[el.header.floorInd] : 0.0) + el.zone.roomBaseLev;
+			const double zTop = zBot + (el.zone.roomHeight > 0.1 ? el.zone.roomHeight : 3.0);
+			const double tolC = 0.03;
+			for (const Edge& e : edges) {
+				otd::Seg sg; sg.x1 = e.x1; sg.y1 = e.y1; sg.x2 = e.x2; sg.y2 = e.y2;
+				const double len = sg.Length ();
+				if (len < 0.05 || !otd::IsAxisEdge (sg))
+					continue;
+				std::vector<std::pair<double, double>> cov;
+				for (const ColumnBox& c : cols) {
+					double a, b;
+					if (otd::EdgeOnBox (sg, c.x1, c.y1, c.x2, c.y2, tolC, a, b)) cov.push_back ({ a, b });
+				}
+				std::vector<std::pair<const WallGeo*, std::pair<double, double>>> extra;
+				for (const WallGeo& w : allWalls) {
+					if (!w.ortho || std::min (w.top, zTop) - std::max (w.bot, zBot) < 0.5)
+						continue;
+					double a, b;
+					if (!otd::EdgeOnBox (sg, w.x1, w.y1, w.x2, w.y2, tolC, a, b))
+						continue;
+					if (std::find (relWalls.begin (), relWalls.end (), w.guid) != relWalls.end ())
+						cov.push_back ({ a, b });
+					else
+						extra.push_back ({ &w, { a, b } });
+				}
+				for (const auto& ex : extra) {
+					const WallGeo& w = *ex.first;
+					const double a = ex.second.first, b = ex.second.second;
+					const double free = otd::UncoveredLength (a, b, cov);
+					cov.push_back ({ a, b });
+					if (free < 0.05)
+						continue;
+					const WallInfo wi = ReadWall (w.guid, rules, wallCache);
+					otd::WallPiece p;
+					p.elemId = wi.id;
+					p.construction = wi.construction;
+					p.column = wi.column;
+					p.byContour = true;
+					p.length = free;
+					const double bot = std::max (w.bot, zBot), top = std::min (w.top, zTop);
+					p.elemHeight = top - bot;
+					const double lo = bot + z.floorThick, hi = top - ceil;
+					p.finishHeight = std::max (0.0, hi - lo);
+					if (st.subtractOpenings) {
+						// отрезок ребра -> координата вдоль стены от begC
+						const double wl = std::hypot (w.endC.x - w.begC.x, w.endC.y - w.begC.y);
+						if (wl > 1e-6) {
+							const double ux = (w.endC.x - w.begC.x) / wl, uy = (w.endC.y - w.begC.y) / wl;
+							auto along = [&] (double t) {
+								const double px = sg.x1 + (sg.x2 - sg.x1) * t / len, py = sg.y1 + (sg.y2 - sg.y1) * t / len;
+								return (px - w.begC.x) * ux + (py - w.begC.y) * uy;
+							};
+							const double t1 = std::min (along (a), along (b)), t2 = std::max (along (a), along (b));
+							for (const OpeningInfo& o : WallOpenings (w.guid)) {
+								const double ow = std::min (o.loc + o.width / 2, t2) - std::max (o.loc - o.width / 2, t1);
+								if (ow <= 1e-4) continue;
+								const double oh = otd::OpeningOverlap (w.bot + o.lower, o.height, lo, hi);
+								if (oh <= 0) continue;
+								p.openings += ow * oh;
+								p.nOpenings += 1;
+							}
+						}
+					}
+					z.pieces.push_back (p);
+					++rs.byContour;
+					if (p.column == 0)
+						rs.unknown[wi.construction.empty () ? std::wstring (L"(без названия)") : wi.construction] += p.Area ();
+				}
+				for (const auto& gp : otd::Gaps (len, cov, 0.1))
+					z.gaps.push_back (gp.second - gp.first);
+			}
 			ACAPI_DisposeRoomRelationHdls (&rel);
 		}
+		if (!z.gaps.empty ()) ++rs.zonesWithGaps;
 		res.push_back (z);
 	}
 	std::stable_sort (res.begin (), res.end (), [] (const otd::ZoneData& a, const otd::ZoneData& b) {
@@ -1195,6 +1347,11 @@ void DoOtdelka (bool checkOnly)
 		if (!excl.empty ())
 			lines.push_back (L"Не входят в ведомость (раздел [Группы], «-»): " + JoinCounts (excl) + L".");
 	}
+	if (rs.byContour > 0)
+		lines.push_back (L"Стены по контуру зоны (Archicad не связал их с зоной, добавлены по геометрии): " + std::to_wstring (rs.byContour) +
+						 L" участков — на листе «Расчёт» помечены «по контуру».");
+	if (rs.zonesWithGaps > 0)
+		lines.push_back (L"Зон с участками контура без стен: " + std::to_wstring (rs.zonesWithGaps) + L" — см. лист «Расчёт» (проходы, проёмы без стены или элементы не-стены).");
 	if (!rs.hiddenLayers.empty ())
 		lines.push_back (L"Пропущены зоны на скрытых слоях: " + JoinCounts (rs.hiddenLayers) + L".");
 	{

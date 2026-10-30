@@ -118,15 +118,17 @@ xlsx::Sheet MakeDetailsSheet (const std::vector<ZoneData>& zones, const Rules& r
 		x.SetNum (r, 8, z.floorThick, xlsx::Num2);
 		x.Set (r, 9, z.floorSource, xlsx::Plain);
 		if (!excl) totalCeil += z.ceilArea;
-		if (z.pieces.empty ()) {
+		if (z.pieces.empty () && z.gaps.empty ()) {
 			x.Set (r, 11, L"(стены у зоны не найдены)", xlsx::Plain);
 			++r;
 			continue;
 		}
+		bool first = true;
 		for (const WallPiece& w : z.pieces) {
-			if (r > 0 && &w != &z.pieces.front ())
+			if (!first)
 				zoneCols (r);
-			x.Set (r, 10, w.elemId, xlsx::Plain);
+			first = false;
+			x.Set (r, 10, w.elemId + (w.byContour ? L" (по контуру)" : L""), xlsx::Plain);
 			x.Set (r, 11, (w.isColumn ? L"Колонна: " : L"") + w.construction, xlsx::Plain);
 			if (w.column >= 1) x.SetNum (r, 12, w.column, xlsx::Default);
 			else x.Set (r, 12, L"не определён", xlsx::Plain);
@@ -137,6 +139,14 @@ xlsx::Sheet MakeDetailsSheet (const std::vector<ZoneData>& zones, const Rules& r
 			x.SetNum (r, 17, w.openings, xlsx::Num2);
 			x.SetNum (r, 18, w.Area (), xlsx::Num2);
 			if (!excl) total[(w.column >= 1 && w.column <= kWallColumns) ? w.column : 0] += w.Area ();
+			++r;
+		}
+		for (double g : z.gaps) {
+			if (!first)
+				zoneCols (r);
+			first = false;
+			x.Set (r, 11, L"(участок контура без стены — проход или не-стена)", xlsx::Plain);
+			x.SetNum (r, 13, g, xlsx::Num2);
 			++r;
 		}
 	}
