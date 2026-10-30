@@ -504,44 +504,20 @@ bool FloorFromSlabs (const API_RoomRelation& rel, const std::wstring& layer, dou
 }
 
 
-struct ColumnBox { std::wstring id; double x1, y1, x2, y2, height; };
-
-
-std::vector<ColumnBox> ReadColumns (const API_RoomRelation& rel)
+// Контуры зоны (внешний и отверстия) из memo
+otd::Polys ZonePolys (const API_ElementMemo& memo)
 {
-	std::vector<ColumnBox> res;
-	const API_ElemType et (API_ColumnID);
-	if (!rel.elementsGroupedByType.ContainsKey (et))
-		return res;
-	for (const API_Guid& g : rel.elementsGroupedByType[et]) {
-		API_Element el = {};
-		el.header.guid = g;
-		if (ACAPI_Element_Get (&el) != NoError)
-			continue;
-		API_Box3D box = {};
-		if (ACAPI_Element_CalcBounds (&el.header, &box) != NoError)
-			continue;
-		res.push_back ({ ElemId (g), box.xMin, box.yMin, box.xMax, box.yMax, el.column.height });
-	}
-	return res;
-}
-
-
-struct Edge { double x1, y1, x2, y2; };
-
-std::vector<Edge> ZoneEdges (const API_ElementMemo& memo)
-{
-	std::vector<Edge> res;
+	otd::Polys res;
 	if (memo.coords == nullptr || memo.pends == nullptr)
 		return res;
 	const Int32 nSub = (Int32) (BMGetHandleSize ((GSConstHandle) memo.pends) / sizeof (Int32)) - 1;
 	for (Int32 k = 1; k <= nSub; ++k) {
 		const Int32 i1 = (*memo.pends)[k - 1] + 1, i2 = (*memo.pends)[k];
-		for (Int32 i = i1; i < i2; ++i) {
-			const API_Coord& a = (*memo.coords)[i];
-			const API_Coord& b = (*memo.coords)[i + 1];
-			res.push_back ({ a.x, a.y, b.x, b.y });
-		}
+		std::vector<otd::Pt> poly;
+		for (Int32 i = i1; i < i2; ++i)			// последняя точка = первой, её не берём
+			poly.push_back ({ (*memo.coords)[i].x, (*memo.coords)[i].y });
+		if (poly.size () >= 3)
+			res.push_back (poly);
 	}
 	return res;
 }
@@ -697,44 +673,60 @@ bool ReadPropertyText (const API_Guid& elem, const API_Guid& def, std::wstring& 
 }
 
 
-// ----------------------------------------------------------------------------- стены по контуру зоны
-// Стены, которые Archicad не связал с зоной (другой этаж, «не влияет на зоны» и т. п.), ищутся по геометрии:
-// грань прямой ортогональной стены лежит на ребре контура зоны и стена проходит по высоте зоны.
-struct WallGeo {
+// ----------------------------------------------------------------------------- стены и колонны в плане
+// Все прямые ортогональные стены и колонны проекта — прямоугольники в плане с отметками низа и верха.
+// Отделка зоны — грани этих прямоугольников, обращённые в зону (otd::ExposedFaces), независимо от того,
+// связал ли Archicad элемент с зоной (стена другого этажа, «не влияет на зоны», пилон внутри зоны).
+struct ElemGeo {
 	API_Guid	guid = APINULLGuid;
+	bool		isColumn = false;
+	bool		ortho = false;						// прямоугольник в плане точный
 	double		x1 = 0, y1 = 0, x2 = 0, y2 = 0;		// габарит в плане
 	double		bot = 0, top = 0;					// абсолютные отметки, м
-	API_Coord	begC = {}, endC = {};
-	bool		ortho = false;
+	API_Coord	begC = {}, endC = {};				// ось стены
+	double		height = 0;
 };
 
-std::vector<WallGeo> LoadWallGeo (const std::vector<StoryRec>& stories)
+std::vector<ElemGeo> LoadElemGeo (const std::vector<StoryRec>& stories, bool skipHidden, LayerCache& layers)
 {
-	std::vector<WallGeo> res;
-	GS::Array<API_Guid> list;
-	if (ACAPI_Element_GetElemList (API_ElemType (API_WallID), &list) != NoError)
-		return res;
+	std::vector<ElemGeo> res;
 	std::map<int, double> lev;
 	for (const auto& r : stories) lev[r.index] = r.level;
-	for (const API_Guid& g : list) {
-		API_Element el = {};
-		el.header.guid = g;
-		if (ACAPI_Element_Get (&el) != NoError)
+	for (API_ElemTypeID type : { API_WallID, API_ColumnID }) {
+		GS::Array<API_Guid> list;
+		if (ACAPI_Element_GetElemList (API_ElemType (type), &list) != NoError)
 			continue;
-		WallGeo w;
-		w.guid = g;
-		w.begC = el.wall.begC;
-		w.endC = el.wall.endC;
-		w.ortho = el.wall.type == APIWtyp_Normal && std::fabs (el.wall.angle) < 1e-6 &&
-				  (std::fabs (w.begC.x - w.endC.x) < 1e-3 || std::fabs (w.begC.y - w.endC.y) < 1e-3);
-		API_Box3D box = {};
-		if (ACAPI_Element_CalcBounds (&el.header, &box) != NoError)
-			continue;
-		w.x1 = box.xMin; w.y1 = box.yMin; w.x2 = box.xMax; w.y2 = box.yMax;
-		const auto it = lev.find (el.header.floorInd);
-		w.bot = (it != lev.end () ? it->second : 0.0) + el.wall.bottomOffset;
-		w.top = w.bot + el.wall.height;
-		res.push_back (w);
+		for (const API_Guid& g : list) {
+			API_Element el = {};
+			el.header.guid = g;
+			if (ACAPI_Element_Get (&el) != NoError)
+				continue;
+			if (skipHidden && ReadLayer (el.header.layer, layers).hidden)
+				continue;
+			ElemGeo w;
+			w.guid = g;
+			w.isColumn = type == API_ColumnID;
+			const double base = lev.count (el.header.floorInd) ? lev[el.header.floorInd] : 0.0;
+			if (w.isColumn) {
+				const double a = std::fmod (std::fabs (el.column.axisRotationAngle), 1.5707963267948966);
+				w.ortho = !el.column.isSlanted && (a < 1e-4 || 1.5707963267948966 - a < 1e-4);
+				w.bot = base + el.column.bottomOffset;
+				w.height = el.column.height;
+			} else {
+				w.begC = el.wall.begC;
+				w.endC = el.wall.endC;
+				w.ortho = el.wall.type == APIWtyp_Normal && std::fabs (el.wall.angle) < 1e-6 &&
+						  (std::fabs (w.begC.x - w.endC.x) < 1e-3 || std::fabs (w.begC.y - w.endC.y) < 1e-3);
+				w.bot = base + el.wall.bottomOffset;
+				w.height = el.wall.height;
+			}
+			w.top = w.bot + w.height;
+			API_Box3D box = {};
+			if (ACAPI_Element_CalcBounds (&el.header, &box) != NoError)
+				continue;
+			w.x1 = box.xMin; w.y1 = box.yMin; w.x2 = box.xMax; w.y2 = box.yMax;
+			res.push_back (w);
+		}
 	}
 	return res;
 }
@@ -777,7 +769,8 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 	const double ceil = st.ceilMm / 1000.0;
 	const std::wstring libPrefix = otd::Lower (st.zoneLib);
 	LayerCache layerCache;
-	const std::vector<WallGeo> allWalls = LoadWallGeo (stories);
+	const std::vector<ElemGeo> allElems = LoadElemGeo (stories, st.skipHidden, layerCache);
+	std::map<API_Guid, std::vector<OpeningInfo>> openCache;
 	std::map<int, double> storyLevel;
 	for (const auto& sr : stories) storyLevel[sr.index] = sr.level;
 
@@ -849,7 +842,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 		}
 		z.ceilFinishRaw = au::ToW (P.Str ("stUpMat"));
 		z.wallFinishRaw = au::ToW (P.Str ("stWallMat"));
-		const std::vector<Edge> edges = ZoneEdges (memo);
+		const otd::Polys polys = ZonePolys (memo);
 		ACAPI_DisposeElemMemoHdls (&memo);
 
 		// площадь потолка = чистая площадь зоны
@@ -882,9 +875,91 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 			z.floorSource = L"из окна (категория " + z.catCode + L")";
 		}
 
+		// ---- стены и колонны: грани, обращённые в зону (по плану, без учёта связей зоны)
+		const double zBot = (storyLevel.count (el.header.floorInd) ? storyLevel[el.header.floorInd] : 0.0) + el.zone.roomBaseLev;
+		const double zTop = zBot + (el.zone.roomHeight > 0.1 ? el.zone.roomHeight : 3.0);
+		double zx1 = 1e30, zy1 = 1e30, zx2 = -1e30, zy2 = -1e30;
+		for (const auto& poly : polys)
+			for (const auto& pt : poly) {
+				zx1 = std::min (zx1, pt.first); zy1 = std::min (zy1, pt.second);
+				zx2 = std::max (zx2, pt.first); zy2 = std::max (zy2, pt.second);
+			}
+		std::vector<const ElemGeo*> nearElems;			// элементы у зоны, проходящие по её высоте
+		std::vector<otd::Box> boxes;
+		for (const ElemGeo& e : allElems) {
+			if (e.x2 < zx1 - 0.1 || e.x1 > zx2 + 0.1 || e.y2 < zy1 - 0.1 || e.y1 > zy2 + 0.1)
+				continue;
+			if (std::min (e.top, zTop) - std::max (e.bot, zBot) < 0.3)
+				continue;
+			nearElems.push_back (&e);
+			boxes.push_back ({ e.x1, e.y1, e.x2, e.y2 });
+		}
+		std::vector<API_Guid> relWalls;
+		if (hasRel)
+			for (const API_WallPart& part : rel.wallPart) relWalls.push_back (part.guid);
+		std::set<API_Guid> doneGeo;					// стены, посчитанные по плану
+		for (size_t i = 0; i < nearElems.size (); ++i) {
+			const ElemGeo& e = *nearElems[i];
+			if (!e.ortho)
+				continue;
+			const std::vector<otd::FaceRun> runs = otd::ExposedFaces (polys, boxes, i);
+			double len = 0;
+			for (const auto& r : runs) len += r.Length ();
+			if (len < 0.02)
+				continue;
+			otd::WallPiece p;
+			const double bot = std::max (e.bot, zBot), top = std::min (e.top, zTop);
+			const double lo = bot + z.floorThick, hi = top - ceil;
+			p.length = len;
+			p.elemHeight = top - bot;
+			p.finishHeight = std::max (0.0, hi - lo);
+			if (e.isColumn) {
+				p.elemId = ElemId (e.guid);
+				p.construction = L"колонна / пилон";
+				p.isColumn = true;
+				p.column = rules.columnsColumn;
+			} else {
+				const WallInfo wi = ReadWall (e.guid, rules, wallCache);
+				p.elemId = wi.id;
+				p.construction = wi.construction;
+				p.column = wi.column;
+				p.byContour = std::find (relWalls.begin (), relWalls.end (), e.guid) == relWalls.end ();
+				doneGeo.insert (e.guid);
+				if (st.subtractOpenings) {
+					auto it = openCache.find (e.guid);
+					if (it == openCache.end ()) it = openCache.emplace (e.guid, WallOpenings (e.guid)).first;
+					const double wl = std::hypot (e.endC.x - e.begC.x, e.endC.y - e.begC.y);
+					if (wl > 1e-6 && !it->second.empty ()) {
+						const double ux = (e.endC.x - e.begC.x) / wl, uy = (e.endC.y - e.begC.y) / wl;
+						for (const auto& r : runs) {
+							const double ta = (r.ax - e.begC.x) * ux + (r.ay - e.begC.y) * uy;
+							const double tb = (r.bx - e.begC.x) * ux + (r.by - e.begC.y) * uy;
+							const double t1 = std::min (ta, tb), t2 = std::max (ta, tb);
+							if (t2 - t1 < 0.01) continue;		// торец стены
+							for (const OpeningInfo& o : it->second) {
+								const double ow = std::min (o.loc + o.width / 2, t2) - std::max (o.loc - o.width / 2, t1);
+								if (ow <= 1e-4) continue;
+								const double oh = otd::OpeningOverlap (e.bot + o.lower, o.height, lo, hi);
+								if (oh <= 0) continue;
+								p.openings += ow * oh;
+								p.nOpenings += 1;
+							}
+						}
+					}
+				}
+				if (p.byContour) ++rs.byContour;
+			}
+			z.pieces.push_back (p);
+			if (p.column == 0)
+				rs.unknown[p.construction.empty () ? std::wstring (L"(без названия)") : p.construction] += p.Area ();
+		}
+
+		// ---- стены из связей зоны, которые по плану не посчитаны (косые, дуговые, многоугольные)
 		if (hasRel) {
 			const std::vector<OpeningInfo> openings = st.subtractOpenings ? ReadOpenings (rel) : std::vector<OpeningInfo> ();
 			for (const API_WallPart& part : rel.wallPart) {
+				if (doneGeo.count (part.guid) != 0)
+					continue;
 				const WallInfo w = ReadWall (part.guid, rules, wallCache);
 				if (!w.ok)
 					continue;
@@ -914,107 +989,11 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 				if (p.column == 0)
 					rs.unknown[w.construction.empty () ? std::wstring (L"(без названия)") : w.construction] += p.Area ();
 			}
-
-			// колонны и пилоны: рёбра контура зоны, лежащие на колонне
-			const std::vector<ColumnBox> cols = ReadColumns (rel);
-			const double tol = 0.01;
-			for (const Edge& e : edges) {
-				for (const ColumnBox& c : cols) {
-					auto inside = [&] (double x, double y) {
-						return x >= c.x1 - tol && x <= c.x2 + tol && y >= c.y1 - tol && y <= c.y2 + tol;
-					};
-					if (!inside (e.x1, e.y1) || !inside (e.x2, e.y2))
-						continue;
-					otd::WallPiece p;
-					p.elemId = c.id;
-					p.construction = L"колонна / пилон";
-					p.isColumn = true;
-					p.column = rules.columnsColumn;
-					p.length = std::hypot (e.x2 - e.x1, e.y2 - e.y1);
-					p.elemHeight = c.height;
-					p.finishHeight = std::max (0.0, c.height - ceil - z.floorThick);
-					if (p.length > 1e-4)
-						z.pieces.push_back (p);
-					break;
-				}
-			}
-
-			// стены по контуру зоны, которых нет в связях зоны; участки контура без стен
-			std::vector<API_Guid> relWalls;
-			for (const API_WallPart& part : rel.wallPart) relWalls.push_back (part.guid);
-			const double zBot = (storyLevel.count (el.header.floorInd) ? storyLevel[el.header.floorInd] : 0.0) + el.zone.roomBaseLev;
-			const double zTop = zBot + (el.zone.roomHeight > 0.1 ? el.zone.roomHeight : 3.0);
-			const double tolC = 0.03;
-			for (const Edge& e : edges) {
-				otd::Seg sg; sg.x1 = e.x1; sg.y1 = e.y1; sg.x2 = e.x2; sg.y2 = e.y2;
-				const double len = sg.Length ();
-				if (len < 0.05 || !otd::IsAxisEdge (sg))
-					continue;
-				std::vector<std::pair<double, double>> cov;
-				for (const ColumnBox& c : cols) {
-					double a, b;
-					if (otd::EdgeOnBox (sg, c.x1, c.y1, c.x2, c.y2, tolC, a, b)) cov.push_back ({ a, b });
-				}
-				std::vector<std::pair<const WallGeo*, std::pair<double, double>>> extra;
-				for (const WallGeo& w : allWalls) {
-					if (!w.ortho || std::min (w.top, zTop) - std::max (w.bot, zBot) < 0.5)
-						continue;
-					double a, b;
-					if (!otd::EdgeOnBox (sg, w.x1, w.y1, w.x2, w.y2, tolC, a, b))
-						continue;
-					if (std::find (relWalls.begin (), relWalls.end (), w.guid) != relWalls.end ())
-						cov.push_back ({ a, b });
-					else
-						extra.push_back ({ &w, { a, b } });
-				}
-				for (const auto& ex : extra) {
-					const WallGeo& w = *ex.first;
-					const double a = ex.second.first, b = ex.second.second;
-					const double free = otd::UncoveredLength (a, b, cov);
-					cov.push_back ({ a, b });
-					if (free < 0.05)
-						continue;
-					const WallInfo wi = ReadWall (w.guid, rules, wallCache);
-					otd::WallPiece p;
-					p.elemId = wi.id;
-					p.construction = wi.construction;
-					p.column = wi.column;
-					p.byContour = true;
-					p.length = free;
-					const double bot = std::max (w.bot, zBot), top = std::min (w.top, zTop);
-					p.elemHeight = top - bot;
-					const double lo = bot + z.floorThick, hi = top - ceil;
-					p.finishHeight = std::max (0.0, hi - lo);
-					if (st.subtractOpenings) {
-						// отрезок ребра -> координата вдоль стены от begC
-						const double wl = std::hypot (w.endC.x - w.begC.x, w.endC.y - w.begC.y);
-						if (wl > 1e-6) {
-							const double ux = (w.endC.x - w.begC.x) / wl, uy = (w.endC.y - w.begC.y) / wl;
-							auto along = [&] (double t) {
-								const double px = sg.x1 + (sg.x2 - sg.x1) * t / len, py = sg.y1 + (sg.y2 - sg.y1) * t / len;
-								return (px - w.begC.x) * ux + (py - w.begC.y) * uy;
-							};
-							const double t1 = std::min (along (a), along (b)), t2 = std::max (along (a), along (b));
-							for (const OpeningInfo& o : WallOpenings (w.guid)) {
-								const double ow = std::min (o.loc + o.width / 2, t2) - std::max (o.loc - o.width / 2, t1);
-								if (ow <= 1e-4) continue;
-								const double oh = otd::OpeningOverlap (w.bot + o.lower, o.height, lo, hi);
-								if (oh <= 0) continue;
-								p.openings += ow * oh;
-								p.nOpenings += 1;
-							}
-						}
-					}
-					z.pieces.push_back (p);
-					++rs.byContour;
-					if (p.column == 0)
-						rs.unknown[wi.construction.empty () ? std::wstring (L"(без названия)") : wi.construction] += p.Area ();
-				}
-				for (const auto& gp : otd::Gaps (len, cov, 0.1))
-					z.gaps.push_back (gp.second - gp.first);
-			}
 			ACAPI_DisposeRoomRelationHdls (&rel);
 		}
+
+		// ---- участки контура без стен и колонн (проходы)
+		z.gaps = otd::ContourGaps (polys, boxes);
 		if (!z.gaps.empty ()) ++rs.zonesWithGaps;
 		res.push_back (z);
 	}

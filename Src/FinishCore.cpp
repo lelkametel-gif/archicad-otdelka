@@ -698,4 +698,126 @@ std::vector<std::pair<double, double>> Gaps (double len, const std::vector<std::
 	return res;
 }
 
+// ============================================================================= грани элементов внутри зоны
+
+double FaceRun::Length () const { return std::hypot (bx - ax, by - ay); }
+
+
+bool PointInPolys (const Polys& p, double x, double y)
+{
+	bool in = false;
+	for (const auto& poly : p) {
+		const size_t n = poly.size ();
+		for (size_t i = 0, j = n - 1; i < n; j = i++) {
+			const double xi = poly[i].first, yi = poly[i].second, xj = poly[j].first, yj = poly[j].second;
+			if ((yi > y) != (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi)
+				in = !in;
+		}
+	}
+	return in;
+}
+
+
+static bool InBox (const Box& b, double x, double y)
+{
+	return x > b.x1 && x < b.x2 && y > b.y1 && y < b.y2;
+}
+
+
+std::vector<FaceRun> ExposedFaces (const Polys& zone, const std::vector<Box>& boxes, size_t idx, double step)
+{
+	static const double kDepth[] = { 0.005, 0.015, 0.03, 0.05 };
+	std::vector<FaceRun> res;
+	const Box& b = boxes[idx];
+	for (int f = 0; f < 4; ++f) {
+		// грань: от (sx,sy) до (ex,ey), наружная нормаль (nx,ny)
+		double sx, sy, ex, ey, nx, ny;
+		switch (f) {
+			case 0:  sx = b.x1; sy = b.y1; ex = b.x2; ey = b.y1; nx = 0; ny = -1; break;
+			case 1:  sx = b.x2; sy = b.y1; ex = b.x2; ey = b.y2; nx = 1; ny = 0; break;
+			case 2:  sx = b.x1; sy = b.y2; ex = b.x2; ey = b.y2; nx = 0; ny = 1; break;
+			default: sx = b.x1; sy = b.y1; ex = b.x1; ey = b.y2; nx = -1; ny = 0; break;
+		}
+		const double len = std::hypot (ex - sx, ey - sy);
+		if (len < step) continue;
+		const int n = (int) std::floor (len / step);
+		const double st = len / n, ux = (ex - sx) / len, uy = (ey - sy) / len;
+		int runStart = -1;
+		auto flush = [&] (int endK) {
+			if (runStart < 0) return;
+			FaceRun r; r.face = f;
+			r.ax = sx + ux * runStart * st; r.ay = sy + uy * runStart * st;
+			r.bx = sx + ux * endK * st;     r.by = sy + uy * endK * st;
+			res.push_back (r);
+			runStart = -1;
+		};
+		for (int k = 0; k < n; ++k) {
+			const double px = sx + ux * (k + 0.5) * st, py = sy + uy * (k + 0.5) * st;
+			bool exposed = false;
+			// грань внутри соседнего элемента (стык стен) — не отделывается;
+			// совпадающие грани двух элементов (одна линия, одна сторона) считаются один раз
+			bool inside = false;
+			for (size_t o = 0; o < boxes.size () && !inside; ++o) {
+				if (o == idx) continue;
+				const Box& ob = boxes[o];
+				const double e = 1e-4;
+				if (px > ob.x1 + e && px < ob.x2 - e && py > ob.y1 + e && py < ob.y2 - e) { inside = true; break; }
+				if (o < idx && px >= ob.x1 - e && px <= ob.x2 + e && py >= ob.y1 - e && py <= ob.y2 + e) {
+					const double face = (f == 0) ? ob.y1 : (f == 1) ? ob.x2 : (f == 2) ? ob.y2 : ob.x1;
+					const double mine = (f == 0) ? b.y1 : (f == 1) ? b.x2 : (f == 2) ? b.y2 : b.x1;
+					if (std::fabs (face - mine) < e) inside = true;
+				}
+			}
+			for (double d : kDepth) {
+				if (inside) break;
+				const double qx = px + nx * d, qy = py + ny * d;
+				bool blocked = false;
+				for (size_t o = 0; o < boxes.size () && !blocked; ++o)
+					if (o != idx && InBox (boxes[o], qx, qy)) blocked = true;
+				if (blocked) break;
+				if (PointInPolys (zone, qx, qy)) { exposed = true; break; }
+			}
+			if (exposed) { if (runStart < 0) runStart = k; }
+			else flush (k);
+		}
+		flush (n);
+	}
+	return res;
+}
+
+
+std::vector<double> ContourGaps (const Polys& zone, const std::vector<Box>& boxes, double minLen, double step)
+{
+	std::vector<double> res;
+	for (const auto& poly : zone) {
+		const size_t n = poly.size ();
+		for (size_t i = 0; i < n; ++i) {
+			const Pt a = poly[i], b = poly[(i + 1) % n];
+			const double len = std::hypot (b.first - a.first, b.second - a.second);
+			if (len < minLen) continue;
+			const double ux = (b.first - a.first) / len, uy = (b.second - a.second) / len;
+			const int m = std::max (1, (int) std::floor (len / step));
+			const double st = len / m;
+			double gap = 0;
+			for (int k = 0; k <= m; ++k) {
+				bool covered = true;
+				if (k < m) {
+					const double px = a.first + ux * (k + 0.5) * st, py = a.second + uy * (k + 0.5) * st;
+					covered = false;
+					for (int side = -1; side <= 1 && !covered; side += 2)		// элемент с любой стороны ребра в пределах 5 см
+						for (double d : { 0.005, 0.02, 0.05 }) {
+							const double qx = px - uy * d * side, qy = py + ux * d * side;
+							if (PointInPolys (zone, qx, qy)) continue;		// это сторона зоны
+							for (const Box& bx : boxes) if (InBox (bx, qx, qy)) { covered = true; break; }
+							if (covered) break;
+						}
+				}
+				if (!covered) gap += st;
+				else { if (gap >= minLen) res.push_back (gap); gap = 0; }
+			}
+		}
+	}
+	return res;
+}
+
 }	// namespace otd

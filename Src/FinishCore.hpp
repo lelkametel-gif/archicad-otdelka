@@ -79,6 +79,26 @@ double			UncoveredLength (double a, double b, const std::vector<std::pair<double
 // Непокрытые участки [0,len] длиннее minLen
 std::vector<std::pair<double, double>>	Gaps (double len, const std::vector<std::pair<double, double>>& covered, double minLen);
 
+// ----------------------------------------------------------------------------- грани элементов внутри зоны
+// Стены и колонны в плане — прямоугольники. Грань считается отделываемой в зоне там, где сразу за ней
+// (идя от грани наружу до 5 см) начинается зона и нет другого элемента (облицовочной стенки, соседней стены).
+using Pt = std::pair<double, double>;
+using Polys = std::vector<std::vector<Pt>>;		// контуры зоны (внешний и отверстия), правило чёт-нечет
+
+struct Box { double x1 = 0, y1 = 0, x2 = 0, y2 = 0; };
+
+struct FaceRun {
+	int		face = 0;				// 0 низ (y1), 1 право (x2), 2 верх (y2), 3 лево (x1)
+	double	ax = 0, ay = 0, bx = 0, by = 0;
+	double	Length () const;
+};
+
+bool					PointInPolys (const Polys& p, double x, double y);
+// Отделываемые участки граней прямоугольника boxes[idx]
+std::vector<FaceRun>	ExposedFaces (const Polys& zone, const std::vector<Box>& boxes, size_t idx, double step = 0.01);
+// Участки контура зоны, вдоль которых снаружи нет ни одного элемента (проходы), длины, м
+std::vector<double>		ContourGaps (const Polys& zone, const std::vector<Box>& boxes, double minLen = 0.1, double step = 0.01);
+
 // ----------------------------------------------------------------------------- площади
 // Часть проёма (низ lower, высота h) внутри полосы отделки [lo, hi]
 double			OpeningOverlap (double lower, double h, double lo, double hi);
