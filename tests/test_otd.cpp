@@ -186,6 +186,24 @@ int main (int argc, char** argv)
 		CHECK (w3.empty () && r3.col3Else == 1 && r3.col3Except.size () == 1);
 	}
 
+	// --- колонна поверх стены: общая грань — у колонны
+	{
+		Polys zone = { { { 0, 0 }, { 3, 0 }, { 3, 6 }, { 0, 6 } } };
+		std::vector<Box> bx = { { -0.2, -0.2, 0.0, 6.2 },		// 0 стена слева на всю длину
+								{ -0.2, 3.0, 0.0, 5.9 } };		// 1 пилон 2,9 м поверх стены, грань совпадает
+		const std::vector<int> pr = { 0, 1 };
+		auto tot = [&] (size_t i) { double s = 0; for (const auto& f : ExposedFaces (zone, bx, i, 0.01, pr)) s += f.Length (); return s; };
+		CHECK (std::fabs (tot (1) - 2.9) < 0.02);
+		CHECK (std::fabs (tot (0) - 3.1) < 0.02);
+		// без приоритета — грань у стены (как было)
+		double s0 = 0; for (const auto& f : ExposedFaces (zone, bx, 0)) s0 += f.Length ();
+		CHECK (std::fabs (s0 - 6.0) < 0.02);
+		// стена проходит сквозь колонну, выступающую в зону
+		std::vector<Box> b2 = { { -0.2, -0.2, 0.0, 6.2 }, { -0.3, 2.0, 0.6, 2.2 } };
+		double s1 = 0; for (const auto& f : ExposedFaces (zone, b2, 1, 0.01, pr)) s1 += f.Length ();
+		CHECK (std::fabs (s1 - (0.6 * 2 + 0.2)) < 0.02);
+	}
+
 	// --- площади
 	NEAR (OpeningOverlap (0, 2.1, 0.08, 2.9), 2.02);
 	NEAR (OpeningOverlap (0.9, 1.5, 0.08, 2.9), 1.5);

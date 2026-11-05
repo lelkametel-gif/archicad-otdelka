@@ -769,7 +769,7 @@ static bool InBox (const Box& b, double x, double y)
 }
 
 
-std::vector<FaceRun> ExposedFaces (const Polys& zone, const std::vector<Box>& boxes, size_t idx, double step)
+std::vector<FaceRun> ExposedFaces (const Polys& zone, const std::vector<Box>& boxes, size_t idx, double step, const std::vector<int>& prio)
 {
 	static const double kDepth[] = { 0.005, 0.015, 0.03, 0.05 };
 	std::vector<FaceRun> res;
@@ -800,14 +800,23 @@ std::vector<FaceRun> ExposedFaces (const Polys& zone, const std::vector<Box>& bo
 			const double px = sx + ux * (k + 0.5) * st, py = sy + uy * (k + 0.5) * st;
 			bool exposed = false;
 			// грань внутри соседнего элемента (стык стен) — не отделывается;
-			// совпадающие грани двух элементов (одна линия, одна сторона) считаются один раз
+			// совпадающие грани двух элементов (одна линия, одна сторона) считаются один раз:
+			// у элемента с большим приоритетом (колонна перед стеной), при равном — у первого
+			auto wins = [&] (size_t o) {
+				const int po = o < prio.size () ? prio[o] : 0, pi = idx < prio.size () ? prio[idx] : 0;
+				return po > pi || (po == pi && o < idx);
+			};
 			bool inside = false;
 			for (size_t o = 0; o < boxes.size () && !inside; ++o) {
 				if (o == idx) continue;
 				const Box& ob = boxes[o];
 				const double e = 1e-4;
-				if (px > ob.x1 + e && px < ob.x2 - e && py > ob.y1 + e && py < ob.y2 - e) { inside = true; break; }
-				if (o < idx && px >= ob.x1 - e && px <= ob.x2 + e && py >= ob.y1 - e && py <= ob.y2 + e) {
+				if (px > ob.x1 + e && px < ob.x2 - e && py > ob.y1 + e && py < ob.y2 - e) {
+					// колонна внутри стены (стена проходит сквозь колонну) — грань колонны не прячется за стеной
+					if (!(idx < prio.size () && o < prio.size () && prio[idx] > prio[o])) { inside = true; break; }
+					continue;
+				}
+				if (wins (o) && px >= ob.x1 - e && px <= ob.x2 + e && py >= ob.y1 - e && py <= ob.y2 + e) {
 					const double face = (f == 0) ? ob.y1 : (f == 1) ? ob.x2 : (f == 2) ? ob.y2 : ob.x1;
 					const double mine = (f == 0) ? b.y1 : (f == 1) ? b.x2 : (f == 2) ? b.y2 : b.x1;
 					if (std::fabs (face - mine) < e) inside = true;

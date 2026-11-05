@@ -893,6 +893,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 			}
 		std::vector<const ElemGeo*> nearElems;			// элементы у зоны, проходящие по её высоте
 		std::vector<otd::Box> boxes;
+		std::vector<int> prio;						// колонна вырезает стену
 		const bool excludedZone = otd::IsExcluded (z, rules);		// 8NNN/9NNN — в ведомость не входит, по плану не считаем
 		for (const ElemGeo& e : allElems) {
 			if (excludedZone) break;
@@ -902,6 +903,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 				continue;
 			nearElems.push_back (&e);
 			boxes.push_back ({ e.x1, e.y1, e.x2, e.y2 });
+			prio.push_back (e.isColumn ? 1 : 0);
 		}
 		// Основное — связи зоны: стены зоны считаются ниже по связям. По плану добавляются только
 		// элементы, которые ограничивают зону, но не связаны с ней (о них — заметка в таблице проверки),
@@ -917,7 +919,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 			const ElemGeo& e = *nearElems[i];
 			if (!e.ortho || e.hidden || (!e.isColumn && relWalls.count (e.guid) != 0))
 				continue;
-			const std::vector<otd::FaceRun> runs = otd::ExposedFaces (polys, boxes, i);
+			const std::vector<otd::FaceRun> runs = otd::ExposedFaces (polys, boxes, i, 0.01, prio);
 			double len = 0;
 			for (const auto& r : runs) len += r.Length ();
 			if (len < 0.02)
