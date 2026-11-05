@@ -18,6 +18,7 @@ struct TText {
 	double			size = 2.5;			// высота шрифта, мм
 	bool			vertical = false;	// повёрнут на 90°
 	bool			bold = false;
+	bool			left = false;		// x — левый край строки (иначе центр)
 	std::wstring	tag;				// GUID зоны строки таблицы проверки (пусто — нет)
 };
 
@@ -36,6 +37,21 @@ struct TableLayout {
 	std::vector<TText>	texts;
 	double				width = 0, height = 0;
 };
+
+// Ячейка сетки таблицы: строки r1..r2, столбцы c1..c2 (с 0)
+struct GridCell {
+	int				r1 = 0, c1 = 0, r2 = 0, c2 = 0;
+	std::wstring	text;
+	bool			vertical = false;
+	bool			bold = false;
+	bool			left = false;		// по левому краю (отступ indent, мм)
+	double			indent = 0;
+	std::wstring	tag;
+};
+
+// Таблица из ячеек: высоты строк по тексту, линии между разными ячейками, заголовок над таблицей
+TableLayout		RenderGrid (const std::vector<GridCell>& cells, int nRows, int headerRows, const std::vector<double>& colW,
+							const TableStyle& st, const std::wstring& title);
 
 // Перенос по словам в ширину widthMm (длинное слово режется)
 std::vector<std::wstring>	WrapText (const std::wstring& text, double widthMm, double size, double charFactor);

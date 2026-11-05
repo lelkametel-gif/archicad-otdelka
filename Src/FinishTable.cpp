@@ -45,30 +45,13 @@ std::vector<std::wstring> WrapText (const std::wstring& text, double widthMm, do
 }
 
 
-namespace {
-
-struct GCell {
-	int				r1, c1, r2, c2;
-	std::wstring	text;
-	bool			vertical = false;
-	bool			bold = false;
-	std::wstring	tag;
-};
-
-}	// namespace
-
-
-static TableLayout Render (const std::vector<GCell>& cells, int nRows, int headerRows, const std::vector<double>& colW,
-						   const TableStyle& st, const std::wstring& title);
-
-
 TableLayout LayoutSheet (const Sheet& sh, const TableStyle& st)
 {
 	const int nCols = (int) st.colW.size ();		// 2 + 2 + 2*3 + 1 = 11
 	const int lastCol = nCols - 1;
-	std::vector<GCell> cells;
+	std::vector<GridCell> cells;
 	auto add = [&cells] (int r1, int c1, int r2, int c2, const std::wstring& t, bool vert = false) {
-		GCell g; g.r1 = r1; g.c1 = c1; g.r2 = r2; g.c2 = c2; g.text = t; g.vertical = vert;
+		GridCell g; g.r1 = r1; g.c1 = c1; g.r2 = r2; g.c2 = c2; g.text = t; g.vertical = vert;
 		cells.push_back (g);
 	};
 
@@ -106,30 +89,30 @@ TableLayout LayoutSheet (const Sheet& sh, const TableStyle& st)
 		}
 		add (first, 0, r - 1, 0, g, true);
 	}
-	return Render (cells, r, 2, st.colW, st, sh.title);
+	return RenderGrid (cells, r, 2, st.colW, st, sh.title);
 }
 
 
-static TableLayout Render (const std::vector<GCell>& cells, int nRows, int headerRows, const std::vector<double>& colW,
+TableLayout RenderGrid (const std::vector<GridCell>& cells, int nRows, int headerRows, const std::vector<double>& colW,
 						   const TableStyle& st, const std::wstring& title)
 {
 	const int nCols = (int) colW.size ();
 
 	// ---- высоты строк
 	const double lineH = st.textSize * st.lineFactor;
-	auto spanW = [&colW] (const GCell& g) {
+	auto spanW = [&colW] (const GridCell& g) {
 		double w = 0;
 		for (int c = g.c1; c <= g.c2; ++c) w += colW[(size_t) c];
 		return w;
 	};
 	std::vector<double> rowH ((size_t) nRows, st.minRow);
 	for (int k = 0; k < headerRows && k < nRows; ++k) rowH[(size_t) k] = 7;
-	for (const GCell& g : cells) {
+	for (const GridCell& g : cells) {
 		if (g.r1 != g.r2 || g.vertical) continue;
 		const size_t n = WrapText (g.text, (spanW (g) - 2 * st.pad) * (g.bold ? 0.88 : 1.0), st.textSize, st.charFactor).size ();
 		rowH[(size_t) g.r1] = std::max (rowH[(size_t) g.r1], n * lineH + 2 * st.pad);
 	}
-	for (const GCell& g : cells) {
+	for (const GridCell& g : cells) {
 		if (g.r1 == g.r2 && !g.vertical) continue;
 		double need;
 		if (g.vertical) {
@@ -154,7 +137,7 @@ static TableLayout Render (const std::vector<GCell>& cells, int nRows, int heade
 	t.height = -ys.back ();
 
 	// ---- тексты
-	for (const GCell& g : cells) {
+	for (const GridCell& g : cells) {
 		if (Trim (g.text).empty ()) continue;
 		const double cx = (xs[(size_t) g.c1] + xs[(size_t) g.c2 + 1]) / 2;
 		const double cy = (ys[(size_t) g.r1] + ys[(size_t) g.r2 + 1]) / 2;
@@ -170,11 +153,12 @@ static TableLayout Render (const std::vector<GCell>& cells, int nRows, int heade
 				t.texts.push_back (tx);
 			}
 		} else {
-			const std::vector<std::wstring> lines = WrapText (g.text, (spanW (g) - 2 * st.pad) * (g.bold ? 0.88 : 1.0), st.textSize, st.charFactor);
+			const std::vector<std::wstring> lines = WrapText (g.text, (spanW (g) - 2 * st.pad - g.indent) * (g.bold ? 0.88 : 1.0), st.textSize, st.charFactor);
 			const double n = (double) lines.size ();
 			for (size_t li = 0; li < lines.size (); ++li) {
 				TText tx;
-				tx.x = cx;
+				tx.x = g.left ? xs[(size_t) g.c1] + st.pad + g.indent : cx;
+				tx.left = g.left;
 				tx.y = cy + (n - 1) / 2 * lineH - (double) li * lineH;
 				tx.text = lines[li]; tx.size = st.textSize; tx.bold = g.bold; tx.tag = g.tag;
 				t.texts.push_back (tx);
@@ -309,9 +293,9 @@ TableLayout LayoutCheck (const std::vector<ZoneData>& zones, const Rules& r, con
 	const std::vector<double> colW = { 12, 14, 40, 40, 12, 17, 16, 16, 16, 18, 15, 17, 17, 17, 30, 54, 80 };
 	const int cL = 6, cH = 9, cO = 10, cW = 11, cGr = 14, cFin = 15;	// длины, высота, проёмы, площади, подкатегория, отделка
 	const int last = (int) colW.size () - 1;
-	std::vector<GCell> cells;
+	std::vector<GridCell> cells;
 	auto add = [&cells] (int r1, int c1, int r2, int c2, const std::wstring& t, bool vert = false, bool bold = false) {
-		GCell g; g.r1 = r1; g.c1 = c1; g.r2 = r2; g.c2 = c2; g.text = t; g.vertical = vert; g.bold = bold;
+		GridCell g; g.r1 = r1; g.c1 = c1; g.r2 = r2; g.c2 = c2; g.text = t; g.vertical = vert; g.bold = bold;
 		cells.push_back (g);
 	};
 	auto num = [] (double v) { return v >= 0.05 ? FormatNum (v, 1) : std::wstring (L"-"); };
@@ -405,7 +389,7 @@ TableLayout LayoutCheck (const std::vector<ZoneData>& zones, const Rules& r, con
 	}
 	TableStyle s2 = st;
 	s2.minRow = 6;
-	return Render (cells, row, 1, colW, s2, title);
+	return RenderGrid (cells, row, 1, colW, s2, title);
 }
 
 
@@ -430,8 +414,8 @@ std::string LayoutSvg (const TableLayout& t)
 		for (char ch : ToUtf8 (tx.text)) {
 			if (ch == '<') esc += "&lt;"; else if (ch == '&') esc += "&amp;"; else esc += ch;
 		}
-		snprintf (buf, sizeof (buf), "<text x=\"%.1f\" y=\"%.1f\" font-family=\"Arial\" font-size=\"%.1f\" text-anchor=\"middle\" "
-				  "dominant-baseline=\"middle\"%s%s>", X (tx.x), Y (tx.y), tx.size * s * 1.35,
+		snprintf (buf, sizeof (buf), "<text x=\"%.1f\" y=\"%.1f\" font-family=\"Arial\" font-size=\"%.1f\" text-anchor=\"%s\" "
+				  "dominant-baseline=\"middle\"%s%s>", X (tx.x), Y (tx.y), tx.size * s * 1.35, tx.left ? "start" : "middle",
 				  tx.bold ? " font-weight=\"bold\"" : "", "");
 		x += buf;
 		if (tx.vertical) {

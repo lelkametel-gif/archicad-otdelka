@@ -30,6 +30,7 @@
 #include "FinishReport.hpp"
 #include "XlsxWriter.hpp"
 #include "FinishTable.hpp"
+#include "TepCore.hpp"
 #include "ApiUtils.hpp"
 
 #include <algorithm>
@@ -1257,8 +1258,8 @@ GSErrCode DrawTable (const otd::TableLayout& t, DrawResult& dr)
 		el.text.loc.x = tx.x * k;
 		el.text.loc.y = tx.y * k;
 		el.text.size = tx.size;
-		el.text.anchor = APIAnc_MM;
-		el.text.just = APIJust_Center;
+		el.text.anchor = tx.left ? APIAnc_LM : APIAnc_MM;
+		el.text.just = tx.left ? APIJust_Left : APIJust_Center;
 		el.text.angle = tx.vertical ? 1.5707963267948966 : 0.0;
 		el.text.faceBits = tx.bold ? APIFace_Bold : APIFace_Plain;
 		el.text.nonBreaking = true;
@@ -1282,6 +1283,376 @@ GSErrCode DrawTable (const otd::TableLayout& t, DrawResult& dr)
 		ACAPI_DisposeElemMemoHdls (&memo);
 	}
 	return NoError;
+}
+
+
+// ============================================================================= паспорта квартир и ТЭП
+
+const wchar_t*	kPassportLib = L"Паспорт_АСП";
+
+std::wstring SafeFileName (std::wstring s)
+{
+	for (wchar_t& c : s)
+		if (c == L'\\' || c == L'/' || c == L':' || c == L'*' || c == L'?' || c == L'"' || c == L'<' || c == L'>' || c == L'|' || c == L';')
+			c = L'_';
+	return s;
+}
+
+// «ТЭП - <имя проекта>» (у безымянного проекта — «ТЭП»)
+std::wstring TepFileBase ()
+{
+	API_ProjectInfo pi;
+	if (ACAPI_ProjectOperation_Project (&pi) == NoError && !pi.untitled && pi.projectName != nullptr) {
+		std::wstring n = otd::Trim (au::ToW (*pi.projectName));
+		const size_t dot = n.rfind (L'.');
+		if (dot != std::wstring::npos && dot + 5 >= n.size ()) n.erase (dot);	// без расширения .pln
+		if (!n.empty ()) return L"ТЭП - " + SafeFileName (n);
+	}
+	return L"ТЭП";
+}
+
+// Данные ТЭП и паспортов: файл в «Документах»; если его нет — создаётся по умолчанию
+tep::Config LoadTepConfig (std::vector<std::wstring>& warnings, std::wstring& path, bool& created)
+{
+	created = false;
+	IO::Location loc;
+	if (!DocumentsFile (TepFileBase () + L".txt", loc))
+		return tep::ParseConfig (tep::DefaultConfigText (), &warnings);
+	path = PathOf (loc);
+	std::string bytes;
+	if (!ReadBytes (loc, bytes)) {
+		std::wstring crlf;
+		for (wchar_t c : tep::DefaultConfigText ()) { if (c == L'\n') crlf += L'\r'; crlf += c; }
+		WriteBytes (loc, "\xEF\xBB\xBF" + otd::ToUtf8 (crlf));
+		created = true;
+		return tep::ParseConfig (tep::DefaultConfigText (), &warnings);
+	}
+	return tep::ParseConfig (otd::FromUtf8 (bytes), &warnings);
+}
+
+
+struct RoomStats {
+	int all = 0, lib = 0, fromStamp = 0, fromArchicad = 0, fromHotlink = 0;
+	std::map<std::wstring, int> hiddenLayers;
+};
+
+// Все зоны HimeraZone всех этажей и секций (зоны на скрытых слоях — по настройке окна ведомости)
+std::vector<tep::Room> ReadRooms (const Settings& st, const std::vector<StoryRec>& stories, const API_Guid& secProp, RoomStats& rs)
+{
+	std::vector<tep::Room> res;
+	GS::Array<API_Guid> list;
+	if (ACAPI_Element_GetElemList (API_ElemType (API_ZoneID), &list) != NoError)
+		return res;
+	const std::wstring libPrefix = otd::Lower (st.zoneLib);
+	LayerCache layerCache;
+	std::map<int, std::wstring> storyName;
+	for (const auto& sr : stories) storyName[sr.index] = sr.name;
+	for (const API_Guid& g : list) {
+		++rs.all;
+		API_Element el = {};
+		el.header.guid = g;
+		if (ACAPI_Element_Get (&el) != NoError)
+			continue;
+		const std::wstring lib = otd::Lower (otd::Trim (au::ToW (au::LibPartName (el.zone.libInd))));
+		if (lib.find (libPrefix) == std::wstring::npos)
+			continue;
+		++rs.lib;
+		const LayerInfo layer = ReadLayer (el.header.layer, layerCache);
+		if (st.skipHidden && layer.hidden) {
+			rs.hiddenLayers[layer.name] += 1;
+			continue;
+		}
+		API_ElementMemo memo = {};
+		if (ACAPI_Element_GetMemo (g, &memo, APIMemoMask_AddPars | APIMemoMask_Polygon) != NoError)
+			continue;
+		tep::Room r;
+		{
+			au::Params P (memo.params);
+			std::wstring sec;
+			if (secProp != APINULLGuid && ReadPropertyText (g, secProp, sec))
+				r.section = sec;
+			else
+				r.section = otd::Trim (au::ToW (P.Str ("asAddOn_stStaircaseCode")));
+			r.apartment = otd::Trim (au::ToW (P.Str ("asAddOn_stApartmentCode")));
+			r.area = P.Real ("asAddOn_CalcArea", 0);		// площадь, как в штампе зоны
+			const otd::Polys polys = ZonePolys (memo);
+			r.x1 = r.y1 = 1e30; r.x2 = r.y2 = -1e30;
+			for (const auto& poly : polys)
+				for (const auto& pt : poly) {
+					r.x1 = std::min (r.x1, pt.first); r.y1 = std::min (r.y1, pt.second);
+					r.x2 = std::max (r.x2, pt.first); r.y2 = std::max (r.y2, pt.second);
+				}
+			if (polys.empty ()) { r.x1 = r.y1 = r.x2 = r.y2 = 0; }
+		}
+		ACAPI_DisposeElemMemoHdls (&memo);
+		r.guid = au::ToW (APIGuidToString (g));
+		r.number = otd::Trim (au::ToW (GS::UniString (el.zone.roomNoStr)));
+		const std::wstring catName = AttrName (API_ZoneCatID, el.zone.catInd);
+		std::wstring catCode;
+		{
+			API_Attribute a = {};
+			a.header.typeID = API_ZoneCatID;
+			a.header.index = el.zone.catInd;
+			if (ACAPI_Attribute_Get (&a) == NoError)
+				catCode = otd::Trim (au::ToW (GS::UniString (a.zoneCat.catCode)));
+		}
+		r.catCode = tep::CodeOf (catCode, catName);
+		r.name = otd::Trim (au::ToW (GS::UniString (el.zone.roomName)));
+		if (r.name.empty ()) r.name = catName;
+		r.story = el.header.floorInd;
+		r.storyName = storyName.count (r.story) ? storyName[r.story] : std::to_wstring (r.story);
+		r.underground = r.story < 0;
+		if (el.header.hotlinkGuid != APINULLGuid) ++rs.fromHotlink;
+		{
+			API_QuantityPar qp = {};
+			qp.minOpeningSize = 0.0001;
+			API_ElementQuantity eq = {};
+			API_Quantities q;
+			q.elements = &eq;
+			API_QuantitiesMask mask;
+			ACAPI_ELEMENT_QUANTITY_MASK_CLEAR (mask);
+			ACAPI_ELEMENT_QUANTITY_MASK_SET (mask, zone, area);
+			ACAPI_ELEMENT_QUANTITY_MASK_SET (mask, zone, calcArea);
+			ACAPI_ELEMENT_QUANTITY_MASK_SET (mask, zone, volume);
+			if (ACAPI_Element_GetQuantities (g, &qp, &q, &mask) == NoError) {
+				r.volume = eq.zone.volume;
+				if (r.area <= 1e-4) {
+					r.area = eq.zone.calcArea > 1e-4 ? eq.zone.calcArea : eq.zone.area;
+					++rs.fromArchicad;
+				} else
+					++rs.fromStamp;
+			}
+		}
+		res.push_back (r);
+	}
+	return res;
+}
+
+
+// Общая часть команд: зоны -> квартиры
+struct AptData {
+	Settings					st;
+	std::vector<StoryRec>		stories;
+	tep::Config					cfg;
+	std::wstring				cfgPath;
+	bool						cfgCreated = false;
+	std::vector<tep::Room>		rooms;
+	std::vector<tep::Apartment>	apts;
+	std::vector<std::wstring>	warn;
+	RoomStats					rs;
+	std::wstring				secInfo;
+};
+
+void LoadAptData (AptData& d)
+{
+	d.st.Parse (LoadModulText (kSettingsKey));
+	{
+		API_DatabaseInfo fp = {};
+		fp.typeID = APIWind_FloorPlanID;
+		ACAPI_Database_ChangeCurrentDatabase (&fp);
+	}
+	d.stories = LoadStories ();
+	std::wstring secPropName;
+	const API_Guid secProp = FindPropertyDef ({ L"Секция №", L"Секция", L"Номер секции" }, secPropName);
+	d.secInfo = secProp != APINULLGuid ? L"Секция — из свойства «" + secPropName + L"», иначе из параметра зоны «Секция»."
+									   : L"Секция — из параметра зоны «Секция».";
+	d.cfg = LoadTepConfig (d.warn, d.cfgPath, d.cfgCreated);
+	d.rooms = ReadRooms (d.st, d.stories, secProp, d.rs);
+	d.apts = tep::BuildApartments (d.rooms, d.cfg, &d.warn);
+}
+
+void AptSummary (const AptData& d, std::vector<std::wstring>& lines)
+{
+	lines.push_back (L"Зон «" + d.st.zoneLib + L"…» в проекте: " + std::to_wstring (d.rs.lib) + L" (всего зон " + std::to_wstring (d.rs.all) +
+					 L"), квартир найдено: " + std::to_wstring (d.apts.size ()) + L". " + d.secInfo);
+	std::map<std::wstring, int> bySec;
+	for (const auto& a : d.apts) bySec[L"секция " + (a.section.empty () ? std::wstring (L"(пусто)") : a.section)] += 1;
+	if (!bySec.empty ())
+		lines.push_back (L"   по секциям: " + JoinCounts (bySec, 20) + L".");
+	if (d.rs.fromHotlink > 0)
+		lines.push_back (L"   Зон из модулей (hotlink): " + std::to_wstring (d.rs.fromHotlink) + L".");
+	if (!d.rs.hiddenLayers.empty ())
+		lines.push_back (L"Пропущены зоны на скрытых слоях: " + JoinCounts (d.rs.hiddenLayers) + L".");
+}
+
+void AptFooter (const AptData& d, std::vector<std::wstring>& lines)
+{
+	if (!d.warn.empty ()) {
+		lines.push_back (L"");
+		for (const auto& w : d.warn) lines.push_back (w);
+	}
+	lines.push_back (L"");
+	lines.push_back (L"Квартира = зоны помещений квартир (категории " + tep::CodesText (d.cfg.apartment) +
+					 L") с одинаковым параметром зоны «Квартира» на одном этаже одной секции.");
+	if (!d.cfgPath.empty ())
+		lines.push_back (L"Данные ТЭП (категории строк, округление, значения вручную): " + d.cfgPath +
+						 (d.cfgCreated ? L" — создан по умолчанию, проверьте категории." : L""));
+}
+
+
+// ---- объект паспорта
+bool PassportLibInd (Int32& libInd)
+{
+	API_LibPart lp = {};
+	const GS::UniString n = au::FromW (kPassportLib);
+	GS::ucsncpy (lp.docu_UName, n.ToUStr (), API_UniLongNameLen - 1);
+	const GSErrCode err = ACAPI_LibraryPart_Search (&lp, false, true);
+	if (lp.location != nullptr) { delete lp.location; lp.location = nullptr; }
+	libInd = lp.index;
+	return err == NoError && libInd > 0;
+}
+
+// true — что-то изменилось
+bool FillPassport (au::Params& P, const tep::Apartment& a, const tep::Config& c)
+{
+	bool changed = false;
+	auto setS = [&] (const char* name, const std::wstring& v) {
+		if (au::ToW (P.Str (name)) != v) { P.SetStr (name, au::FromW (v)); changed = true; }
+	};
+	auto setR = [&] (const char* name, double v) {
+		if (std::fabs (P.Real (name, -1) - v) > 1e-6) { P.SetReal (name, v); changed = true; }
+	};
+	setS ("stType", a.label);
+	setS ("stLiving", tep::PassportNum (a.living, c));
+	setS ("stArea", tep::PassportNum (a.area, c));
+	setS ("stTotal", tep::PassportNum (a.total, c));
+	setS ("stReduced", tep::PassportNum (a.reduced, c));
+	setR ("rLiving", a.living);
+	setR ("rArea", a.area);
+	setR ("rTotal", a.total);
+	setR ("rReduced", a.reduced);
+	setR ("iRooms", a.livingRooms);
+	setS ("stApt", a.code);
+	setS ("stSection", a.section);
+	setS ("stKey", a.Key ());
+	return changed;
+}
+
+struct PassportObj {
+	API_Guid	guid = APINULLGuid;
+	short		floor = 0;
+	std::wstring key;
+	bool		used = false;
+};
+
+std::vector<PassportObj> FindPassports (Int32 libInd, int& inHotlinks)
+{
+	std::vector<PassportObj> res;
+	inHotlinks = 0;
+	GS::Array<API_Guid> list;
+	if (ACAPI_Element_GetElemList (API_ElemType (API_ObjectID), &list) != NoError)
+		return res;
+	for (const API_Guid& g : list) {
+		API_Element el = {};
+		el.header.guid = g;
+		if (ACAPI_Element_Get (&el) != NoError || el.object.libInd != libInd)
+			continue;
+		if (el.header.hotlinkGuid != APINULLGuid) { ++inHotlinks; continue; }
+		API_ElementMemo memo = {};
+		if (ACAPI_Element_GetMemo (g, &memo, APIMemoMask_AddPars) != NoError)
+			continue;
+		PassportObj p;
+		p.guid = g;
+		p.floor = el.header.floorInd;
+		p.key = otd::Trim (au::ToW (au::Params (memo.params).Str ("stKey")));
+		ACAPI_DisposeElemMemoHdls (&memo);
+		res.push_back (p);
+	}
+	return res;
+}
+
+GSErrCode CreatePassport (Int32 libInd, short floor, double x, double y, const tep::Apartment& a, const tep::Config& c)
+{
+	API_Element el = {};
+	el.header.type = API_ObjectID;
+	API_ElementMemo memo = {};
+	GSErrCode err = ACAPI_Element_GetDefaults (&el, &memo);
+	if (err != NoError) { ACAPI_DisposeElemMemoHdls (&memo); return err; }
+	double pa = 0, pb = 0;
+	Int32 n = 0;
+	API_AddParType** pars = nullptr;
+	err = ACAPI_LibraryPart_GetParams (libInd, &pa, &pb, &n, &pars);
+	if (err != NoError) { ACAPI_DisposeElemMemoHdls (&memo); return err; }
+	el.header.guid = APINULLGuid;
+	el.header.floorInd = floor;
+	el.object.libInd = libInd;
+	el.object.xRatio = pa;
+	el.object.yRatio = pb;
+	el.object.pos.x = x;
+	el.object.pos.y = y;
+	el.object.angle = 0;
+	el.object.level = 0;
+	el.object.reflected = false;
+	el.object.linkToSettings.newCreationMode = false;
+	if (memo.params != nullptr) ACAPI_DisposeAddParHdl (&memo.params);
+	memo.params = pars;
+	{
+		au::Params P (memo.params);
+		FillPassport (P, a, c);
+	}
+	err = ACAPI_Element_Create (&el, &memo);
+	ACAPI_DisposeElemMemoHdls (&memo);
+	return err;
+}
+
+GSErrCode UpdatePassport (const API_Guid& g, const tep::Apartment& a, const tep::Config& c, bool& changed)
+{
+	changed = false;
+	API_Element el = {};
+	el.header.guid = g;
+	GSErrCode err = ACAPI_Element_Get (&el);
+	if (err != NoError) return err;
+	API_ElementMemo memo = {};
+	err = ACAPI_Element_GetMemo (g, &memo, APIMemoMask_AddPars);
+	if (err != NoError) return err;
+	{
+		au::Params P (memo.params);
+		changed = FillPassport (P, a, c);
+	}
+	if (changed) {
+		API_Element mask;
+		ACAPI_ELEMENT_MASK_CLEAR (mask);
+		err = ACAPI_Element_Change (&el, &mask, &memo, APIMemoMask_AddPars, true);
+	}
+	ACAPI_DisposeElemMemoHdls (&memo);
+	return err;
+}
+
+// Таблица на рабочем листе name (создаётся при первом запуске, затем перерисовывается целиком)
+GSErrCode DrawOnWorksheet (const std::wstring& name, const std::wstring& ref, const otd::TableLayout& layout, const std::wstring& undoName,
+						   bool& existed, DrawResult& dr, std::wstring& step)
+{
+	API_DatabaseInfo ws = {};
+	step = L"создание листа";
+	GSErrCode err = FindOrCreateWorksheet (name, ref, ws, existed);
+	if (err == NoError) {
+		step = L"открытие листа";
+		API_WindowInfo wi = ws;
+		err = ACAPI_Window_ChangeWindow (&wi);
+		API_DatabaseInfo cur = {};
+		if (err == NoError && (ACAPI_Database_GetCurrentDatabase (&cur) != NoError || !(cur.databaseUnId == ws.databaseUnId))) {
+			step = L"переход на лист";
+			API_DatabaseInfo db = ws;
+			err = ACAPI_Database_ChangeCurrentDatabase (&db);
+		}
+	}
+	if (err == NoError) {
+		step = L"построение таблицы";
+		err = ACAPI_CallUndoableCommand (au::FromW (undoName), [&] () -> GSErrCode { return DrawTable (layout, dr); });
+	}
+	return err;
+}
+
+void DrawReport (const std::wstring& name, GSErrCode err, bool existed, const DrawResult& dr, const std::wstring& step, std::vector<std::wstring>& lines)
+{
+	if (err == NoError) {
+		lines.push_back (L"Таблица построена на рабочем листе «" + name + L"»" + (existed ? L" (лист перерисован заново)" : L"") + L".");
+		if (dr.lineErrs > 0 || dr.textErrs > 0)
+			lines.push_back (L"   Не создано линий: " + std::to_wstring (dr.lineErrs) + L", текстов: " + std::to_wstring (dr.textErrs) + L".");
+		if (dr.layerHidden)
+			lines.push_back (L"   Слой «" + dr.layer + L"» скрыт — включите его, чтобы увидеть таблицу.");
+	} else
+		lines.push_back (L"Таблицу на рабочем листе построить не удалось: шаг «" + step + L"», код " + std::to_wstring (err) + L".");
 }
 
 }	// namespace
@@ -1544,4 +1915,165 @@ void DoSelectZones ()
 			lines.push_back (L"Не найдено в проекте: " + std::to_wstring (missing) + L" — пересчитайте таблицу проверки.");
 		ShowReport (lines);
 	}
+}
+
+// ============================================================================= паспорта квартир на планах этажей
+// Для каждой квартиры (зоны с одинаковым параметром «Квартира») на её этаже — объект «Паспорт_АСП».
+// Уже стоящие паспорта (по ключу «секция|квартира» на том же этаже) только обновляются — место сохраняется.
+
+void DoPassports ()
+{
+	AptData d;
+	LoadAptData (d);
+	std::vector<std::wstring> lines;
+	lines.push_back (L"Паспорта квартир на планах этажей.");
+	AptSummary (d, lines);
+
+	Int32 libInd = 0;
+	if (!PassportLibInd (libInd)) {
+		lines.push_back (L"");
+		lines.push_back (L"Объект «Паспорт_АСП» не найден в загруженных библиотеках. Соберите Паспорт_АСП.gsm (файл «Собрать Паспорт_АСП.bat» рядом с Паспорт_АСП.xml),");
+		lines.push_back (L"добавьте его в библиотеку проекта (Файл → Библиотеки и объекты → Менеджер библиотек) и запустите команду снова.");
+		AptFooter (d, lines);
+		ShowReport (lines);
+		return;
+	}
+
+	double scale = 100;
+	if (ACAPI_Drawing_GetDrawingScale (&scale) != NoError || scale <= 0)
+		scale = 100;
+	double wMm = 18, hMm = 14;		// размер паспорта по умолчанию — из объекта
+	{
+		double pa = 0, pb = 0;
+		Int32 n = 0;
+		API_AddParType** pars = nullptr;
+		if (ACAPI_LibraryPart_GetParams (libInd, &pa, &pb, &n, &pars) == NoError && pars != nullptr) {
+			au::Params P (pars);
+			wMm = P.Real ("wType", 8) + P.Real ("wArea", 10);
+			hMm = 4 * P.Real ("hRow", 3.5);
+			ACAPI_DisposeAddParHdl (&pars);
+		}
+	}
+	const double k = scale / 1000.0, w = wMm * k, h = hMm * k, gap = 6 * k;
+
+	// габарит этажа секции — паспорт ставится снаружи у ближайшего к квартире края
+	std::map<std::wstring, std::vector<double>> box;
+	for (const auto& r : d.rooms) {
+		if (d.cfg.excluded.Has (r.catCode)) continue;
+		auto& b = box[r.section + L"|" + std::to_wstring (r.story)];
+		if (b.empty ()) b = { 1e30, 1e30, -1e30, -1e30 };
+		b[0] = std::min (b[0], r.x1); b[1] = std::min (b[1], r.y1);
+		b[2] = std::max (b[2], r.x2); b[3] = std::max (b[3], r.y2);
+	}
+
+	int inHot = 0;
+	std::vector<PassportObj> objs = FindPassports (libInd, inHot);
+	int created = 0, updated = 0, same = 0, deleted = 0, errs = 0, noKey = 0;
+	GSErrCode firstErr = NoError;
+	std::map<std::wstring, int> createdBySt;
+	ACAPI_CallUndoableCommand (au::FromW (L"Паспорта квартир"), [&] () -> GSErrCode {
+		for (const auto& a : d.apts) {
+			bool found = false;
+			for (auto& o : objs) {
+				if (o.used || o.floor != a.story || o.key != a.Key ()) continue;
+				o.used = true;
+				found = true;
+				bool ch = false;
+				const GSErrCode e = UpdatePassport (o.guid, a, d.cfg, ch);
+				if (e != NoError) { if (errs++ == 0) firstErr = e; }
+				else if (ch) ++updated;
+				else ++same;
+				break;
+			}
+			if (found) continue;
+			const auto bi = box.find (a.section + L"|" + std::to_wstring (a.story));
+			double x = a.x1, y = a.y2;
+			if (bi != box.end ())
+				tep::PassportPlace (a, bi->second[0], bi->second[1], bi->second[2], bi->second[3], w, h, gap, x, y);
+			const GSErrCode e = CreatePassport (libInd, (short) a.story, x, y, a, d.cfg);
+			if (e != NoError) { if (errs++ == 0) firstErr = e; }
+			else { ++created; createdBySt[a.storyName] += 1; }
+		}
+		// паспорта квартир, которых больше нет (номер квартиры изменён / зоны удалены), и повторы
+		GS::Array<API_Guid> del;
+		for (const auto& o : objs) {
+			if (o.used) continue;
+			if (o.key.empty ()) { ++noKey; continue; }		// поставлен вручную — не трогаем
+			del.Push (o.guid);
+		}
+		if (!del.IsEmpty () && ACAPI_Element_Delete (del) == NoError)
+			deleted = (int) del.GetSize ();
+		return NoError;
+	});
+
+	lines.push_back (L"");
+	lines.push_back (L"Поставлено новых паспортов: " + std::to_wstring (created) + (createdBySt.empty () ? std::wstring () : L" (" + JoinCounts (createdBySt, 30) + L")") + L".");
+	lines.push_back (L"Обновлено: " + std::to_wstring (updated) + L", без изменений: " + std::to_wstring (same) +
+					 L", удалено (квартиры больше нет или повтор): " + std::to_wstring (deleted) + L".");
+	if (created > 0)
+		lines.push_back (L"Новые паспорта стоят снаружи у ближайшего края этажа секции — передвиньте их как нужно: при следующем запуске место сохранится, обновятся только цифры.");
+	if (noKey > 0)
+		lines.push_back (L"Паспортов без ключа (поставлены вручную, не тронуты): " + std::to_wstring (noKey) + L".");
+	if (inHot > 0)
+		lines.push_back (L"Паспортов в модулях (hotlink) — не тронуты: " + std::to_wstring (inHot) + L".");
+	if (errs > 0)
+		lines.push_back (L"Ошибок при создании / изменении: " + std::to_wstring (errs) + L" (первая — код " + std::to_wstring (firstErr) +
+						 L"). Проверьте, не заблокирован ли слой объектов по умолчанию.");
+	lines.push_back (L"Площадь помещения — как в штампе зоны (" + std::to_wstring (d.rs.fromStamp) + L" зон), у остальных " +
+					 std::to_wstring (d.rs.fromArchicad) + L" — расчётная площадь Archicad; округляется до " + std::to_wstring (d.cfg.dec) +
+					 L" знака и складывается.");
+	AptFooter (d, lines);
+	ShowReport (lines);
+}
+
+// ============================================================================= ТЭП по всему дому
+
+void DoTep ()
+{
+	AptData d;
+	LoadAptData (d);
+	const tep::Tep t = tep::BuildTep (d.rooms, d.apts, d.cfg);
+	const std::wstring title = L"Технико-экономические показатели";
+	std::vector<std::wstring> lines;
+	lines.push_back (L"ТЭП по дому: секции " + [&t] () { std::wstring s; for (const auto& x : t.sections) s += (s.empty () ? L"" : L", ") + (x.empty () ? std::wstring (L"(пусто)") : x); return s; } () + L".");
+	AptSummary (d, lines);
+
+	bool existed = false;
+	DrawResult dr;
+	std::wstring step;
+	const std::wstring wsName = L"ТЭП";
+	const GSErrCode wsErr = DrawOnWorksheet (wsName, L"ТЭП", tep::LayoutTep (t, title), L"ТЭП: таблица", existed, dr, step);
+	DrawReport (wsName, wsErr, existed, dr, step, lines);
+
+	IO::Location loc;
+	const std::wstring fname = TepFileBase () + L".xlsx";
+	const GSErrCode xlErr = DocumentsFile (fname, loc) ?
+		WriteBytes (loc, xlsx::BuildXlsx ({ tep::TepSheet (t, title), tep::ApartmentsSheet (d.rooms, d.apts, d.cfg) })) : APIERR_GENERAL;
+	if (xlErr == NoError)
+		lines.push_back (L"Excel: " + PathOf (loc) + L" (лист «Квартиры» — каждая квартира с помещениями, для проверки).");
+	else
+		lines.push_back (L"Не удалось записать «" + fname + L"» в папку «Документы». Если файл открыт в Excel — закройте и запустите ещё раз.");
+
+	for (const auto& r : t.rows)
+		if (r.num == L"9" || r.num == L"10" || r.num == L"16")
+			lines.push_back (L"   " + r.num + L". " + r.name.substr (0, 40) + (r.name.size () > 40 ? L"…" : L"") + L" — " + r.total + L" " + r.unit);
+	lines.push_back (L"Строки 2, 2.1 — по этажам с зонами секции (подземные — индекс этажа < 0); 18 и любые другие можно задать вручную в файле данных, раздел [Вручную].");
+	AptFooter (d, lines);
+	ShowReport (lines);
+}
+
+// Открыть файл данных ТЭП (создаётся по умолчанию, если его нет)
+void DoTepData ()
+{
+	std::vector<std::wstring> warn;
+	std::wstring path;
+	bool created = false;
+	LoadTepConfig (warn, path, created);
+	if (path.empty ()) {
+		ShowReport ({ L"Не удалось найти папку «Документы»." });
+		return;
+	}
+	OpenInShell (path, true);
+	if (!warn.empty ())
+		ShowReport (warn);
 }
