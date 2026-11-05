@@ -130,7 +130,7 @@ std::wstring DefaultRulesText ()
 		L"# Правила ведомости отделки помещений (надстройка «Ведомость отделки», Archicad 27).\n"
 		L"# Строки, начинающиеся с #, — комментарии. Файл можно править в Блокноте;\n"
 		L"# изменения применяются при следующем расчёте. Чтобы вернуть правила по умолчанию — удалите файл.\n"
-		L"# Версия правил: 8 (более старый файл заменяется новым, старый сохраняется рядом с пометкой «старые»)\n"
+		L"# Версия правил: 9 (более старый файл заменяется новым, старый сохраняется рядом с пометкой «старые»)\n"
 		L"\n"
 		L"[Заголовок]\n"
 		L"# {секция} заменяется номером секции из окна расчёта\n"
@@ -192,6 +192,12 @@ std::wstring DefaultRulesText ()
 		L"8 = -\n"
 		L"9 = -\n"
 		L"\n"
+		L"[Строки по категориям]\n"
+		L"# Подкатегория = наборы начал кода категории через «;», внутри набора — через «,». Каждый набор — отдельная\n"
+		L"# строка ведомости (как в томе АР: жилые комнаты, кухни, прихожие, санузлы, лоджии — даже при одинаковой отделке).\n"
+		L"# Зоны подкатегорий, которых здесь нет, объединяются в строки только по одинаковой отделке.\n"
+		L"Квартиры = 101; 102; 103, 104, 108; 105; 106, 107\n"
+		L"\n"
 		L"[Столбец 3]\n"
 		L"# Межкомнатные перегородки (столбец 3) — только в зонах этой подкатегории, кроме зон, в имени или категории\n"
 		L"# которых есть одно из слов «Кроме»; у остальных зон такие стены идут в столбец «Иначе».\n"
@@ -243,7 +249,7 @@ static bool ToInt (const std::wstring& s, int& v)
 Rules ParseRules (const std::wstring& text, std::vector<std::wstring>* warnings)
 {
 	Rules r;
-	enum Sec { None, Title, Cols, Mats, Groups, Rows, Finish, Col3 } sec = None;
+	enum Sec { None, Title, Cols, Mats, Groups, Rows, Finish, Col3, Buckets } sec = None;
 	auto warn = [&] (int line, const std::wstring& msg) {
 		if (warnings != nullptr)
 			warnings->push_back (L"Правила, строка " + std::to_wstring (line) + L": " + msg);
@@ -269,6 +275,7 @@ Rules ParseRules (const std::wstring& text, std::vector<std::wstring>* warnings)
 			else if (name == L"строки") sec = Rows;
 			else if (name == L"отделка") sec = Finish;
 			else if (name == L"столбец 3") sec = Col3;
+			else if (name == L"строки по категориям") sec = Buckets;
 			else { sec = None; warn (lineNo, L"неизвестный раздел " + line); }
 			continue;
 		}
@@ -321,6 +328,17 @@ Rules ParseRules (const std::wstring& text, std::vector<std::wstring>* warnings)
 			case Finish:
 				if (!key.empty ()) r.finishNames.push_back ({ key, val });
 				break;
+			case Buckets: {
+				std::vector<std::vector<std::wstring>> sets;
+				for (const auto& part : SplitBy (val, L';')) {
+					std::vector<std::wstring> set;
+					for (const auto& c : SplitBy (part, L',')) if (!Trim (c).empty ()) set.push_back (Trim (c));
+					if (!set.empty ()) sets.push_back (set);
+				}
+				if (key.empty () || sets.empty ()) warn (lineNo, L"ожидается «Подкатегория = 101; 102; 103, 104»");
+				else r.rowBuckets.push_back ({ key, sets });
+				break;
+			}
 			case Col3:
 				if (SameText (key, L"Подкатегория")) r.col3Group = val;
 				else if (SameText (key, L"Кроме")) {
@@ -586,6 +604,21 @@ std::wstring JoinNames (const std::vector<std::wstring>& names)
 }
 
 
+int BucketOf (const ZoneData& z, const std::wstring& group, const Rules& r)
+{
+	const std::wstring code = CatCodeOf (z);
+	for (const auto& gb : r.rowBuckets) {
+		if (!SameText (gb.first, group)) continue;
+		size_t best = 0; int idx = -1;
+		for (size_t i = 0; i < gb.second.size (); ++i)
+			for (const auto& pre : gb.second[i])
+				if (pre.size () > best && code.compare (0, pre.size (), pre) == 0) { best = pre.size (); idx = (int) i; }
+		return idx;
+	}
+	return -1;
+}
+
+
 std::wstring RowTitleOf (const ZoneData& z, const std::wstring&, const Rules&)
 {
 	return ZoneTitle (z);
@@ -604,11 +637,11 @@ Sheet BuildSheet (const std::vector<ZoneData>& zones, const Rules& r, const std:
 		sh.columnTitle[c] = r.columnTitle[c];
 
 	// строка ведомости = подкатегория + отделка потолка + отделка стен; наименование — перечень имён зон
-	struct Key { std::wstring group, ceil, wall; };
+	struct Key { std::wstring group, ceil, wall; int bucket = -1; };
 	std::vector<SheetRow> rows;
 	auto findRow = [&rows] (const Key& k) -> SheetRow* {
 		for (auto& row : rows)
-			if (row.group == k.group && row.ceilFinish == k.ceil && row.wallFinish == k.wall)
+			if (row.group == k.group && row.bucket == k.bucket && row.ceilFinish == k.ceil && row.wallFinish == k.wall)
 				return &row;
 		return nullptr;
 	};
@@ -620,10 +653,11 @@ Sheet BuildSheet (const std::vector<ZoneData>& zones, const Rules& r, const std:
 			continue;
 		k.ceil = CleanFinish (z.ceilFinishRaw, r);
 		k.wall = CleanFinish (z.wallFinishRaw, r);
+		k.bucket = BucketOf (z, k.group, r);
 		SheetRow* row = findRow (k);
 		if (row == nullptr) {
 			SheetRow nr;
-			nr.group = k.group; nr.ceilFinish = k.ceil; nr.wallFinish = k.wall;
+			nr.group = k.group; nr.ceilFinish = k.ceil; nr.wallFinish = k.wall; nr.bucket = k.bucket;
 			rows.push_back (nr);
 			row = &rows.back ();
 		}
@@ -656,6 +690,7 @@ Sheet BuildSheet (const std::vector<ZoneData>& zones, const Rules& r, const std:
 		const int ga = groupIdx (a.group), gb = groupIdx (b.group);
 		if (ga != gb) return ga < gb;
 		if (a.group != b.group) return a.group < b.group;
+		if (a.bucket != b.bucket) return (unsigned) a.bucket < (unsigned) b.bucket;		// наборы категорий по порядку, потом «по отделке»
 		if (a.wallFinish != b.wallFinish) return Lower (a.wallFinish) < Lower (b.wallFinish);	// одинаковые стены — подряд
 		if (*a.floors.begin () != *b.floors.begin ()) return *a.floors.begin () < *b.floors.begin ();
 		return Lower (a.title) < Lower (b.title);
@@ -672,7 +707,8 @@ Sheet BuildSheet (const std::vector<ZoneData>& zones, const Rules& r, const std:
 	// объединение стен у соседних строк с одинаковой отделкой стен
 	for (size_t i = 0; i < rows.size (); ) {
 		size_t j = i + 1;
-		while (j < rows.size () && rows[j].group == rows[i].group && rows[j].wallFinish == rows[i].wallFinish) ++j;
+		while (j < rows.size () && rows[j].group == rows[i].group && rows[j].bucket == rows[i].bucket &&
+			   rows[j].wallFinish == rows[i].wallFinish) ++j;
 		rows[i].wallSpan = (int) (j - i);
 		for (size_t k = i; k < j; ++k) {
 			if (k > i) rows[k].wallSpan = 0;

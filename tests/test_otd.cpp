@@ -37,6 +37,9 @@ int main (int argc, char** argv)
 	}
 	CHECK (r.groupByCode.size () == 9);
 	CHECK (r.groupOrder.front () == L"Тех.помещения (подвал)");
+	CHECK (r.rowBuckets.size () == 1 && r.rowBuckets[0].second.size () == 5);
+	{ ZoneData q; q.catCode = L"1081"; CHECK (BucketOf (q, L"Квартиры", r) == 2); q.catCode = L"1070"; CHECK (BucketOf (q, L"Квартиры", r) == 4);
+	  q.catCode = L"2020"; CHECK (BucketOf (q, L"Общедомовые помещения", r) == -1); }
 	CHECK (r.groupOrder.size () > 5 && r.groupOrder[1] == L"Встроенные помещения" && r.groupOrder[2] == L"Квартиры" &&
 		   r.groupOrder[3] == L"Типовой этаж" && r.groupOrder[4] == L"1 этаж" && r.groupOrder[5] == L"Общедомовые помещения");
 	CHECK (r.groupOrder.size () == 8);		// 7 подкатегорий + «Прочие»
@@ -315,27 +318,26 @@ int main (int argc, char** argv)
 
 	const Sheet sh = BuildSheet (zones, r, L"1");
 	CHECK (sh.title == L"1 секция. Ведомость отделки помещений жилого дома");
-	CHECK (sh.rows.size () == 5);
+	CHECK (sh.rows.size () == 6);
 	for (const auto& row : sh.rows)
 		std::printf ("  %-24s | %-48s | %-34s %6.2f | %6.2f %6.2f %6.2f [%5.2f]\n", U (row.group).c_str (), U (row.title).c_str (),
 					 U (row.ceilFinish).c_str (), row.ceilArea, row.wallArea[1], row.wallArea[2], row.wallArea[3], row.wallArea[0]);
-	if (sh.rows.size () == 5) {
+	if (sh.rows.size () == 6) {
 		CHECK (sh.rows[0].group == L"Тех.помещения (подвал)");
-		CHECK (sh.rows[0].title == L"Электрощитовая, С/У");
+		CHECK (sh.rows[0].title == L"Электрощитовая, С/У");			// не квартиры — по отделке
 		NEAR (sh.rows[0].wallArea[0], 2.5);
 		CHECK (sh.rows[0].floors.count (-1) == 1);
 		CHECK (sh.rows[1].group == L"Квартиры");
-		CHECK (sh.rows[1].title == L"Жилая комната, кабинет, кухня-столовая");
-		NEAR (sh.rows[1].ceilArea, 51.0);
-		NEAR (sh.rows[1].wallArea[1], 6 * 2.5);
-		NEAR (sh.rows[1].wallArea[3], 6 * 2.5);
+		CHECK (sh.rows[1].title == L"Жилая комната, кабинет");		// квартиры — по видам помещений (101x)
+		NEAR (sh.rows[1].ceilArea, 41.0);
 		CHECK (sh.rows[1].wallFinish == L"Оклейка обоями светлых тонов");
-		CHECK (sh.rows[3].title == L"Лифтовый холл (2 эт.)");
-		CHECK (sh.rows[4].title == L"Лифтовый холл (15 эт.)");
-		CHECK (sh.rows[3].wallSpan == 2 && sh.rows[4].wallSpan == 0);	// одинаковые стены — одна ячейка
-		NEAR (sh.rows[3].wallSum[1], 10.0);
-		CHECK (sh.rows[1].wallSpan == 1);
-		CHECK (sh.rows[2].group == L"1 этаж" && sh.rows[2].title == L"Административное помещение");	// порядок как в томе АР
+		CHECK (sh.rows[2].title == L"Кухня-столовая");				// 102x — своя строка при той же отделке
+		CHECK (sh.rows[1].wallSpan == 1 && sh.rows[2].wallSpan == 1);	// стены разных видов не объединяются
+		CHECK (sh.rows[3].group == L"1 этаж" && sh.rows[3].title == L"Административное помещение");
+		CHECK (sh.rows[4].title == L"Лифтовый холл (2 эт.)");
+		CHECK (sh.rows[5].title == L"Лифтовый холл (15 эт.)");
+		CHECK (sh.rows[4].wallSpan == 2 && sh.rows[5].wallSpan == 0);	// одинаковые стены — одна ячейка
+		NEAR (sh.rows[4].wallSum[1], 10.0);
 		NEAR (sh.unknownArea, 2.5);
 	}
 

@@ -43,13 +43,16 @@ struct Rules {
 	std::wstring					basementGroup;		// зоны на этажах с номером 0 и ниже (если задано)
 	std::wstring					otherGroup = L"Прочие помещения";
 	std::vector<RowRule>			rows;
+	// [Строки по категориям]: подкатегория -> наборы начал кода категории; каждый набор — своя строка ведомости
+	// (Квартиры: жилые / кухни / прихожие / санузлы / лоджии). Не попавшие зоны делятся только по отделке.
+	std::vector<std::pair<std::wstring, std::vector<std::vector<std::wstring>>>>	rowBuckets;
 	std::vector<std::pair<std::wstring, std::wstring>>	finishNames;	// как в зоне -> как в ведомости
 	std::wstring					col3Group = L"Квартиры";	// столбец 3 только в этой подкатегории (пусто — везде)
 	std::vector<std::wstring>		col3Except = { L"санузел", L"с/у", L"совмещ", L"ванн", L"душ", L"туалет", L"уборн", L"балкон", L"лоджи", L"террас" };
 	int								col3Else = 2;
 };
 
-const int		kRulesVersion = 8;
+const int		kRulesVersion = 9;
 extern const wchar_t* const kExcludedGroup;		// «-»: зона не входит в ведомость
 std::wstring	DefaultRulesText ();
 int				RulesVersion (const std::wstring& text);	// «# Версия правил: N»; нет строки — 1
@@ -163,6 +166,7 @@ struct SheetRow {
 	std::vector<std::wstring>	names;		// имена зон строки (без повторов)
 	// Соседние строки подкатегории с одинаковой отделкой стен — стены одной объединённой ячейкой (как в томе АР):
 	// у первой строки wallSpan = число строк и wallSum — сумма площадей, у остальных wallSpan = 0
+	int				bucket = -1;		// набор категорий из [Строки по категориям]; -1 — по отделке
 	int				wallSpan = 1;
 	double			wallSum[kWallColumns + 1] = { 0, 0, 0, 0 };
 };
@@ -185,6 +189,8 @@ std::wstring	CleanZoneName (const std::wstring& raw);
 std::wstring	ZoneTitle (const ZoneData& z);
 // {«Электрощитовая», «Лестничная клетка», «С/У»} -> «Электрощитовая, лестничная клетка, С/У»
 std::wstring	JoinNames (const std::vector<std::wstring>& names);
+// Номер набора категорий зоны в её подкатегории ([Строки по категориям]); -1 — нет
+int				BucketOf (const ZoneData& z, const std::wstring& group, const Rules& r);
 std::wstring	RowTitleOf (const ZoneData& z, const std::wstring& group, const Rules& r);	// = ZoneTitle
 // Столбец 3 (межкомнатные перегородки) разрешён в зоне?
 bool			Col3Allowed (const ZoneData& z, const Rules& r);
