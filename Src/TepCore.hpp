@@ -29,6 +29,8 @@ struct Config {
 	double			perResident = 30;			// м² приведённой площади квартир на жителя
 	double			coefBalcony = 0.3, coefLoggia = 0.5;
 	std::wstring	studioLabel = L"С";			// обозначение студии в паспорте (остальные — «1К», «2К»…)
+	std::wstring	officeLabel = L"АП";		// обозначение встроенного помещения в паспорте
+	std::wstring	officeSep = L",";			// разделитель дробной части в паспортах помещений
 
 	CodeSet	apartment, living, kitchenDining, kitchen, balcony, loggia;
 	CodeSet	building, volume, houseArea, tech, builtIn, storage, nonResidential, common, excluded;
@@ -48,11 +50,14 @@ struct Room {
 	bool			underground = false;	// подземный этаж (индекс < 0)
 	double			area = 0;				// площадь помещения, м² (как в штампе зоны)
 	double			volume = 0;				// объём зоны, м³
+	double			height = 0;				// высота зоны, м
 	double			x1 = 0, y1 = 0, x2 = 0, y2 = 0;	// габарит в плане, м
 	otd::Polys		polys;					// контур зоны (для поиска свободного места под паспорт)
 };
 
 struct Apartment {
+	bool				office = false;		// встроенное помещение (АП), не квартира
+	double				height = 0;			// помещение: высота самой большой зоны, м
 	std::wstring		section, code, storyName;
 	int					story = 0;
 	std::vector<size_t>	rooms;				// индексы в списке помещений
@@ -66,7 +71,7 @@ struct Apartment {
 	// у чего ставить паспорт: габарит самой большой жилой комнаты (нет жилых — вся квартира)
 	double				ax1 = 0, ay1 = 0, ax2 = 0, ay2 = 0;
 	void				AnchorAll () { ax1 = x1; ay1 = y1; ax2 = x2; ay2 = y2; }
-	std::wstring		Key () const { return section + L"|" + code; }
+	std::wstring		Key () const { return (office ? std::wstring (L"АП|") : std::wstring ()) + section + L"|" + code; }
 };
 
 double					RoundTo (double v, int dec);
@@ -74,6 +79,11 @@ std::wstring			CodeOf (const std::wstring& catCode, const std::wstring& catName)
 std::wstring			StoryKey (int story);
 // Квартиры по параметру «Квартира»; warnings — зоны квартир без номера и т. п.
 std::vector<Apartment>	BuildApartments (const std::vector<Room>& rooms, const Config& c, std::vector<std::wstring>* warnings = nullptr);
+// Встроенные помещения (категории «Встроенные помещения») по тому же параметру «Квартира» (номер помещения: 1005):
+// площадь — сумма зон, высота и место паспорта — по самой большой зоне
+std::vector<Apartment>	BuildPremises (const std::vector<Room>& rooms, const Config& c);
+std::wstring			OfficeArea (double v, const Config& c);		// «84,2 м²»
+std::wstring			OfficeHeight (double v, const Config& c);	// «h=3,97м»
 // Числа паспорта: жилая, площадь квартиры, общая, приведённая
 std::wstring			PassportNum (double v, const Config& c);
 

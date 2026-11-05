@@ -83,6 +83,8 @@ std::wstring DefaultConfigText ()
 		L"Коэффициент лоджий = 0,5\n"
 		L"Площадь на жителя = 30\n"
 		L"Обозначение студии = С\n"
+		L"Обозначение встроенных помещений = АП\n"
+		L"Разделитель в паспортах помещений = ,\n"
 		L"\n"
 		L"[Категории]\n"
 		L"Помещения квартир = 1\n"
@@ -148,6 +150,8 @@ Config ParseConfig (const std::wstring& text, std::vector<std::wstring>* warning
 			else if (SameText (k, L"Коэффициент лоджий")) c.coefLoggia = ToNum (v, def0.coefLoggia);
 			else if (SameText (k, L"Площадь на жителя")) c.perResident = std::max (1.0, ToNum (v, def0.perResident));
 			else if (SameText (k, L"Обозначение студии")) c.studioLabel = v;
+			else if (SameText (k, L"Обозначение встроенных помещений")) c.officeLabel = v;
+			else if (SameText (k, L"Разделитель в паспортах помещений")) c.officeSep = v.empty () ? std::wstring (L",") : v.substr (0, 1);
 			else warn (L"неизвестный параметр «" + k + L"»");
 		} else if (SameText (section, L"Категории")) {
 			const CodeSet s = ParseCodes (v);
@@ -222,7 +226,7 @@ std::vector<Apartment> BuildApartments (const std::vector<Room>& rooms, const Co
 		const bool aptCat = c.apartment.Has (r.catCode);
 		const std::wstring code = Trim (r.apartment);
 		if (!aptCat) {
-			if (!code.empty ()) notApt[r.storyName].push_back (r.number + L" " + r.name + L" (" + r.catCode + L")");
+			if (!code.empty () && !c.builtIn.Has (r.catCode)) notApt[r.storyName].push_back (r.number + L" " + r.name + L" (" + r.catCode + L")");
 			continue;
 		}
 		if (code.empty ()) {
@@ -300,6 +304,58 @@ std::vector<Apartment> BuildApartments (const std::vector<Room>& rooms, const Co
 	}
 	return res;
 }
+
+std::vector<Apartment> BuildPremises (const std::vector<Room>& rooms, const Config& c)
+{
+	std::map<std::wstring, Apartment> byKey;
+	std::map<std::wstring, double> best;
+	std::vector<std::wstring> order;
+	for (const Room& r : rooms) {
+		const std::wstring code = Trim (r.apartment);
+		if (code.empty () || !c.builtIn.Has (r.catCode) || c.apartment.Has (r.catCode)) continue;
+		const std::wstring key = r.section + L"|" + StoryKey (r.story) + L"|" + code;
+		auto it = byKey.find (key);
+		if (it == byKey.end ()) {
+			Apartment a;
+			a.office = true;
+			a.section = r.section; a.code = code; a.story = r.story; a.storyName = r.storyName;
+			a.label = c.officeLabel;
+			a.typeName = L"встроенное помещение";
+			it = byKey.emplace (key, a).first;
+			order.push_back (key);
+		}
+		Apartment& a = it->second;
+		const double ar = RoundTo (r.area, c.dec);
+		a.area += ar; a.total += ar; a.reduced += ar;
+		a.x1 = std::min (a.x1, r.x1); a.y1 = std::min (a.y1, r.y1);
+		a.x2 = std::max (a.x2, r.x2); a.y2 = std::max (a.y2, r.y2);
+		if (ar > best[key]) {
+			best[key] = ar;
+			a.height = r.height;
+			a.ax1 = r.x1; a.ay1 = r.y1; a.ax2 = r.x2; a.ay2 = r.y2;
+		}
+	}
+	std::vector<Apartment> res;
+	for (const auto& key : order) {
+		Apartment a = byKey[key];
+		a.area = RoundTo (a.area, c.dec); a.total = a.reduced = a.area;
+		res.push_back (a);
+	}
+	return res;
+}
+
+static std::wstring WithSep (const std::wstring& s, const std::wstring& sep)
+{
+	std::wstring r;
+	for (wchar_t ch : s) {
+		if (ch == L' ' || ch == 0xA0) continue;
+		r += ch == L',' ? sep[0] : ch;
+	}
+	return r;
+}
+
+std::wstring OfficeArea (double v, const Config& c) { return WithSep (FormatNum (RoundTo (v, c.dec), c.dec), c.officeSep) + L" м²"; }
+std::wstring OfficeHeight (double v, const Config& c) { return L"h=" + WithSep (FormatNum (RoundTo (v, 2), 2), c.officeSep) + L"м"; }
 
 std::wstring PassportNum (double v, const Config& c)
 {

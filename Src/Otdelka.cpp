@@ -1403,6 +1403,7 @@ std::vector<tep::Room> ReadRooms (const Settings& st, const std::vector<StoryRec
 		r.story = el.header.floorInd;
 		r.storyName = storyName.count (r.story) ? storyName[r.story] : std::to_wstring (r.story);
 		r.underground = r.story < 0;
+		r.height = el.zone.roomHeight;
 		if (el.header.hotlinkGuid != APINULLGuid) ++rs.fromHotlink;
 		{
 			API_QuantityPar qp = {};
@@ -1439,6 +1440,7 @@ struct AptData {
 	bool						cfgCreated = false;
 	std::vector<tep::Room>		rooms;
 	std::vector<tep::Apartment>	apts;
+	std::vector<tep::Apartment>	premises;		// встроенные помещения с номером (АП 1005)
 	std::vector<std::wstring>	warn;
 	RoomStats					rs;
 	std::wstring				secInfo;
@@ -1460,12 +1462,14 @@ void LoadAptData (AptData& d)
 	d.cfg = LoadTepConfig (d.warn, d.cfgPath, d.cfgCreated);
 	d.rooms = ReadRooms (d.st, d.stories, secProp, d.rs);
 	d.apts = tep::BuildApartments (d.rooms, d.cfg, &d.warn);
+	d.premises = tep::BuildPremises (d.rooms, d.cfg);
 }
 
 void AptSummary (const AptData& d, std::vector<std::wstring>& lines)
 {
 	lines.push_back (L"Зон «" + d.st.zoneLib + L"…» в проекте: " + std::to_wstring (d.rs.lib) + L" (всего зон " + std::to_wstring (d.rs.all) +
-					 L"), квартир найдено: " + std::to_wstring (d.apts.size ()) + L". " + d.secInfo);
+					 L"), квартир найдено: " + std::to_wstring (d.apts.size ()) + L", встроенных помещений с номером: " +
+					 std::to_wstring (d.premises.size ()) + L". " + d.secInfo);
 	std::map<std::wstring, int> bySec;
 	for (const auto& a : d.apts) bySec[L"секция " + (a.section.empty () ? std::wstring (L"(пусто)") : a.section)] += 1;
 	if (!bySec.empty ())
@@ -1514,10 +1518,20 @@ bool FillPassport (au::Params& P, const tep::Apartment& a, const tep::Config& c)
 		if (std::fabs (P.Real (name, -1) - v) > 1e-6) { P.SetReal (name, v); changed = true; }
 	};
 	setS ("stType", a.label);
-	setS ("stLiving", tep::PassportNum (a.living, c));
-	setS ("stArea", tep::PassportNum (a.area, c));
-	setS ("stTotal", tep::PassportNum (a.total, c));
-	setS ("stReduced", tep::PassportNum (a.reduced, c));
+	setR ("iKind", a.office ? 1 : 0);
+	if (a.office) {
+		setS ("stLiving", L"");
+		setS ("stArea", tep::OfficeArea (a.area, c));
+		setS ("stTotal", L"");
+		setS ("stReduced", L"");
+		setS ("stHeight", tep::OfficeHeight (a.height, c));
+	} else {
+		setS ("stLiving", tep::PassportNum (a.living, c));
+		setS ("stArea", tep::PassportNum (a.area, c));
+		setS ("stTotal", tep::PassportNum (a.total, c));
+		setS ("stReduced", tep::PassportNum (a.reduced, c));
+		setS ("stHeight", L"");
+	}
 	setR ("rLiving", a.living);
 	setR ("rArea", a.area);
 	setR ("rTotal", a.total);
@@ -1569,7 +1583,7 @@ std::vector<PassportObj> FindPassports (Int32 libInd, int& inHotlinks)
 			p.x = el.object.pos.x;
 			p.y = el.object.pos.y;
 			p.wMm = P.Real ("wType", 8) + P.Real ("wArea", 10);
-			p.hMm = 4 * P.Real ("hRow", 3.5);
+			p.hMm = (P.Int ("iKind", 0) == 1 ? 3 : 4) * P.Real ("hRow", 3.5);
 			const double px = P.Real ("rPlaceX", 0), py = P.Real ("rPlaceY", 0);
 			p.movable = (std::fabs (px) < 1e-9 && std::fabs (py) < 1e-9) ||
 						(std::fabs (p.x - px) < 1e-3 && std::fabs (p.y - py) < 1e-3);
@@ -1961,7 +1975,7 @@ void DoPassports ()
 	AptData d;
 	LoadAptData (d);
 	std::vector<std::wstring> lines;
-	lines.push_back (L"Паспорта квартир на планах этажей.");
+	lines.push_back (L"Паспорта квартир и встроенных помещений на планах этажей.");
 	AptSummary (d, lines);
 
 	Int32 libInd = 0;
@@ -1989,7 +2003,7 @@ void DoPassports ()
 			ACAPI_DisposeAddParHdl (&pars);
 		}
 	}
-	const double k = scale / 1000.0, w = wMm * k, h = hMm * k, gap = 12 * k;
+	const double k = scale / 1000.0, w = wMm * k, gap = 12 * k;
 
 	// габарит этажа (все секции) — по нему выбирается наружная сторона квартиры; паспорт — у стены квартиры
 	std::map<std::wstring, std::vector<double>> box;
@@ -2012,6 +2026,7 @@ void DoPassports ()
 	{
 		std::set<int> aptStories;
 		for (const auto& a : d.apts) aptStories.insert (a.story);
+		for (const auto& a : d.premises) aptStories.insert (a.story);
 		for (const auto& r : d.rooms) {
 			if (d.cfg.excluded.Has (r.catCode) || aptStories.count (r.story) == 0) continue;
 			for (const auto& poly : r.polys) space[r.story].AddShape (poly);
@@ -2031,8 +2046,12 @@ void DoPassports ()
 	}
 	const double minGap = 2 * k, maxGap = 80 * k, step = 1.5 * k, margin = 0.8 * k;
 
+	std::vector<tep::Apartment> all = d.apts;
+	all.insert (all.end (), d.premises.begin (), d.premises.end ());
+	const double hRow1 = hMm / 4 * k;		// высота строки паспорта, м
 	ACAPI_CallUndoableCommand (au::FromW (L"Паспорта квартир"), [&] () -> GSErrCode {
-		for (const auto& a : d.apts) {
+		for (const auto& a : all) {
+			const double h = (a.office ? 3 : 4) * hRow1;
 			const auto bi = box.find (std::to_wstring (a.story));
 			double x = a.x1, y = a.y2;
 			if (bi != box.end ()) {
@@ -2093,6 +2112,8 @@ void DoPassports ()
 	lines.push_back (L"Площадь помещения — как в штампе зоны (" + std::to_wstring (d.rs.fromStamp) + L" зон), у остальных " +
 					 std::to_wstring (d.rs.fromArchicad) + L" — расчётная площадь Archicad; округляется до " + std::to_wstring (d.cfg.dec) +
 					 L" знака и складывается.");
+	lines.push_back (L"Встроенные помещения (категории " + tep::CodesText (d.cfg.builtIn) + L") с номером в параметре «Квартира» (1005…) — паспорт «" +
+					 d.cfg.officeLabel + L"»: номер, площадь (сумма зон), высота самой большой зоны.");
 	AptFooter (d, lines);
 	ShowReport (lines);
 }
@@ -2119,7 +2140,7 @@ void DoTep ()
 	IO::Location loc;
 	const std::wstring fname = TepFileBase () + L".xlsx";
 	const GSErrCode xlErr = DocumentsFile (fname, loc) ?
-		WriteBytes (loc, xlsx::BuildXlsx ({ tep::TepSheet (t, title), tep::ApartmentsSheet (d.rooms, d.apts, d.cfg) })) : APIERR_GENERAL;
+		WriteBytes (loc, xlsx::BuildXlsx ({ tep::TepSheet (t, title), tep::ApartmentsSheet (d.rooms, [&d] () { auto v = d.apts; v.insert (v.end (), d.premises.begin (), d.premises.end ()); return v; } (), d.cfg) })) : APIERR_GENERAL;
 	if (xlErr == NoError)
 		lines.push_back (L"Excel: " + PathOf (loc) + L" (лист «Квартиры» — каждая квартира с помещениями, для проверки).");
 	else

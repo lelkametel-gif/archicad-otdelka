@@ -168,6 +168,27 @@ int main (int argc, char** argv)
 			CHECK (x + 1.8 <= 3.6 + 0.9 + 1e-6);			// не под лоджией
 		}
 	}
+	{	// встроенные помещения: номер 1005 в параметре «Квартира»
+		std::vector<Room> rr = {
+			R (L"1", 1, L"1005", L"5010", L"Административное помещение", 78.7, 0, 0, 9, 10),
+			R (L"1", 1, L"1005", L"5030", L"С/у (КУИ)", 5.5, 3, 2, 5, 4),
+			R (L"1", 1, L"1006", L"5010", L"Административное помещение", 94.7, 9, 0, 18, 10),
+			R (L"1", 1, L"1006", L"5030", L"С/у (КУИ)", 4.0),
+			R (L"1", 1, L"", L"5010", L"Офис без номера", 10.0) };
+		rr[0].height = 3.97;
+		std::vector<std::wstring> w3;
+		const auto pr = BuildPremises (rr, c);
+		CHECK (BuildApartments (rr, c, &w3).empty () && w3.empty ());
+		CHECK (pr.size () == 2);
+		if (pr.size () == 2) {
+			CHECK (pr[0].office && pr[0].code == L"1005" && pr[0].label == L"АП");
+			NEAR (pr[0].area, 84.2); NEAR (pr[1].area, 98.7);
+			CHECK (OfficeArea (pr[0].area, c) == L"84,2 м²");
+			CHECK (OfficeHeight (pr[0].height, c) == L"h=3,97м");
+			CHECK (pr[0].Key () == L"АП|1|1005");
+			NEAR (pr[0].ax2, 9);
+		}
+	}
 	if (a3) {
 		CHECK (a3->label == L"С");
 		CHECK (a3->typeName == L"1-комнатных (студий)");

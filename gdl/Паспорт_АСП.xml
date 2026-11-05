@@ -22,12 +22,16 @@
 
 k = GLOB_SCALE / 1000
 ! в GDL имена переменных без учёта регистра: _h и _H — одна переменная, поэтому имена разные
+! iKind = 0 — квартира: слева номер (верх) и тип (низ), справа 4 площади;
+! iKind = 1 — встроенное помещение: слева «АП», справа номер, площадь, высота
 _w1 = wType * k
 _w2 = wArea * k
 _hr = hRow * k
+_nRows = 4
+if iKind = 1 then _nRows = 3
 _wTot = _w1 + _w2
-_hTot = 4 * _hr
-_num = bAptNum and stApt <> ""
+_hTot = _nRows * _hr
+_num = iKind = 0 and bAptNum and stApt <> ""
 
 hotspot2 0, 0
 hotspot2 _wTot, 0
@@ -41,7 +45,7 @@ line2 _wTot, 0, _wTot, _hTot
 line2 _wTot, _hTot, 0, _hTot
 line2 0, _hTot, 0, 0
 line2 _w1, 0, _w1, _hTot
-for i = 1 to 3
+for i = 1 to _nRows - 1
 	line2 _w1, i * _hr, _wTot, i * _hr
 next i
 if _num then line2 0, _hTot / 2, _w1, _hTot / 2
@@ -52,7 +56,6 @@ if bTypeBold then _face = 1
 define style "aspType" sFont, tSizeType, 5, _face
 define style "aspArea" sFont, tSize, 5, 0
 
-! слева: номер квартиры (верх) и тип (низ); без номера — тип по центру
 set style "aspType"
 if _num then
 	text2 _w1 / 2, _hTot * 0.25, stType
@@ -64,11 +67,17 @@ endif
 
 set style "aspArea"
 dim _s[4]
-_s[1] = stLiving
-_s[2] = stArea
-_s[3] = stTotal
-_s[4] = stReduced
-for i = 1 to 4
+if iKind = 1 then
+	_s[1] = stApt
+	_s[2] = stArea
+	_s[3] = stHeight
+else
+	_s[1] = stLiving
+	_s[2] = stArea
+	_s[3] = stTotal
+	_s[4] = stReduced
+endif
+for i = 1 to _nRows
 	text2 _w1 + _w2 / 2, _hTot - (i - 0.5) * _hr, _s[i]
 next i
 ]]>
@@ -114,6 +123,20 @@ next i
 		<Title Name="tiData">
 			<Description><![CDATA["Квартира (заполняет надстройка)"]]></Description>
 		</Title>
+		<Integer Name="iKind">
+			<Description><![CDATA["Вид: 0 квартира, 1 встроенное помещение"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Integer>
+		<String Name="stHeight">
+			<Description><![CDATA["Высота помещения (текст)"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
 		<String Name="stType">
 			<Description><![CDATA["Тип квартиры"]]></Description>
 			<Flags>
