@@ -21,37 +21,46 @@
 ! Размеры — в мм листа; начало — левый нижний угол.
 
 k = GLOB_SCALE / 1000
+! в GDL имена переменных без учёта регистра: _h и _H — одна переменная, поэтому имена разные
 _w1 = wType * k
 _w2 = wArea * k
-_h = hRow * k
-_W = _w1 + _w2
-_H = 4 * _h
+_hr = hRow * k
+_wTot = _w1 + _w2
+_hTot = 4 * _hr
+_num = bShowApt and stApt <> ""
 
 hotspot2 0, 0
-hotspot2 _W, 0
-hotspot2 0, _H
-hotspot2 _W, _H
-hotspot2 _W / 2, _H / 2
+hotspot2 _wTot, 0
+hotspot2 0, _hTot
+hotspot2 _wTot, _hTot
+hotspot2 _wTot / 2, _hTot / 2
 
 pen gs_cont_pen
-line2 0, 0, _W, 0
-line2 _W, 0, _W, _H
-line2 _W, _H, 0, _H
-line2 0, _H, 0, 0
-line2 _w1, 0, _w1, _H
+line2 0, 0, _wTot, 0
+line2 _wTot, 0, _wTot, _hTot
+line2 _wTot, _hTot, 0, _hTot
+line2 0, _hTot, 0, 0
+line2 _w1, 0, _w1, _hTot
 for i = 1 to 3
-	line2 _w1, i * _h, _W, i * _h
+	line2 _w1, i * _hr, _wTot, i * _hr
 next i
+if _num then line2 0, _hTot / 2, _w1, _hTot / 2
 
 pen gs_text_pen
 _face = 0
 if bTypeBold then _face = 1
 define style "aspType" sFont, tSizeType, 5, _face
 define style "aspArea" sFont, tSize, 5, 0
-define style "aspApt" sFont, tSize, 8, 0
 
+! слева: номер квартиры (верх) и тип (низ); без номера — тип по центру
 set style "aspType"
-text2 _w1 / 2, _H / 2, stType
+if _num then
+	text2 _w1 / 2, _hTot * 0.25, stType
+	set style "aspArea"
+	text2 _w1 / 2, _hTot * 0.75, stApt
+else
+	text2 _w1 / 2, _hTot / 2, stType
+endif
 
 set style "aspArea"
 dim _s[4]
@@ -60,13 +69,8 @@ _s[2] = stArea
 _s[3] = stTotal
 _s[4] = stReduced
 for i = 1 to 4
-	text2 _w1 + _w2 / 2, _H - (i - 0.5) * _h, _s[i]
+	text2 _w1 + _w2 / 2, _hTot - (i - 0.5) * _hr, _s[i]
 next i
-
-if bShowApt and stApt <> "" then
-	set style "aspApt"
-	text2 _W / 2, _H + 0.8 * k, "кв. " + stApt
-endif
 ]]>
 </Script_2D>
 
@@ -254,11 +258,11 @@ endif
 			<Value>0</Value>
 		</Boolean>
 		<Boolean Name="bShowApt">
-			<Description><![CDATA["Показывать номер квартиры над паспортом"]]></Description>
+			<Description><![CDATA["Номер квартиры в паспорте (слева сверху)"]]></Description>
 			<Flags>
 				<ParFlg_Child/>
 			</Flags>
-			<Value>0</Value>
+			<Value>1</Value>
 		</Boolean>
 		<PenColor Name="gs_cont_pen">
 			<Description><![CDATA["Перо рамки"]]></Description>
