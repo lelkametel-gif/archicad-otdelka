@@ -249,6 +249,7 @@ std::vector<CheckRow> CheckRows (const std::vector<ZoneData>& zones, const Rules
 		c.number = z.number;
 		c.guid = z.guid;
 		for (const auto& n : z.notes) c.note += (c.note.empty () ? L"" : L"; ") + n;
+		if (!c.note.empty ()) c.note = L"не связаны с зоной, взяты по плану (м): " + c.note;
 		c.zoneName = ZoneTitle (z);
 		c.category = z.name;
 		c.code = CatCodeOf (z);
@@ -283,7 +284,7 @@ std::vector<CheckRow> CheckRows (const std::vector<ZoneData>& zones, const Rules
 TableLayout LayoutCheck (const std::vector<ZoneData>& zones, const Rules& r, const std::wstring& title, const TableStyle& st)
 {
 	// Этаж | № зоны | Имя зоны | Категория зоны | Код | Площадь, м² | Подкатегория | Строка ведомости
-	const std::vector<double> colW = { 12, 14, 44, 44, 14, 18, 34, 60, 60 };
+	const std::vector<double> colW = { 12, 14, 44, 44, 14, 18, 34, 60, 90 };
 	std::vector<GCell> cells;
 	auto add = [&cells] (int r1, int c1, int r2, int c2, const std::wstring& t, bool vert = false, bool bold = false) {
 		GCell g; g.r1 = r1; g.c1 = c1; g.r2 = r2; g.c2 = c2; g.text = t; g.vertical = vert; g.bold = bold;

@@ -685,6 +685,7 @@ struct ElemGeo {
 	double		bot = 0, top = 0;					// абсолютные отметки, м
 	API_Coord	begC = {}, endC = {};				// ось стены
 	double		height = 0;
+	bool		hidden = false;						// скрытый слой: не считается, но закрывает грани за собой
 };
 
 std::vector<ElemGeo> LoadElemGeo (const std::vector<StoryRec>& stories, bool skipHidden, LayerCache& layers)
@@ -701,9 +702,8 @@ std::vector<ElemGeo> LoadElemGeo (const std::vector<StoryRec>& stories, bool ski
 			el.header.guid = g;
 			if (ACAPI_Element_Get (&el) != NoError)
 				continue;
-			if (skipHidden && ReadLayer (el.header.layer, layers).hidden)
-				continue;
 			ElemGeo w;
+			w.hidden = skipHidden && ReadLayer (el.header.layer, layers).hidden;
 			w.guid = g;
 			w.isColumn = type == API_ColumnID;
 			const double base = lev.count (el.header.floorInd) ? lev[el.header.floorInd] : 0.0;
@@ -906,7 +906,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 		}
 		for (size_t i = 0; i < nearElems.size (); ++i) {
 			const ElemGeo& e = *nearElems[i];
-			if (!e.ortho || (!e.isColumn && relWalls.count (e.guid) != 0))
+			if (!e.ortho || e.hidden || (!e.isColumn && relWalls.count (e.guid) != 0))
 				continue;
 			const std::vector<otd::FaceRun> runs = otd::ExposedFaces (polys, boxes, i);
 			double len = 0;
@@ -956,8 +956,8 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 			}
 			if (p.byContour) {
 				++rs.byContour;
-				z.notes.push_back (L"по плану (не связан с зоной): " + std::wstring (p.isColumn ? L"колонна " : L"стена ") +
-								   (p.elemId.empty () ? std::wstring (L"без ID") : p.elemId) + L" — " + otd::FormatNum (p.length, 2) + L" м");
+				z.notes.push_back ((p.isColumn ? L"кол. " : L"") + (p.elemId.empty () ? std::wstring (L"без ID") : p.elemId) +
+								   L" " + otd::FormatNum (p.length, 2));
 			}
 			z.pieces.push_back (p);
 			if (p.column == 0)
