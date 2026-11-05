@@ -816,7 +816,7 @@ static double DistToBoundary (const Shape& s, double x, double y)
 
 std::vector<FaceRun> ExposedFaces (const Polys& zone, const std::vector<Shape>& shapes, size_t idx, double step, const std::vector<int>& prio)
 {
-	static const double kDepth[] = { 0.005, 0.015, 0.03, 0.05 };
+	static const double kDepth[] = { 0.005, 0.015, 0.03, 0.045 };
 	const double e = 1e-4;
 	std::vector<FaceRun> res;
 	const Shape& sh = shapes[idx];
@@ -860,6 +860,8 @@ std::vector<FaceRun> ExposedFaces (const Polys& zone, const std::vector<Shape>& 
 				if (wins (o) && DistToBoundary (os, px, py) <= e && InShape (os, px - nx * 0.001, py - ny * 0.001))
 					inside = true;
 			}
+			// идём от грани наружу до 5 см: зона без элементов — отделывается; элемент раньше зоны — грань закрыта;
+			// элемент сразу за зоной (щель до 5 см между пилоном и стеной) — щель не отделывается
 			bool exposed = false;
 			for (double d : kDepth) {
 				if (inside) break;
@@ -875,8 +877,8 @@ std::vector<FaceRun> ExposedFaces (const Polys& zone, const std::vector<Shape>& 
 						continue;
 					blocked = true;
 				}
-				if (blocked) break;
-				if (PointInPolys (zone, qx, qy)) { exposed = true; break; }
+				if (blocked) { exposed = false; break; }
+				if (PointInPolys (zone, qx, qy)) exposed = true;
 			}
 			if (exposed) { if (runStart < 0) runStart = k; }
 			else flush (k);

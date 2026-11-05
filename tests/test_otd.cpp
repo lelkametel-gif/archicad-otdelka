@@ -243,6 +243,20 @@ int main (int argc, char** argv)
 		CHECK (s2 < 0.05);
 	}
 
+	// --- пилон 0,8×0,2 у ж/б стены с щелью 2 см: грани в щель не отделываются
+	{
+		Polys zone = { { { 0, 0 }, { 3, 0 }, { 3, 6 }, { 0, 6 } } };
+		std::vector<Box> bx = { { -0.25, -0.2, 0.0, 6.2 },		// 0 ж/б стена
+								{ 0.02, 3.0, 0.82, 3.2 } };		// 1 пилон в 2 см от стены
+		const std::vector<int> pr = { 1, 2 };
+		auto tot = [&] (size_t i) { double s = 0; for (const auto& f : ExposedFaces (zone, bx, i, 0.01, pr)) s += f.Length (); return s; };
+		CHECK (std::fabs (tot (1) - 1.8) < 0.03);					// 0,8 + 0,8 + 0,2, без торца в щель
+		CHECK (std::fabs (tot (0) - (6.0 - 0.2)) < 0.03);			// стена без участка за пилоном
+		// щель 10 см — уже отделывается
+		bx[1] = { 0.1, 3.0, 0.9, 3.2 };
+		CHECK (std::fabs (tot (1) - 2.0) < 0.03);
+	}
+
 	// --- площади
 	NEAR (OpeningOverlap (0, 2.1, 0.08, 2.9), 2.02);
 	NEAR (OpeningOverlap (0.9, 1.5, 0.08, 2.9), 1.5);
