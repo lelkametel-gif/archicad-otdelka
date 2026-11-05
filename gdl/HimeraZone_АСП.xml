@@ -1,0 +1,3796 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Symbol IsArchivable="false" IsPlaceable="true" MainGUID="74D2561B-1B23-4787-AE10-4A78AA88340E" MigrationValue="Normal" Owner="0" Signature="1381194061" Version="45">
+<SubKind SectVersion="1" SectionFlags="0" SubIdent="0" length_in_bytes="256" platform="Win">
+	<![CDATA[
+	5757010000000000000000000000000000000000000000000000000000000000
+	0000000000000000000000000000000000000000000000000000000000000000
+	0000000000000000000000000000000000000000000000000000000000000000
+	0000000000000000000000000000000000000000000000000000000000000000
+	0000000000000000000000000000000000000000000000000000000000000000
+	0000000000000000000000000000000000000000000000000000000000000000
+	0000000000000000000000000000000000000000000000000000000000000000
+	0000000000000000000000000000000000000000000000000000000000000000
+	]]>
+</SubKind>
+
+<!-- GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT -->
+
+<Script_2D SectVersion="20" SectionFlags="0" SubIdent="0">
+<![CDATA[
+unid = 1
+gs = GLOB_SCALE
+PTM = GLOB_SCALE / 1000
+
+err = REQUEST ("Calc_area_unit", "", format_string)
+
+!err = REQUEST ("view_rotangle", "", angleViewRotation)
+!text2 0,0, "SYMB=" + str (SYMB_ROTANGLE,3,2)
+!text2 0,1, "VIEW="+ str (angleViewRotation,3,2)
+!circle2 0,0,0.1
+
+_not = 0
+_und = 1 ! подчеркиванье
+_circle = 2
+_dcircle = 3
+_oval = 4
+_triangle = 5
+_undotriangle = 6
+_square = 7
+_rectangle = 8
+_romb = 9
+_hexagon = 10
+
+
+
+fill fillMark
+allMarkH = 0
+basis = TextSize * PTM
+dim drr[], dBasis[]
+curH = 0
+
+for comp=1 to 6  ! Подготовка текстовых блоков с вычислением их габаритов
+	rr=0
+	if bZone[comp] then 
+		pen pZone[comp]
+		styleName= "room" + dcomp[comp][2]
+		fontSize = TextSize
+		if fsZone[comp] > EPS then fontSize = fsZone[comp]
+		basis = fontSize * PTM
+		dBasis[comp] = basis
+		define style styleName TextFont, fontSize, 5, TextStyle
+		style styleName
+
+		parName = "par" + dcomp[comp][2]
+		paragraph parName 2,0,0,0,1
+			szone[comp]
+		endparagraph
+		tbName = "tb" + dcomp[comp][2]
+		letxt0=0
+		if strlen(szone[comp])> 8 then letxt0 = letxt[comp] * 2000
+		textblock tbName letxt0, 5, 0, 1, 1, 1, parName
+		sss=request("TEXTBLOCK_INFO", tbName, tbWidth, tbHeight)
+
+		if		fZone[comp] = _not \
+			or	fZone[comp] = _und \
+			or	fZone[comp] = _rectangle then
+			rr = basis*0.2
+		else
+			if fZone[comp] = _square		then rr = basis*0.8
+			if fZone[comp] = _romb			then rr = basis*1.2
+			if fZone[comp] = _hexagon		then rr = basis*0.8
+			if fZone[comp] = _circle 		then rr = basis*0.9
+			if fZone[comp] = _dcircle		then rr = basis*0.9
+			if fZone[comp] = _triangle		then rr = basis*0.5
+			if fZone[comp] = _undotriangle 	then rr = basis*0.5
+			if fZone[comp] = _triangle or fZone[comp] = _undotriangle then
+				if tbWidth > fontSize * 2 then rr = rr + (tbWidth-fontSize*2)*PTM/2
+			else
+				if tbWidth > fontSize * 2.5 then rr = rr + (tbWidth-fontSize*2.5)*PTM/2
+			endif
+		endif
+		rr = rr + tbHeight * PTM / 2
+		if fZone[comp] = _hexagon		then rr = rr / cos(30)
+		if fZone[comp] = _triangle or fZone[comp]=_undotriangle then rr=rr/tan(30)/4*3
+		if rZone[comp] > EPS then rr = rZone[comp]*PTM
+		drr[comp] = rr
+		if abs(compOffX[comp][of_mov]) < EPS and abs(compOffY[comp][of_mov]) < EPS then
+			if allMarkH < EPS and rr > EPS then curH = rr + basis/4
+			allMarkH = allMarkH + rr * 2 + basis / 2
+		endif
+	endif
+next comp
+
+for comp = 1 to 6
+	if bZone[comp] and szone[comp] <> "" then
+		basis = dBasis[comp]
+		styleName = "room" + dcomp[comp][2]
+		fontSize = TextSize
+		if fsZone[comp] > EPS then fontSize = fsZone[comp]
+
+		sss=request("Height_of_style", styleName, height, descent, leading)
+
+		pen pZone[comp]
+		rr = drr[comp]
+		place0 = 0
+		if abs(compOffX[comp][of_mov]) < EPS and abs(compOffY[comp][of_mov]) < EPS then
+			place0 = 1
+			rot2 -SYMB_ROTANGLE
+			add2 0, curH - rr - basis / 2 + rr / 3 *((fZone[comp] = _undotriangle) - (fZone[comp] = _triangle) )
+			curH = curH - rr * 2 - basis / 2
+			rot2 SYMB_ROTANGLE
+		endif
+		rot2 -SYMB_ROTANGLE ! -----------------Вначале поворачиваем-----------------
+		! - хотспоты смещения X Y надписей в штампе
+		_stPoz = 'место (X) Маркера ' + str(comp,1,0) + ' для Вида ' +str(of_mov,1,0) 
+		hotspot2 0,							compOffY[comp][of_mov],	unid,	compOffX[comp][of_mov],	1+128,	compOffX[comp][of_mov], _stPoz	:unid = unid + 1
+		hotspot2 compOffX[comp][of_mov],	compOffY[comp][of_mov],	unid,	compOffX[comp][of_mov],	2,compOffX[comp][of_mov], _stPoz		:unid = unid + 1
+		hotspot2 -1,						compOffY[comp][of_mov],	unid,	compOffX[comp][of_mov],	3,compOffX[comp][of_mov], _stPoz		:unid = unid + 1
+		_stPoz = 'место (У) Маркера ' + str(comp,1,0) + ' для Вида ' +str(of_mov,1,0) 		
+		hotspot2 compOffX[comp][of_mov],	0,						unid,	compOffY[comp][of_mov],	1+128,	compOffX[comp][of_mov], _stPoz	:unid = unid + 1
+		hotspot2 compOffX[comp][of_mov],	compOffY[comp][of_mov],	unid,	compOffY[comp][of_mov],	2,compOffX[comp][of_mov], _stPoz		:unid = unid + 1
+		hotspot2 compOffX[comp][of_mov],	-1,						unid,	compOffY[comp][of_mov],	3,compOffX[comp][of_mov], _stPoz		:unid = unid + 1
+		add2 compOffX[comp][of_mov],	compOffY[comp][of_mov] ! потом смещаем
+		rot2 SYMB_ROTANGLE ! ------------------Отменяем поворот без отмены смещения-------------
+
+		xLin = compOffX[comp][of_mov] - startOffX[comp][of_mov]
+		yLin = compOffY[comp][of_mov] - startOffY[comp][of_mov] + basis
+		lenLin = sqr(xLin^2 + yLin^2)
+		angLin = 90
+		if abs(xLin) > EPS then angLin = atn(yLin/xLin)
+		if xLin < 0 or (abs(xLin) < EPS and yLin < 0) then angLin = angLin + 180
+
+		drawindex 20
+		tbName = "tb"+ dcomp[comp][2]
+		sss = request("TEXTBLOCK_INFO", tbName, tbWidth, tbHeight)
+		tl1 = tbWidth * PTM
+
+		if fZone[comp] < 2 and bfill then
+			poly2_B 4, 6, penFill, 0,
+				-tl1/2-basis/2,	-rr,	1,
+				tl1/2+basis/2,	-rr,	1,
+				tl1/2+basis/2,	rr,		1,
+				-tl1/2-basis/2,	rr,		1
+			endLin = rr
+		endif
+		if fZone[comp] = _und then
+			line2 -tl1/2, -rr+leading*PTM*5, tl1/2, -rr+leading*PTM*5
+		endif
+
+		if fZone[comp] = _circle then
+			poly2_B 2, 5+2*bfill, penFill, 0,
+				0,	0,		901,
+				rr,	360,	4001
+			endLin =rr
+		endif
+
+		if fZone[comp] = _dcircle then
+			poly2_B 2, 5+2*bfill, penFill, 0,
+				0,	0,		901,
+				rr*1.1,	360,	4001
+			circle2 0,0,rr
+			endLin = rr*1.1
+		endif
+
+		if fZone[comp] = _oval then
+			poly2_B 5, 5+2*bfill, penFill, 0,
+				-tl1/2+rr/3,	rr,		1,
+				tl1/2-rr/3,		rr,		1,
+				tl1/2-rr/3,		-rr,	1001,
+				-tl1/2+rr/3,	-rr,	1,
+				-tl1/2+rr/3,	rr,		1001
+			endLin = rr
+		endif
+
+		if fZone[comp]=_triangle then
+			rrx=rr*2*tan(30)
+			poly2_B 3, 5+2*bfill, penFill, 0,
+				0,		rr*4/3,		1,
+				-rrx,	-rr*2/3,	1,
+				rrx,	-rr*2/3,	1
+			endLin = rr/2
+		endif
+
+		if fZone[comp]=_undotriangle then
+			rrx=rr*2*tan(30)
+			poly2_B 3, 5+2*bfill, penFill, 0,
+				0,		-rr*4/3,	1,
+				-rrx,	rr*2/3,		1,
+				rrx,	rr*2/3,		1
+			endLin = rr/2
+		endif
+
+		if fZone[comp]=_square then
+			poly2_B 4, 5+2*bfill, penFill, 0,
+				-rr,	-rr,	1,
+				rr,		-rr,	1,
+				rr,		rr,		1,
+				-rr,	rr, 	1
+			endLin = rr
+		endif
+
+		if fZone[comp]=_rectangle then
+			poly2_B 4, 5+2*bfill, penFill, 0,
+				-tl1/2-basis/4,	-rr,	1,
+				tl1/2+basis/4,	-rr,	1,
+				tl1/2+basis/4,	rr,		1,
+				-tl1/2-basis/4,	rr,		1
+			endLin=rr
+		endif
+
+		if fZone[comp]=_romb then
+			poly2_B 4, 5+2*bfill, penFill, 0,
+				-rr,	0,		1,
+				0,		-rr,	1,
+				rr,		0,		1,
+				0,		rr,		1
+			endLin=rr*0.7
+		endif
+
+		if fZone[comp]=_hexagon then
+			rrx=rr*cos(30)
+			poly2_B 6, 5+2*bfill, penFill, 0,
+				0,		rr,		1,
+				rrx,	rr/2,	1,
+				rrx,	-rr/2,	1,
+				0,		-rr,	1,
+				-rrx,	-rr/2,	1,
+				-rrx,	rr/2,	1
+			endLin=rr
+		endif
+
+		if strlen(szone[comp]) > 8 then  ! добавляем хотспоты для длинных наименований
+			add2 0, rr/2
+			hotspot2	0,				0,	unid,	letxt[comp],	1+1024+128	:unid=unid+1
+			hotspot2	letxt[comp]*gs,	0,	unid,	letxt[comp],	2+1024		:unid=unid+1
+			hotspot2	-1,				0,	unid,	letxt[comp],	3+1024		:unid=unid+1
+			del 1
+		endif
+
+		add2 0, (height/2-descent-leading-fontSize/2) * PTM
+		!--------Вывод текста--------------------------------------------------------------------------
+		richtext2 0, 0, tbName
+		del top
+
+		if bShowLines and lenLin > 1 then  
+			! ---- хотспоты линии начала с выносками X-Y -------
+
+			rot2 -SYMB_ROTANGLE ! -----------------Вначале поворачиваем
+			add2 0, -basis ! смещение начала линии выноски  
+
+			hotspot2 0,							startOffY[comp][of_mov],	unid,	startOffX[comp][of_mov],	1+128	:unid=unid+1
+			hotspot2 startOffX[comp][of_mov],	startOffY[comp][of_mov],	unid,	startOffX[comp][of_mov],	2		:unid=unid+1
+			hotspot2 -1,						startOffY[comp][of_mov],	unid,	startOffX[comp][of_mov],	3		:unid=unid+1
+			
+			hotspot2 startOffX[comp][of_mov],	0,							unid,	startOffY[comp][of_mov],	1+128	:unid=unid+1
+			hotspot2 startOffX[comp][of_mov],	startOffY[comp][of_mov],	unid,	startOffY[comp][of_mov],	2		:unid=unid+1
+			hotspot2 startOffX[comp][of_mov],	-1,							unid,	startOffY[comp][of_mov],	3		:unid=unid+1
+
+			add2 startOffX[comp][of_mov],	startOffY[comp][of_mov]
+			rot2 angLin
+			drawindex 10
+			line2 0, 0, lenLin - endLin, 0 
+			del top
+		endif
+		if place0 then del top
+	endif
+next comp
+
+]]>
+</Script_2D>
+
+<!-- GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT -->
+
+<Script_VL SectVersion="20" SectionFlags="0" SubIdent="0">
+<![CDATA[
+!!!!lock "bypmv"
+!!!!hideparameter all
+parameters PositionCodeByStory = 0
+lock "PositionCodeByStory"
+
+values "koeff" 0.3,0.5,0.75,0.8,1, range[0,1]
+values "fzone" 0,1,2,3,4,5,6,7,8,9,10
+values "cat" "", "А", "Б", "В1", "В2", "В3", "В4", "Г1", "Г2", "Д", custom
+values "gs_ui_current_page" 1,2,3,4,5
+
+if GLOB_UI_BUTTON_ID=1000 then
+	for comp=1 to 6
+		for ofmov=1 to 6
+			compoffx[comp][ofmov]=0
+			compoffy[comp][ofmov]=0
+			startoffx[comp][ofmov]=0
+			startoffy[comp][ofmov]=0
+		next ofmov
+	next comp
+	parameters compoffx=compoffx, compoffy=compoffy, startoffx=startoffx, startoffy=startoffy
+endif
+
+! ----- Identification for Apartment/TOP Stamp Add-On -------
+success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "numid", numid)
+!--1-Тип пола ----------------------------------
+iNum = 0
+if numid then ! №зоны = ИД, а пол 
+	err = split(ROOM_NUMBER,"%n", iNum) ! получение числа
+else
+	err = split(GLOB_ID,"%n", iNum)! получение числа
+endif
+stFloorType = str(iNum,1,0) ! перевод в строку
+parameters 	stFloorType = stFloorType 
+lock "stFloorType"
+
+
+
+!-------------------Площадь пола 4-----------------------------------------------------------------
+roomExtr = ROOM_COLUMN_EXTR_AREA + ROOM_WALL_EXTR_AREA + ROOM_FILL_EXTR_AREA
+FloorArea = (ROOM_BOT_SURFACE - roomExtr - (N_PER+V_PER) * FinishSize * bFinishWall)
+if bFloorAdd then
+	FloorArea = FloorArea + FloorAdd
+endif
+if brounded then
+	FloorArea = INT(FloorArea * div + 0.5) / div
+endif 
+
+!--1-Тип пола ----------------------------------
+asAddOn_SubArea = iNum 
+!--2-Тип кваритры-------------------------------
+asAddOn_SubRegul = iTypeZone
+!--3-Коэфицент уменьшения-----------------------
+asAddOn_SubFinish = koeff
+!--4-Площадь помещения--------------------------
+asAddOn_CalcArea = CalcArea
+!--5-Площадь пола-------------------------------
+asAddOn_FloorArea = FloorArea
+!--6-Площадь штриховки-------------------------------
+asAddOn_FillArea = FillArea
+
+parameters asAddOn_SubRegul = asAddOn_SubRegul,
+			asAddOn_SubArea 	= asAddOn_SubArea,
+			asAddOn_SubFinish	= asAddOn_SubFinish,
+			asAddOn_CalcArea	= asAddOn_CalcArea,
+			asAddOn_FloorArea	= asAddOn_FloorArea,
+			asAddOn_FillArea  = asAddOn_FillArea 
+parameters AreaCoeff = AreaCoeff
+
+! Группа отделки и отделка пола не используются (пол — перекрытие в слое «Полы»)
+hideparameter "stRoomType", "stDownMat", "stPlinthMat", "PlinthLenght"
+lock "stRoomType", "stDownMat", "stPlinthMat", "PlinthLenght"
+
+! Варианты отделки — как в ведомости отделки (лист 63)
+values "stUpMat" `Водно-дисперсионная окраска`,
+	`Водно-дисперсионная водостойкая окраска`,
+	`Натяжной потолок`,
+	`Подвесной потолок`,
+	`Подвесной потолок "Грильято"`,
+	`Подвесной потолок из ГКЛ с окраской водно-дисперсионной краской`,
+	`см. дизайн-проект`,
+	custom
+values "stWallMat" `Водно-дисперсионная окраска`,
+	`Водно-дисперсионная водостойкая окраска`,
+	`Оклейка обоями светлых тонов`,
+	`см. дизайн-проект`,
+	custom
+values "stWallDownMat" `Водно-дисперсионная окраска`,
+	`Водно-дисперсионная водостойкая окраска`,
+	`Оклейка обоями светлых тонов`,
+	`см. дизайн-проект`,
+	custom
+
+values "DoorHight" RANGE [1,ROOM_HEIGHT]
+values "WallDownHigh" RANGE [0,ROOM_HEIGHT]
+values "WallDownHighWindow" RANGE [0,ROOM_HEIGHT]
+
+
+]]>
+</Script_VL>
+
+<ParamSection SectVersion="26" SectionFlags="0" SubIdent="0">
+	<ParamSectHeader>
+		<AutoHotspots>false</AutoHotspots>
+		<StatBits>
+			<STBit_UIDefault/>
+			<STBit_FixSize/>
+			<STBit_UIUseHierarchicalPages/>
+		</StatBits>
+		<WDLeftFrame>0</WDLeftFrame>
+		<WDRightFrame>0</WDRightFrame>
+		<WDTopFrame>0</WDTopFrame>
+		<WDBotFrame>0</WDBotFrame>
+		<LayFlags>65535</LayFlags>
+		<WDMirrorThickness>0</WDMirrorThickness>
+		<WDWallInset>0</WDWallInset>
+	</ParamSectHeader>
+	<Parameters>
+		<Length Name="A">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>1</Value>
+		</Length>
+		<Length Name="B">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>1</Value>
+		</Length>
+		<String Name="AC_TextFont_1">
+			<Description><![CDATA["Шрифт текста 1"]]></Description>
+			<Fix/>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value><![CDATA["ISOCPEUR Cyrillic"]]></Value>
+		</String>
+		<RealNum Name="AC_TextSize_1">
+			<Description><![CDATA["Размер Текста Маркера 1 (по умолчанию)"]]></Description>
+			<Fix/>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>2.5</Value>
+		</RealNum>
+		<Integer Name="AC_TextStyle_1">
+			<Description><![CDATA["Стиль Текста Маркера 1 (по умолчанию)"]]></Description>
+			<Fix/>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>0</Value>
+		</Integer>
+		<Integer Name="AC_TextAlignment_1">
+			<Description><![CDATA["Выравнивание Текста Маркера 1 (по умолчанию)"]]></Description>
+			<Fix/>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>1</Value>
+		</Integer>
+		<RealNum Name="AC_TextLeading_1">
+			<Description><![CDATA["Межстрочное Расстояние Текста Маркера 1 (по умолчанию)"]]></Description>
+			<Fix/>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>1</Value>
+		</RealNum>
+		<RealNum Name="AC_TextCharWidthFactor_1">
+			<Description><![CDATA["Фактор Ширины Символов Текста Маркера 1 (по умолчанию)"]]></Description>
+			<Fix/>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>1</Value>
+		</RealNum>
+		<RealNum Name="AC_TextCharSpaceFactor_1">
+			<Description><![CDATA["Фактор Межсимвольного Расстояния Текста Маркера 1 (по умолчанию)"]]></Description>
+			<Fix/>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>1</Value>
+		</RealNum>
+		<PenColor Name="AC_TextPen_1">
+			<Description><![CDATA["Перо Текста Маркера 1 (по умолчанию)"]]></Description>
+			<Fix/>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>1</Value>
+		</PenColor>
+		<String Name="ROOM_NAME">
+			<Description><![CDATA["Имя зоны"]]></Description>
+			<Fix/>
+			<Value><![CDATA["<имя зоны>"]]></Value>
+		</String>
+		<String Name="ROOM_NUMBER">
+			<Description><![CDATA["Номер зоны"]]></Description>
+			<Fix/>
+			<Value><![CDATA["3"]]></Value>
+		</String>
+		<RealNum Name="ROOM_AREA">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0.064</Value>
+		</RealNum>
+		<Length Name="ROOM_PERIM">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</Length>
+		<Length Name="ROOM_HOLES_PRM">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</Length>
+		<Length Name="ROOM_WALLS_PRM">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</Length>
+		<Integer Name="ROOM_CORNERS">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</Integer>
+		<Integer Name="ROOM_CONCAVES">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</Integer>
+		<RealNum Name="ROOM_WALLS_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<Length Name="ROOM_DOORS_WID">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</Length>
+		<RealNum Name="ROOM_DOORS_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<Length Name="ROOM_WINDS_WID">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</Length>
+		<RealNum Name="ROOM_WINDS_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<Length Name="ROOM_BASELEV">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</Length>
+		<Length Name="ROOM_FL_THICK">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</Length>
+		<Length Name="ROOM_HEIGHT">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>3</Value>
+		</Length>
+		<RealNum Name="ROOM_NET_AREA">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<Length Name="ROOM_NET_PERIMETER">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</Length>
+		<RealNum Name="ROOM_WALL_EXTR_AREA">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_CURTAINWALL_EXTR_AREA">
+			<Description><![CDATA["Вычитаемая Площадь Навесных Стен"]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_COLUMN_EXTR_AREA">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_FILL_EXTR_AREA">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_LOW_EXTR_AREA">
+			<Description><![CDATA["Подрезка по высоте"]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_TOTAL_EXTR_AREA">
+			<Description><![CDATA["Общая вычитаемая площадь"]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_REDUCED_AREA">
+			<Description><![CDATA["Уменьшенная площадь без К"]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_AREA_FACTOR">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>1</Value>
+		</RealNum>
+		<RealNum Name="ROOM_CALC_AREA">
+			<Description><![CDATA["Уменьшенная на К"]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_VOLUME">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_BOUNDARY_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_TOP_SURFACE">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_BOT_SURFACE">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_ROOF_TOP_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_ROOF_BOT_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_SLAB_TOP_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_SLAB_BOT_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_BEAM_TOP_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_BEAM_BOT_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_WALL_IN_TOP_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_WALL_IN_BACK_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_WALL_IN_SIDE_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Value>0</Value>
+		</RealNum>
+		<String Name="listZoneProperty">
+			<Description><![CDATA[""]]></Description>
+			<Fix/>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<ArrayValues FirstDimension="1" SecondDimension="2">
+				<AVal Column="1" Row="1"><![CDATA[""]]></AVal>
+				<AVal Column="2" Row="1"><![CDATA[""]]></AVal>
+			</ArrayValues>
+		</String>
+		<RealNum Name="LABPP_Area">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>0.064</Value>
+		</RealNum>
+		<RealNum Name="LABPP_Rounded_Area">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="LABPP_Rounded_Area_With_K">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<Boolean Name="koefByCat">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</Boolean>
+		<RealNum Name="koeff">
+			<Description><![CDATA[""]]></Description>
+			<Value>1</Value>
+		</RealNum>
+		<Boolean Name="bShowLines">
+			<Description><![CDATA["Рисовать выноски"]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+
+		<!-- bypmv: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bypmv">
+			<Description><![CDATA["по параметрам МВ"]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<Boolean Name="bZone">
+			<Description><![CDATA["выбор компонентов"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="0">
+				<AVal Row="1">0</AVal>
+				<AVal Row="2">1</AVal>
+				<AVal Row="3">1</AVal>
+				<AVal Row="4">0</AVal>
+				<AVal Row="5">0</AVal>
+				<AVal Row="6">0</AVal>
+			</ArrayValues>
+		</Boolean>
+		<Integer Name="fZone">
+			<Description><![CDATA["Типо отображения компонента"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="0">
+				<AVal Row="1">2</AVal>
+				<AVal Row="2">0</AVal>
+				<AVal Row="3">1</AVal>
+				<AVal Row="4">5</AVal>
+				<AVal Row="5">7</AVal>
+				<AVal Row="6">6</AVal>
+			</ArrayValues>
+		</Integer>
+		<RealNum Name="fsZone">
+			<Description><![CDATA["Размер шрифта"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="0">
+				<AVal Row="1">0</AVal>
+				<AVal Row="2">0</AVal>
+				<AVal Row="3">0</AVal>
+				<AVal Row="4">0</AVal>
+				<AVal Row="5">0</AVal>
+				<AVal Row="6">0</AVal>
+			</ArrayValues>
+		</RealNum>
+		<PenColor Name="pzone">
+			<Description><![CDATA["перо компонентов"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="0">
+				<AVal Row="1">1</AVal>
+				<AVal Row="2">1</AVal>
+				<AVal Row="3">21</AVal>
+				<AVal Row="4">1</AVal>
+				<AVal Row="5">1</AVal>
+				<AVal Row="6">1</AVal>
+			</ArrayValues>
+		</PenColor>
+		<Boolean Name="onepen">
+			<Description><![CDATA["Одно перо для всех"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<RealNum Name="rZone">
+			<Description><![CDATA["Размер фигуры компонента"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="0">
+				<AVal Row="1">3</AVal>
+				<AVal Row="2">0</AVal>
+				<AVal Row="3">0</AVal>
+				<AVal Row="4">0</AVal>
+				<AVal Row="5">0</AVal>
+				<AVal Row="6">0</AVal>
+			</ArrayValues>
+		</RealNum>
+		<Boolean Name="catzoneforname">
+			<Description><![CDATA["Категория в качестве наименования"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<String Name="catpropid">
+			<Description><![CDATA["Категория по классификации"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["ВСТРОЕННЫЙ ПАРАМЕТР ЗОНЫ"]]></Value>
+		</String>
+		<String Name="cat">
+			<Description><![CDATA["Категория помещения"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<String Name="custparamid">
+			<Description><![CDATA["Спец. параметр по классификации"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["СПЕЦИАЛЬНЫЙ ПАРАМЕТР"]]></Value>
+		</String>
+		<String Name="custparam">
+			<Description><![CDATA["Специальный параметр"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<Integer Name="bFullArea">
+			<Description><![CDATA["Полная площадь"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>2</Value>
+		</Integer>
+		<String Name="areaunit">
+			<Description><![CDATA["Единицы площади"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<Integer Name="areadec">
+			<Description><![CDATA["Знаков после запятой"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>2</Value>
+		</Integer>
+		<Boolean Name="decbyproject">
+			<Description><![CDATA["Знаков после запятой из проекта"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>1</Value>
+		</Boolean>
+		<Boolean Name="brounded">
+			<Description><![CDATA["Спец. округление"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+
+		<!-- bypmvattr: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bypmvattr">
+			<Description><![CDATA["Атррибуты по параметрам МВ"]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>1</Value>
+		</Boolean>
+		<String Name="TextFont">
+			<Description><![CDATA["Шрифт"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["ISOCPEUR Cyrillic"]]></Value>
+		</String>
+		<RealNum Name="TextSize">
+			<Description><![CDATA["Высота шрифта"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>2.3</Value>
+		</RealNum>
+		<Integer Name="TextStyle">
+			<Description><![CDATA["Стиль текста Ж К П"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Integer>
+		<PenColor Name="TextPen">
+			<Description><![CDATA["Перо текста"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>1</Value>
+		</PenColor>
+		<FillPattern Name="fillmark">
+			<Description><![CDATA["Штриховка"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>65</Value>
+		</FillPattern>
+		<Boolean Name="bFill">
+			<Description><![CDATA["Штриховка"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>1</Value>
+		</Boolean>
+		<PenColor Name="penFill">
+			<Description><![CDATA["Перо штриховки"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</PenColor>
+
+		<!-- _sp17: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Title Name="_sp17">
+			<Description><![CDATA["Отделка"]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+		</Title>
+		<Material Name="votc">
+			<Description><![CDATA["Потолка"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Material>
+		<Material Name="votw">
+			<Description><![CDATA["Стен/перегородок"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Material>
+		<Material Name="votwbottom">
+			<Description><![CDATA["Низа стен"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Material>
+		<Material Name="votp">
+			<Description><![CDATA["Плинтуса/панелей"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Material>
+		<Length Name="plinth">
+			<Description><![CDATA["Высота плинтуса/панелей"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0.1</Value>
+		</Length>
+
+		<!-- gjs22_sp0_A: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Title Name="gjs22_sp0_A">
+			<Description><![CDATA["Реквизиты"]]></Description>
+		</Title>
+		<Length Name="compoffx">
+			<Description><![CDATA["Расположение маркера Х"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="6">
+				<AVal Column="1" Row="1">0</AVal>
+				<AVal Column="2" Row="1">0</AVal>
+				<AVal Column="3" Row="1">0</AVal>
+				<AVal Column="4" Row="1">0</AVal>
+				<AVal Column="5" Row="1">0</AVal>
+				<AVal Column="6" Row="1">0</AVal>
+				<AVal Column="1" Row="2">0</AVal>
+				<AVal Column="2" Row="2">0</AVal>
+				<AVal Column="3" Row="2">0</AVal>
+				<AVal Column="4" Row="2">0</AVal>
+				<AVal Column="5" Row="2">0</AVal>
+				<AVal Column="6" Row="2">0</AVal>
+				<AVal Column="1" Row="3">0</AVal>
+				<AVal Column="2" Row="3">0</AVal>
+				<AVal Column="3" Row="3">0</AVal>
+				<AVal Column="4" Row="3">0</AVal>
+				<AVal Column="5" Row="3">0</AVal>
+				<AVal Column="6" Row="3">0</AVal>
+				<AVal Column="1" Row="4">0</AVal>
+				<AVal Column="2" Row="4">0</AVal>
+				<AVal Column="3" Row="4">0</AVal>
+				<AVal Column="4" Row="4">0</AVal>
+				<AVal Column="5" Row="4">0</AVal>
+				<AVal Column="6" Row="4">0</AVal>
+				<AVal Column="1" Row="5">0</AVal>
+				<AVal Column="2" Row="5">0</AVal>
+				<AVal Column="3" Row="5">0</AVal>
+				<AVal Column="4" Row="5">0</AVal>
+				<AVal Column="5" Row="5">0</AVal>
+				<AVal Column="6" Row="5">0</AVal>
+				<AVal Column="1" Row="6">0</AVal>
+				<AVal Column="2" Row="6">0</AVal>
+				<AVal Column="3" Row="6">0</AVal>
+				<AVal Column="4" Row="6">0</AVal>
+				<AVal Column="5" Row="6">0</AVal>
+				<AVal Column="6" Row="6">0</AVal>
+			</ArrayValues>
+		</Length>
+		<Length Name="compoffy">
+			<Description><![CDATA["Расположение маркера Y"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="6">
+				<AVal Column="1" Row="1">0</AVal>
+				<AVal Column="2" Row="1">0</AVal>
+				<AVal Column="3" Row="1">0</AVal>
+				<AVal Column="4" Row="1">0</AVal>
+				<AVal Column="5" Row="1">0</AVal>
+				<AVal Column="6" Row="1">0</AVal>
+				<AVal Column="1" Row="2">0</AVal>
+				<AVal Column="2" Row="2">0</AVal>
+				<AVal Column="3" Row="2">0</AVal>
+				<AVal Column="4" Row="2">0</AVal>
+				<AVal Column="5" Row="2">0</AVal>
+				<AVal Column="6" Row="2">0</AVal>
+				<AVal Column="1" Row="3">0</AVal>
+				<AVal Column="2" Row="3">0</AVal>
+				<AVal Column="3" Row="3">0</AVal>
+				<AVal Column="4" Row="3">0</AVal>
+				<AVal Column="5" Row="3">0</AVal>
+				<AVal Column="6" Row="3">0</AVal>
+				<AVal Column="1" Row="4">0</AVal>
+				<AVal Column="2" Row="4">0</AVal>
+				<AVal Column="3" Row="4">0</AVal>
+				<AVal Column="4" Row="4">0</AVal>
+				<AVal Column="5" Row="4">0</AVal>
+				<AVal Column="6" Row="4">0</AVal>
+				<AVal Column="1" Row="5">0</AVal>
+				<AVal Column="2" Row="5">0</AVal>
+				<AVal Column="3" Row="5">0</AVal>
+				<AVal Column="4" Row="5">0</AVal>
+				<AVal Column="5" Row="5">0</AVal>
+				<AVal Column="6" Row="5">0</AVal>
+				<AVal Column="1" Row="6">0</AVal>
+				<AVal Column="2" Row="6">0</AVal>
+				<AVal Column="3" Row="6">0</AVal>
+				<AVal Column="4" Row="6">0</AVal>
+				<AVal Column="5" Row="6">0</AVal>
+				<AVal Column="6" Row="6">0</AVal>
+			</ArrayValues>
+		</Length>
+		<Length Name="startoffx">
+			<Description><![CDATA["Начало маркера Х"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="6">
+				<AVal Column="1" Row="1">0</AVal>
+				<AVal Column="2" Row="1">0</AVal>
+				<AVal Column="3" Row="1">0</AVal>
+				<AVal Column="4" Row="1">0</AVal>
+				<AVal Column="5" Row="1">0</AVal>
+				<AVal Column="6" Row="1">0</AVal>
+				<AVal Column="1" Row="2">0</AVal>
+				<AVal Column="2" Row="2">0</AVal>
+				<AVal Column="3" Row="2">0</AVal>
+				<AVal Column="4" Row="2">0</AVal>
+				<AVal Column="5" Row="2">0</AVal>
+				<AVal Column="6" Row="2">0</AVal>
+				<AVal Column="1" Row="3">0</AVal>
+				<AVal Column="2" Row="3">0</AVal>
+				<AVal Column="3" Row="3">0</AVal>
+				<AVal Column="4" Row="3">0</AVal>
+				<AVal Column="5" Row="3">0</AVal>
+				<AVal Column="6" Row="3">0</AVal>
+				<AVal Column="1" Row="4">0</AVal>
+				<AVal Column="2" Row="4">0</AVal>
+				<AVal Column="3" Row="4">0</AVal>
+				<AVal Column="4" Row="4">0</AVal>
+				<AVal Column="5" Row="4">0</AVal>
+				<AVal Column="6" Row="4">0</AVal>
+				<AVal Column="1" Row="5">0</AVal>
+				<AVal Column="2" Row="5">0</AVal>
+				<AVal Column="3" Row="5">0</AVal>
+				<AVal Column="4" Row="5">0</AVal>
+				<AVal Column="5" Row="5">0</AVal>
+				<AVal Column="6" Row="5">0</AVal>
+				<AVal Column="1" Row="6">0</AVal>
+				<AVal Column="2" Row="6">0</AVal>
+				<AVal Column="3" Row="6">0</AVal>
+				<AVal Column="4" Row="6">0</AVal>
+				<AVal Column="5" Row="6">0</AVal>
+				<AVal Column="6" Row="6">0</AVal>
+			</ArrayValues>
+		</Length>
+		<Length Name="startoffy">
+			<Description><![CDATA["Начало маркера Y"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="6">
+				<AVal Column="1" Row="1">0</AVal>
+				<AVal Column="2" Row="1">0</AVal>
+				<AVal Column="3" Row="1">0</AVal>
+				<AVal Column="4" Row="1">0</AVal>
+				<AVal Column="5" Row="1">0</AVal>
+				<AVal Column="6" Row="1">0</AVal>
+				<AVal Column="1" Row="2">0</AVal>
+				<AVal Column="2" Row="2">0</AVal>
+				<AVal Column="3" Row="2">0</AVal>
+				<AVal Column="4" Row="2">0</AVal>
+				<AVal Column="5" Row="2">0</AVal>
+				<AVal Column="6" Row="2">0</AVal>
+				<AVal Column="1" Row="3">0</AVal>
+				<AVal Column="2" Row="3">0</AVal>
+				<AVal Column="3" Row="3">0</AVal>
+				<AVal Column="4" Row="3">0</AVal>
+				<AVal Column="5" Row="3">0</AVal>
+				<AVal Column="6" Row="3">0</AVal>
+				<AVal Column="1" Row="4">0</AVal>
+				<AVal Column="2" Row="4">0</AVal>
+				<AVal Column="3" Row="4">0</AVal>
+				<AVal Column="4" Row="4">0</AVal>
+				<AVal Column="5" Row="4">0</AVal>
+				<AVal Column="6" Row="4">0</AVal>
+				<AVal Column="1" Row="5">0</AVal>
+				<AVal Column="2" Row="5">0</AVal>
+				<AVal Column="3" Row="5">0</AVal>
+				<AVal Column="4" Row="5">0</AVal>
+				<AVal Column="5" Row="5">0</AVal>
+				<AVal Column="6" Row="5">0</AVal>
+				<AVal Column="1" Row="6">0</AVal>
+				<AVal Column="2" Row="6">0</AVal>
+				<AVal Column="3" Row="6">0</AVal>
+				<AVal Column="4" Row="6">0</AVal>
+				<AVal Column="5" Row="6">0</AVal>
+				<AVal Column="6" Row="6">0</AVal>
+			</ArrayValues>
+		</Length>
+		<Length Name="letxt">
+			<Description><![CDATA["Ширина текста"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="0">
+				<AVal Row="1">0</AVal>
+				<AVal Row="2">0</AVal>
+				<AVal Row="3">0</AVal>
+				<AVal Row="4">0</AVal>
+				<AVal Row="5">0</AVal>
+				<AVal Row="6">0</AVal>
+			</ArrayValues>
+		</Length>
+		<Boolean Name="bUseGL">
+			<Description><![CDATA["Исполз. глоб. праметры для опред типа"]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<String Name="stRoomType">
+			<Description><![CDATA["Тип отделки помещения"]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value><![CDATA["07 ЛК, ЛХ, Фойе"]]></Value>
+		</String>
+		<String Name="stFloorType">
+			<Description><![CDATA["Тип пола"]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value><![CDATA["0"]]></Value>
+		</String>
+
+		<!-- bFinishWall: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bFinishWall">
+			<Description><![CDATA["Отделочный слой"]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<Length Name="FinishSize">
+			<Description><![CDATA["Толщина отделки (мм)"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0.01</Value>
+		</Length>
+
+		<!-- sp_Area: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Title Name="sp_Area">
+			<Description><![CDATA["Площади (просмотр.)"]]></Description>
+		</Title>
+		<RealNum Name="UpArea">
+			<Description><![CDATA["Площадь потолка (м2)"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="WallArea">
+			<Description><![CDATA["Площадь стен (м2)"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="FloorArea">
+			<Description><![CDATA["Площадь пола (м2)"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="PlinthLenght">
+			<Description><![CDATA["Длина плинтусов (м)"]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+
+		<!-- sp_mat: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Title Name="sp_mat">
+			<Description><![CDATA["Материалы"]]></Description>
+		</Title>
+		<String Name="stUpMat">
+			<Description><![CDATA["Отделка потолка"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["Водно-дисперсионная окраска"]]></Value>
+		</String>
+		<String Name="stWallMat">
+			<Description><![CDATA["Отделка стен"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["Водно-дисперсионная окраска"]]></Value>
+		</String>
+		<String Name="stWallDownMat">
+			<Description><![CDATA["Отделка низа стен"]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["Водно-дисперсионная окраска"]]></Value>
+		</String>
+		<String Name="stColumnMat">
+			<Description><![CDATA["Отделка колонн"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["01 побелка"]]></Value>
+		</String>
+		<String Name="stWindowSideMat">
+			<Description><![CDATA["Откосы окон"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<String Name="stDoorMat">
+			<Description><![CDATA["Откосы дверей"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["01 нет"]]></Value>
+		</String>
+		<String Name="stDownMat">
+			<Description><![CDATA["Пол"]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["00 Покраска"]]></Value>
+		</String>
+		<String Name="stPlinthMat">
+			<Description><![CDATA["Плинтус"]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["00 Покраска"]]></Value>
+		</String>
+
+		<!-- bUseWallDown: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bUseWallDown">
+			<Description><![CDATA["Особый низ стен (не используется)"]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<RealNum Name="WallFloorArea">
+			<Description><![CDATA["Площадь низа стен (м2)"]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<Length Name="WallDownHigh">
+			<Description><![CDATA["Высота отделки низа (мм)"]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>1.8</Value>
+		</Length>
+		<Length Name="WallDownHighWindow">
+			<Description><![CDATA["Высота до низа окна (мм)"]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0.9</Value>
+		</Length>
+
+		<!-- bColumsAdd: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bColumsAdd">
+			<Description><![CDATA["Доб. колоны к стенам"]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<RealNum Name="ColumnArea">
+			<Description><![CDATA["Площадь колон (м2)"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+
+		<!-- bWindowAdd: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bWindowAdd">
+			<Description><![CDATA["Доб. откосы к стенам"]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<RealNum Name="WindowSideArea">
+			<Description><![CDATA["Площадь откосов окон (м2)"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<Integer Name="nWindow">
+			<Description><![CDATA["Количество окон"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>1</Value>
+		</Integer>
+		<Length Name="WindowSideDepth">
+			<Description><![CDATA["Глубина откосов (мм)"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0.38</Value>
+		</Length>
+
+		<!-- bDoorAdd: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bDoorAdd">
+			<Description><![CDATA["Доб. окосы дверей к стенам"]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<RealNum Name="DoorArea">
+			<Description><![CDATA["Площадь откосов дверей (м2)"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<Length Name="DoorHight">
+			<Description><![CDATA["Высота дверей корт. (мм)"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>2.1</Value>
+		</Length>
+
+		<!-- bCorrection: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bCorrection">
+			<Description><![CDATA["Умен./Увел. площадь стен"]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<Length Name="CorrectionLen">
+			<Description><![CDATA["Добавить к периметру +/- (мм)"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Length>
+
+		<!-- bFloorAdd: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bFloorAdd">
+			<Description><![CDATA["Поправка к площади пола"]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>1</Value>
+		</Boolean>
+		<RealNum Name="floorAdd">
+			<Description><![CDATA["Добавить к площади пола +/- м2"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+
+		<!-- sp_stampAddon: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Title Name="sp_stampAddon">
+			<Description><![CDATA["Параметры для Аддона"]]></Description>
+		</Title>
+		<Integer Name="iTypeZone">
+			<Description><![CDATA["Тип зоны"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>4</Value>
+		</Integer>
+		<RealNum Name="asAddOn_SubArea">
+			<Description><![CDATA["Номер для передачи ведомости пола"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<Integer Name="asAddOn_SubRegul">
+			<Description><![CDATA["Тип помещения зоны"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>4</Value>
+		</Integer>
+		<RealNum Name="asAddOn_SubFinish">
+			<Description><![CDATA["Уменьшение площади балконы"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>1</Value>
+		</RealNum>
+		<RealNum Name="asAddOn_CalcArea">
+			<Description><![CDATA["Площадь вычисленная"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="asAddOn_FloorArea">
+			<Description><![CDATA["Площадь пола"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="asAddOn_FillArea">
+			<Description><![CDATA["Площадь штриховки"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<String Name="asAddOn_stApartmentCode">
+			<Description><![CDATA["Квартира"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<String Name="asAddOn_stStaircaseCode">
+			<Description><![CDATA["Секция"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<String Name="asAddOn_stHouseCode">
+			<Description><![CDATA["Здание"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<String Name="asAddOn_stPositionCode">
+			<Description><![CDATA["Расположение"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<Boolean Name="PositionCodeByStory">
+			<Description><![CDATA["Расположение по номеру этажа"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<RealNum Name="AreaCoeff">
+			<Description><![CDATA["Площадь с коэффициентом"]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<String Name="dfloortype">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<ArrayValues FirstDimension="1" SecondDimension="0">
+				<AVal Row="1"><![CDATA["
+"]]></AVal>
+			</ArrayValues>
+		</String>
+		<Integer Name="gs_ui_current_page">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>4</Value>
+		</Integer>
+	</Parameters>
+</ParamSection>
+
+<Picture MIME="image/png" SectVersion="19" SectionFlags="0" SubIdent="0" length_in_bytes="27039" platform="Win">
+	<![CDATA[
+	696D6167652F706E670089504E470D0A1A0A0000000D494844520000012C0000
+	012C0802000000F61F1922000000017352474200AECE1CE90000000467414D41
+	0000B18F0BFC6105000000097048597300000AEB00000AEB01828B0D5A000069
+	2A49444154785EED9D077C14C5FB878F1048083DF4A214A9D205A42820A27410
+	91DE041191AAA2825828360404110B58B180FC284A9326200882282245A4D7D0
+	092584960408FF67EF9DEC7F732D7BC9850BB97D3E7C96DDD999D999D9F73BEF
+	3BBB77970CB76EDDB2595858F88F20F5BF8585859FB0446861E1672C115A58F8
+	194B8416167EE6FF1FCCC4C6C65EBB764DF62D2CD21AC1C1C1D9B2655307E98B
+	FF17E1D5AB57AF5CB922FB1616698D4C9932E5CA954B1DA42FAC70D4C2C2CF58
+	22B4B0F03396082D2CFC8C25420B0B3F6389D0C2C2CF584F47BDE3725CDCEE0B
+	17769F3F1F79F5EAA92B576EC6C7670A0ACA9F356BFEB0B0F2E1E1E5C2C3C332
+	6552592D7C4A3A7E3A6A8930690E5DBCB8F5CC9945070F6E397DFAF8E5CB2AD5
+	15196CB6A23972542F50A0658912D50B162C924EDF6BF9054B84010783127BE3
+	C66FC78EBDF1FBEF87A3A349C99C3163C60C19F264C9D2E0AEBBEE2F58B070D6
+	ACC572E62C9E2307123D7CF1E2892B57D64444AC8C88B8111F7F3D3E3EDE3EAA
+	83AB571F72DF7D21C1C114B4D76A917C2C11061C5FFDFBEFD8BFFE8A8A8D65BF
+	E15D770DAC56AD44CE9CE1A1A149469BE762628E4647FF7CF0E0E7DBB7C7DCB8
+	41B05A3A77EE77EBD5AB5BB8B0CA61912C2C11060AF831C2CEA95BB76E3973A6
+	64AE5C8DEEBEBB45C992C9D6CF2F870F7FBD63C7EA8888D0E0E001D5AA752B5F
+	BEB015A026174B8401C1F998980F366FFE6CDBB6908C19FB55A9F26AEDDAEA44
+	CA60253974DDBA1D9191EC4F6ED4A84DA952B8473965611E4B84E99FC86BD71A
+	CD9E7DEACA95A2D9B3CF68DEBC6C787890EF167271376F7EBF6BD7F0B56B591C
+	562F58F0DBA64D595BAA7316E6B04498CED979EE5C9B050B626FDC20681C50B5
+	6AD6D479CD70E4E2C59ECB96FD77EE1C41E982366D8AE5C8A14E5898C012617A
+	06053E367FFEB51B37BE6ED2A471F1E22A3575888E8D6DBD60C1CEB367738786
+	2E6EDBB6543AB5AAD4201D8B30D017279157AF3E3E7F7ECC8D1BCB9F7822B515
+	08394242E63FF658BEB0B00B3131ADE6CD3B6F7D81D322C045B83F2AEAA1D9B3
+	63E2E3BF6EDAB442DEBC2A3595C91512B2A643077CE0B96BD75ACC9BC772519D
+	B0085402578457AF5FEFB664C9A5B8B8298D1A3D5AAC984ABD2DE00997B56B57
+	396FDE03515193366FBE99B022B0084C0257849F6FDF7E302A6A628306CD4B96
+	5449B7911C9933CF7BECB14259B3BEFFF7DFEB8E1F57A9160149808A5093DFE6
+	CDF9C3C29A9428A1926E3BD94342A63CFA6850860C93FEFE5B255904248128C2
+	1BF1F1CFAC5871333EFED55AB5B267CEAC52FD41AD82057B55ACB8E1C489597B
+	F6A8248BC0231045386FDFBEED91916D4B97EE52BEBC4AF229AC360F5FBC783D
+	3E5E1DBB276350D0987AF58A64CF3E72FDFA6B376EA8548B0023E04478FEDAB5
+	977EFB8D9D7E55AB4A8A498E44478F58BFBEEECC9993FFF9E7A4FB17AAD17171
+	DD972CA9FBC30FAB8E1C514949D1A14C99F33131237FFF5D1D5B04180127C2BF
+	4F9FC6E7742857EEDE3C79549209FE3A79B2C54F3F4DDDB66DFF850B6F6FDCF8
+	E4D2A531AE1C57546CEC53CB96FD71E2C48D5BB7624CBF7BE85BA50AABD3597B
+	F75EB59C61401270225C72E850860C199EBCF75E756C822BD7AFF75AB6ECECB5
+	6BA865CF534FB5BAE79E6D91910356AD7278B570E6CA952E3FFFBCDEAE409564
+	8EF0D0D01E152AC4C6C71F8C8A5249168144C089F07FBB778764CC58DA9B0F40
+	6D3E7D1A05D62B5A7474DDBAB94343D996CC9163EDD1A3176262540E9B0DC738
+	74EDDA7F4E9F2E1C16F64091222AD534F50A178E8F8F5F1511A18E2D0289C012
+	E1DCBD7BE36FDD7AB576ED5CA1A12A2929882A7FDCBB17D7F644E9D2F2BD8AA2
+	D9B337BCEBAE4BD7AF1B577D9B4E9DDA72E6CC3DB973FFD4A64DB9F070956A9A
+	AA050AB0FD64CB96C8AB5725C52270082C112E3A70204B70F0B3952BAB631384
+	04056D3871829D2AF9F2490AA019C46C745CB50A157ABF418355EDDB27EFBB11
+	B48A089925E53AFBB52C028AC012E19EF3E7CB7AE9A68E5EBA24EF1259B9490A
+	94C899139F68FCBA61E68C191F2D5E3C3438581D7B4FEB52A5D81EBB74490E2D
+	0287C01261745C5C4E2FDFCE131F46C7C616CC9A35A3E1EBF0D932652234DD79
+	FEBCFCA0934FC0D3728908FB8F4A5904148125C24B7171B94242D4813958135E
+	888D2D1016169A31A34AB2D90A65CB76F3D6ADB357AF9EF1DD120E5F9A2B7366
+	6B4D1880049008114CECCD9B45BD5CB35DB97EFD725C5CEED0D06C06172AEE14
+	71CAA14FC00DE60C09B13C6100124022DC7DEE1CDBFC5EFEB80BDA431BC72F5D
+	327E0CEDACFDE5445ED38F58CD407C9B2553260266756C11300490087F3B768C
+	6D192F1FCC840405E10623AF5D6365A892EC0BC5908C19F3858515C89A5525A5
+	184448C46B7CF7681120049008E7EFDFCFB656A142726892BB72E4080E0A8A8A
+	8DBD7CFDBA4AB2FF3822916DA95CB97CF8C3DA5415121C6C7D722D000920113E
+	5FBD3ADBC5070FCAA149F2878531463943438D1F1695951B9A91439F107FEBD6
+	95B8B81C7EFD6A95855F08201156CB9F9FADB72FE26EC4C73F58B428B1E836FB
+	AFF70A7F9E3CC9C03D6E7FB3E72B1021DED5DB87B716E980001261899C395977
+	1DB978511D9B8358F489D2A5891567EFD9233FCAF4DFD9B36B8E1ECD93254BF5
+	8205258F03C97B651F6FB3118BE60D0B53C71601430089306BA64CF89973DEBF
+	57A89A3FFFDDD9B3AF3D76ACE7B265872E5E7C7ECD9A9357AEB4BCE79E9C6EBC
+	96F1B335E6898F8F8F8A89E142EAD82260082011022BAE64FCD427CE704EAB56
+	2573E65C79E448AD1933B69D39D3BC4489771E7CD0DD5399D08C1939E5ED331B
+	22DE4BD7AFDF658930F0082C1116CB99735FB2BEB347C19FDBB6FDF491470654
+	ABF67DF3E6931E7E1865AA734ED42D5CF8C51A35EA172DAA8ECDB1F1D4A95BB7
+	6EDD933BB73AB60818024B84E5C2C371383FEEDBA78EBD216F962CEDCA941959
+	A74E93E2C53D3F3EA99037EFD0FBEFCFED4D507AF3D6AD4FB66E65E77E37EB4C
+	8B744C6089B06DE9D26C47AE5F2F876987AD67CE6C397DBA6ABE7C04BD2AC922
+	60082C1156CB9FBF45C99217626222D2D83786FEB07F8DB0AF97BF3DE5434216
+	2CC857AA548EA79FCE94F666A8744F6089100829AFC7C7EFB47F8E34EDF0C3AE
+	5D2C32E54DA65F886BD224AE76ED9055AB7275E992B36FDFA00B17D4098BD427
+	E04448C8C7F683CD9BE5302DB0FDECD9FD515121193396F05F2C7A2B34F4E277
+	DF45CD98115FA850E665CBC26BD5CA327DBA3A6791CA049C088B64CF5E396F5E
+	1660DFEFDCA992FCCD0BAB5767CE98F1B3471FF5F6AD868F090ABA5EB7EEF955
+	ABA2A74EBD952347B6D75E0B6FD8306CEAD40CD6C75953998013214C6FD1226F
+	962CEF6CDC783E0D7C65E19B1D3BFE8D8C6C59B2E46DF8EB8866B895356B6CB3
+	66E757AE8C79ECB1A0C8C8ACEFBD97ED95578277ED52A72D5281401461C1AC59
+	3B972F7F2126A6EBE2C5667EAC3EF5601618B16143BEB0B0F7EAD5534969835B
+	B9725D9A3CF9FC9A35378B150B9D3B3777D3A639FAF7B7595FB34A1D025184F0
+	CAFDF7372F5972CB9933E67FAC3E357871CD9A981B37C6D6AF6FFE27186F27F1
+	79F35E58BEFCD2F8F1F1050B862C5912DEA245E8BC79EA9C85EF085011660A0A
+	7AAE7AF5D0E0E0FE2B57FE79F2A44ABDBD2C3E78907F85B3656B78D75D2A29ED
+	712B3434A67DFBF3BFFC72E5F5D7335CBC98FDF9E773B76A15B26081CD5A28FA
+	8E0CB7127E2FECEAD5AB57DCFF9D9374C9C2FDFBFBAC58913553A6256DDB26E3
+	177B930D23CE3AB0F5BC79211933AE68DFFEEE64FD54E9ED27E8FCF99C4F3F9D
+	71C78E0CB1B1D77AF7BE3A6040BC377FCF238564CA94299737BF9B7E0711A09E
+	506852A244A5BC792FC7C53D366FDEEDFC852514F8D8FCF94141410B1E7FFC4E
+	5120C487875F9835EBC2C285D7EFBF3FCB575F853FF450F6575EC960F8C1018B
+	E411D022C4112D6CD38668F0426C6C8359B3369D3AA54EA4266B8E1E6D3D7F7E
+	069B6D668B16B7D3FDFA864C996E962B1735674EF4C71FDF0A09099D3933E793
+	4F665EBD5A9DB54816011D8E0A57AF5FEFF4F3CF1B4F9ECC9E39F3AC962D6BA4
+	DA47A819E88D274E7459BC3853C68C0BDAB4297FC729303141515161932685FE
+	F4136BC5EBB56B5F193AF47AD5AA36C3AFB3FA96741C8E5A22D4B876E346CF65
+	CB564744040705352D5162EA238F64F6B5319DBD7A75E0EAD5BF4544840607AF
+	EDD429DD7C6F30E38913393B75CA78E4882D28E86ABF7E48519DF03596080382
+	5F232286AC5973E2F2E5AAF9F3BF5CB3E6A3C58AA91329E6932D5B3ED8BCF9D2
+	F5EB1DCB961D54AD5AE9F4F5A5C10CD7AE655EBF3ECB471F65DABAF5E6DD77C7
+	B46B77AD57AF5BBE5EEB5A220C14A2E3E25E5BB7EEA77DFB3266C8F0428D1A6D
+	4B974EDE5F5912A86DEDB16313366DFAEFDCB922D9B2F5AE54E9D92A553C7C1B
+	F84E27CBF7DF671D3F9EE834BE50A14B63C7C63568A04EF8024B8481C58EB367
+	07AC5AB5C7FEF75ECAE4CEFDCE830FD62A54282423C234F5E9CEEBF65F8B19B1
+	7EBD7C7B986295F2E59BDDB265DA7C23EF5B324447677FE9A59055AB6C376EC4
+	3DF8E0A58913E3F3E7B7991B37CF58220C38626FDEFCF7EC599C98FC11C2F0D0
+	D092B9723D76CF3D350B16C437E671F55BFA67AE5E8D888EFEEDD8B1597BF61C
+	4EF84DB7E6254A0CA959B37C7878A6F4EB009D09DEB225E7A04141478FDECA9A
+	F5EAA041AC15D5891460893070415A8B0F1E445A6B8F1ED57F843B4B7070BEB0
+	B0FC616115F2E4C16D9EBE7A35D2FED766E46CCE9090FA458B36285AB4C53DF7
+	E40900EFE7920C57AE84FEF863E8F4E9C17BF6DC2857EEDAD34FC7366B762B5B
+	3675DA7B2C115A68B056FC3732323226E6EF9327915C5C7CFCE5B8B86C993367
+	0E0A2258BDAF60C1C26161550B146859B2A42A6061B3857DFA69D8A449196263
+	6F162912FDD55737CA975727BCC412A1452218345D84D93367CE9431A3B66254
+	272D12131F9FF1F0E16CA34665FEEDB75B59B2C435697279E4C878EFDF915A22
+	B4B048299957ACC8FEFAEB41A74EDDCA9DFBF2B061319D3BAB13E6B0446861E1
+	035828864D9E1C3A7F3E52BC51A5CAE5575FBD51B5EA2D73CBE6742CC280FEEC
+	A8C56DE656D6AC57860F3FBF6EDDD5E79E0BDEB62D57E7CEB99B350B3A7B569D
+	4E834C9D6A2B57CE76F8B03A4C1D2C4F68E10F6EDECCBC7E7DD8C71F67FAF3CF
+	5BB9725DEBD6ED6AEFDEB73C2E14FDE0092F5EB4D5AF6FDBB7CF962F9FEDDF7F
+	6DA9F67D17CB135AF8838C19E3EAD78F9A3D3B7AC2045B860CA831BC71E3905F
+	7EB125B804FF73F3A6AD470F4D81C58AD922236DCB96A9F454C012A1853F896D
+	D7EEDC1F7FC43CFE785054548E3E7D72B56B97F1E8519B5F7FF84771FCB86DFD
+	7A5B9932B6C993F1C2B6175EB09D3EAD4EF91A4B84167EE656962C97264D3ABF
+	7AF5B5A79ECAB47973EEC68D733EF964D0F9F3EAB45FB876CDD6B3272B34DBE0
+	C1B6468D6C1F7C60BB7041D361EA60AD092DD20A196EDE0C993B37CB77DF05EF
+	D8111F1E7EE5E597635BB6D4BF8D715BD7841F7E681B3EDCF6C413B62FBFB4C9
+	1FFFA951C3868BDEBCD9E6E51FDB328325428B3447E88F3F661D372EE8F4E9F8
+	7CF92E4E9B76A34205D68DB74F84B1B1B62A5534D7B76D9B4DFF86F7679FD95E
+	7AC956AF9EEDE79F6DBEFE18B0158E5AA439629E78E2FCAFBFC6B6691374E64C
+	AEB66D73F6EF8F20D5B9DBC0FBEFDB22226C8F3E6A2B5040A5C0D34F6BFFD6AE
+	B5AD59A3527C87E5092DD22E99B66C099D362D74D1A25BD9B3DF78FCF14C6FBD
+	654BEDDF778B8CB4D5AE6D2B54C8F6CB2FB6B0309528ECDA65AB5EDD963FBF16
+	94FAB4199627B448BB5CAF56EDD2071F5C1D32E456B66C99BEF9C656AD9A6DD5
+	2AED79492A71FDBAAD552BDBC993B6E79F775420942F6FEBDCD976E68C6DDA34
+	95E2232C4F68710790212E2E6CF6ECB01123B4178977DFAD3D2FA95B579DF321
+	449B4D9BDA2A57B66DD8E07AE177F9B2AD74691B4B539FFE710ECB135ADC01DC
+	CA9C39AE572FDBC183B6D6ADB50F91B160EBD0C1F72FEE264CD0B4F7CE3B6E1F
+	BD64CBA6AD188F1CB10D19A2BDCDF71196082DEE1CF2E5B3FDF0836DE142ED29
+	E59225DA6B8371E36CBE7AA3387FBE6DC50A4DDBF5EBAB149774EDAA39E1AFBF
+	B66DDFAE52528C158E5ADC19247A4581D10E1FAE7DBA3A2E4E7B52F2CB2FB652
+	A552F4E600B776CF3DDA8FA61E38A0523C805CBB74D1A680DF7EF3C9CFE7589E
+	D03B626363972F5FDEBB77EFA143872E59B2E4A6EF62120B2FC0F4DF7B4FFB50
+	F56BAFD9A2A36D75EAD89A37B7FDFDB73A9B0C082FCF9CB175ECA80E3DD3AC99
+	F69086CBAD5CA9525286E509BD80217AE18517162E5C28DA0B0A0AEADAB5EBB8
+	71E332A6DACF4E5BE8B87D591F11611B30407B6A0A4F3D651B3DDAEBF707478F
+	DA2A55B265CFAEBD7BC0AF9A81D5294169952A9A5774F5AB5F5E6179422FD8B8
+	71E3BC79F38283836BD7AEDDA64D9B909090993367E218D5690BBF70F7DDB645
+	8B6C33676A3BD3A669AF31FEF73F2F5E63C4C76BA5086B274D32AB402859D2D6
+	AD9B6DDD3ADBB0612A25055822F482EDF6B5788F1E3DE6CC99F3E9A79F0E1F3E
+	FCC68D1BEBB813167EE7B1C76C5BB6D8FAF4B19D3DABF9C3871ED23CA419E6CC
+	B18D1FAFBD856FD346A598E4EDB7B577FA78C214FF01634B845E101D1D4DE4D9
+	AC59337C20FEB069D3A6245A317C5A81B0106FB66183F6058803076C356BDA9E
+	79465B377AE6D34F6D9933DBBEFACAEB3F65131AAA394334FFDC73DA5BFE1460
+	89D00B446FB973E766217DFEFCF92953A664C890E191471E91B3166982AA5535
+	5DFDF9A7F6BC74FA745BAD5AB61123B497ECCEDCBAA505AE9B36697225733218
+	3A548B7EBFFFDEB678B14A491677A408A74F9FDEA143873367CEA8633BBB77EF
+	AE5AB5EAAFBFFEAA8EEDA0961D3B76BCF7DE7B9D3A75AA5EBD7AD9B2654BD879
+	E28927540E0311111123468C68D4A8D17DF7DDD7B56BD78F3EFA283EF1B74B2F
+	5DBAC476DBB66D1D3B76E45ADF7CF34DAE5CB9A84DCE1A317FDD2D5BB6B46BD7
+	6E03F37762D0F6ABAFBEAA0EECCB51CA92591D27D0A04183F144534EECDCB973
+	F0E0C1D5AA55EBDBB7EFECD9B31D3A92FE41546BD6681FAC090BD35EC157A9A2
+	9EDC18397952FBBA608E1CDA9A3079AF37B266B57DF289E642DF7B4FA5248B3B
+	5284C78E1D43726713FF40D0850B174E9C38F1CF3FFFA8633BF3E6CD7BFCF1C7
+	274E9C88388F1E3D4A1EBC19AC5FBF5EE54860EAD4A9C88FEDBFFFFE4BFD2B56
+	AC78FBEDB7BB75EB86C75339B48F165EC79A5F7AE9A5356BD6C4C4C4A0342AA4
+	7EE76733E6AF7BFCF8F183070F3A341B68C65F7FFDA58B874A8E1C3982B4E450
+	8771F83BF1A3F99B376F0E1B360C0DA3BD2C59B2AC5AB50A3522E07DF63F8C11
+	4064CAA4BDCDDBB347DBA2B756ADB455DFF1E3EA2C8C1CA979C851A3B4A59DCE
+	8D1BB67EFD6C65CB6ADF1B44C0FCCB99537B8558B9B2CDE513B87BEFD57CEFF6
+	EDB61933548AF7DC91221483560709C8BB16D90AE867C284092CE470296BD7AE
+	C5D6719EF270C5D933E0E52A56ACF8C9279FE0940E1F3EBC74E9523CD8CA952B
+	97197E5C04114AFDDDBB779F3B77EEA79F7EFAF0C30FD312BCCDB973E7240F78
+	75DDCB972F5F75F5288F0B19FB42B6D8D8587560C0211BFCFCF3CFDF7DF71DCE
+	9C89805EFCF2CB2F5DBA7441CFEFBEFBAECA1150E4C963FBE20BED6D7EA346DA
+	47436BD4B0BDF596EDD0211B1113B2E16CFBF62AA7CED1A3DAA7701E7C50FBF4
+	0CFF3A76D4D6962FBCA089CD19D6930B176A8A9D3C59FB3E7EB248D3226452C7
+	943FFEF8E372E5CA7D4FE49D003ED0A5E13A40366453B468D1D6AD5B534336FB
+	1F42C8C404E98A975F7E19AB6DDFBE7DA952A5C2C2C250E02BAFBC42BAF1E127
+	DE8F2D921B3B766CFDFAF50923A74D9B465C4A6370539207BCBA2EEA323A5B77
+	300EA74F9F0E4FEA87AB6921B34650501071759D3A7572E6CC59B264C971E3C6
+	152B560CD7EA52C601018A5AB4C8F6C71F9A671B33C656A182AD654BCD55FEF4
+	93E34B456634DC63BE7CDA72F19B6FB47F9F7FAEBD87E8D52BD1D70B8DE4CE6D
+	7BF659ED0950A74E5A71EF49A3223C79F2244EE9D1471FAD5CB9F29B6FBE1915
+	1525EB3141C49024717171C80331642576F7125444A4C74E912245240588EE32
+	66CC58BA74E9E0E0603DA5AEFDE3FC5BB76E9514F0EABA8850ED79E4E2C58B48
+	2BC9A9E7C68D1BC4D2C58B1767125149361BAD652E40C644D12A293021C8FCF3
+	4FCD13CA84181A6ABBEB2EFB0903842A274EA87DF320C2E2C5B55568B262FEB4
+	25420C65E1C2853D7AF4C086468F1EBD6BD72E42447CD4EFBFFFDECFF0E7B5B0
+	7262B0AFBFFE9A80508743753A01B42A568B679314C04CD59E2BA876D1A24553
+	A64C193A74E83BEFBC131A1A5AAF5E3D754E0B3D32B3CD9FF895EEDD77DFCDD6
+	280FAFAE7BCD1EC3FCF6DB6FAA1B769877E4AC8E84DF49CE3EC40EC8952528CB
+	5155D7A79F329D1D387080594CAE15D0E4CD6B1B3448FD6805B291DF8F712019
+	DE8C1BFDE28BDA8B8A4993548A37A42D11A2B73E7DFA105061B24D9B36FDEFBF
+	FF58E190488868FC039D981A8B2B563EA30CA05E753A014C56FC4C76C31F88F7
+	FC11332C98E06DE4C8913366CCC0643B77EE5C81D0250111A1434C58C01EA518
+	35E6D57571B96C11A1EA861D227039AB9323470E4620C978929121B8251E1E3F
+	7EBCAA6BD42899CE9C97A301CA8F3F6AABBEDEBD35AFE8FC77CB31B3E4FD35BB
+	AE5DB54523E1ABD313EC24495B2264B9F5C0030F88DE588CB56AD58A4597B30F
+	410CD8F4E4C993FF30607CA02F848484882F327A00E7273A4672E5CA3573E64C
+	6A9B30610276FFEDB7DF1ADF0A4878E9A004E70ABDBA2E012DDBDEBD7B4B2F84
+	FFB120490C0B4BC251938B3AC2D1254B96A8BA12D8B871A3F54AD376EE9C6DE0
+	404D7BEE3E6E86ED899F8C8CB41F9B06E9FEFCB3F6C2A34F1F95629AB425C2FB
+	EEBB6FCE9C39BFFCF2CB902143CA962DBB7FFFFE61C386B1067BFAE9A7376FDE
+	AC326903A5A994E5E23D06EEBFFF7E39AB93295326F4C08E3156C4D7C98EF179
+	A611D672D4D6A54B973163C6E03D8C2F1E455A0EAF468EDB9F7A1B234FAFAE2B
+	7D61E529BD101E7EF86139AB835365DE49329E44A8C89506D4A85143D5954089
+	1225E4115140337CB8F6636A5F7CE1F6970BB91D08E9F061ED87B7B9A779F268
+	FEEDB1C7B48F892609DA6ED4C8B673A7EDA38F548A39D2DC83194CAD4A952AAF
+	BCF20A41E9F2E5CB3B76ECC81A6CE9D2A58853E570F5A0DF252801DF85F7308A
+	41DF3F75EA94ECB88466942953263838D8E87C501A8BC608C3871269C99E3D7B
+	D8A956AD9AA480E7EB9E4EFC7D700248B5E711F1849EDD389007074E887BF2E4
+	499564A1F3FBEFDA6768583E78F8DA6E5090F673A32FBCA0BD9C605A2F554AFB
+	6C371371DBB6497F8B1701B39827B49938D166788E9824694E8446AA56ADFAD1
+	471FFDFEFBEFFBF6ED7BFBEDB755AADD6F183D8F3B500802DEBE7DBBF1C96A74
+	74B4EC383C9624EC24845307F6A5DAD75F7F4D245CDF70C3702FD4C9822D2A2A
+	4A52366DDAC4648156F3B2E24FC0F3758D8980E3CD9933A73A700F5D46DB7BF7
+	EE4D32222D58B0E0D1A347656AB048C4D8B1DA1637E8212240845DBA68BF70C1
+	EA6EF56AED93A8FFFCA3892A2646FBC9C324B9E71EEDB36CCCB3DE7C904D3D6A
+	4FCB105C813AB0839F0935B17A2E5FBE3C31EDD6AD5B7BF4E8413C8633898C8C
+	D45FE88D1831A265CB9603070E948070CA94293FFFFC73E1C28509DBC2C3C391
+	198B528AD4AC5953F243AD5AB5BA77EFFEC30F3F3468D080601819EFDEBD1B17
+	3771E24496612A9397D7653631F326A37AF5EAF9F2E55BB162459B366D084DD1
+	2DBE5A17B60E6E90B09C109AD53561BCE49453EC3091398C640031668CF60AA1
+	71639B53A8EF166E50C68CDABF5EBDB477F1CCBC376ED812DE4EB965D020ED63
+	00FDFB6B016D9D3A2AD12319478D1A257BCCFD20FB691C9CCC810307DAB56B67
+	7C5079E6CC1942D6E6CD9BB3B09414AC1C8B640D46E4497E044338878F6AD4A8
+	115EE5BFFFFE6375D7B97367AC99CC152B5664D9263977EDDA857D972A55EA8B
+	2FBE202895DA000BAE5BB72E01247976ECD8417E1C14E6DEAB572F5194E0D575
+	894E376CD8F0E0830FA26A292E70E992254BB66FDF5E6A2633112F91305EEED8
+	B1633B77EEC4D7B166E62CFD45D5520A2A55AA4466AA25DBC18307B93A4DA547
+	44130F3CF0008E57E5BBD3A05366665ED79C38A13DBD247A5AB0405BF2790BEE
+	912869FF7E6DC967786FEC1AA6B9D2A5B5EF37B2F877FE388E2BAC6FD65BDC19
+	300326FF67F03FF840FB218CE1C36D6FBCA152BCE5C927B56F1EFEF69BF6958B
+	24B9764DFB76454484E67B9D9E173A93A6D78416163E0037482CCAA2FD996754
+	4A32888CF4B49274204B166D49C916E99A78AB6489D022BD235FBA259E74F7E1
+	CF24A1386E2D776E5BC24A27696AD7D6347FE488F6B5FDA4B0446891AE59B142
+	7B50497058BEBC4A310FDABB7A55FBEEFCE4C99A9CF2E7D71ED298A77F7FED63
+	71EFBE6B3B764CA5B8C15A135ADC1924674D1813A37DB37EDF3EEDAB8086CF00
+	7BE2E64DEDA72EFEF947737D870F6B2F0989272F5CD01EEA6CDCA8FDBE93577C
+	FFBDF6D9EE9123B5F716EEB13CA145FAE5AFBF342175EA645681101FAF7DEDF0
+	CF3FB557F3A74F6BCF458B15D3BE0D4C34EBAD02A14307ED6B53EFBD675BBA54
+	A5B8C2F2841677065E7BC2A347B585199E0D3925FEE2CB6D85ABD7AFAF7DF6CD
+	FDF7C82C4F68914E9938510B23F1427E542054AEACCD059B36691FBE7183E509
+	2DEE0CBCF384478E682FF4B264D11C91894F05A62E28B0450BED1DC9DF7F6B6B
+	4B272C4F6891EEC0AF8C1EAD3D9579E925FF2B10980E680FF382D3D74405CB13
+	5ADC1978E109FFFB4FFB5199D6AD6DDF7EAB52FC4E64A4F65C8705EAD6AD36C3
+	0721853BF2B3A35E71E4C89159B3667DF5D557B367CFDEBD7B776C6C6C49378F
+	B956AE5C396DDAB46FBEF9E6C48913D9B265CB972F9F3A61E7E4C99363C68C61
+	C7A1F8F0E1C3972C59D2B87163F990674444C4D8B163434242E4672F8CC4C5C5
+	3DFBECB3CC7AE5CA95534916A631FBD9D1A828EDB504EEE4B3CF6C850BAB44BF
+	9335ABF6E351CB9669EF3C9A37578909A4734F88A2468F1E6DEC577070F0A041
+	835E78E105E31DBD78F1E2C89123D1AAFEEDBEB0B0B0214386F4EBD78F095852
+	366FDE3C70E040F4835025452854A81063F8DF7FFFE5B1FF6ED7FAF5EB29F8C0
+	030F4C9C385132E8D00C04DCB66DDB2953A6A8240BD398F584DF7F6FEBDB577B
+	2DE1F49B437E060F57B7AEF629F02FBFD4BEB268209DAF0991040E0D81AD5DBB
+	76FFFEFDDF7FFF7DDEBC79274F9E8C66540E3BD3A74F9F3973262A7AEEB9E796
+	2D5BD6B2654BDCDA7BEFBD67FC5D5DFDE79B1C901FBC5107F69FB470994D40AE
+	A00E2C7CCEA143EAB538B1C6BE7D69EBDFE1C3DA57A262636D2FBFACFDAAA281
+	74EE09E9147292DF71013AFBF1C71FBFFDF6DB38AB6109BF32429CD9AB57AF6D
+	DBB6115556B5FFC02BA2FAF6DB6F5F79E595AE5DBB7EF0C10792EDD75F7FE5B0
+	69D3A60E9E30BFFD09F8AE5DBBC4132E5AB4E899679EE9DCB9B34B4F58A24409
+	3CE1D4A953258500F8ADB7DE227FA74E9DE49B4D16EE30E509C78DD37E513B8D
+	23CF6C0D5F890AAC07332C7AF16F9F7CF2092B61966792F8CF3FFF20032484F0
+	0ACA8FFCD87F85BE51A346D5AA559B33674E0EFB37D0162C58D0A74F9F162D5A
+	7816E18C19338875BB75EB66468413264C78FFFDF7F1A5E1E1E1356BD66CDDBA
+	F5238F3C92DBF927C02C4C8A3026467B1D87191F3F4E01EDF32EACC1F8E7AF5F
+	9ACB90417B54CBF41A12A2BE844117C2C3B5E7A5B42D818010217DDCB163C7A5
+	4B97366CD8F091FD4778962F5FAE3F1DF9F3CF3FBB77EF8E0FFCEAABAFF41F29
+	3C75EA54E5CA958B1429B274E95251E6DCB973FBF7EF5FBB766DBCA8FCF6219C
+	3F7FFEA9A79E6247172112C5C73EFCF0C303060C60D959A040012A112FE72C42
+	1A4693FEF7BFFF6DDCB8312222824356987851A45EBA74E9E47F87353DE2C5D3
+	D13B8D80784F78FCF871A4D2A64D9B71E3C6B1661B3E7CF85D869F5EBE7CF9B2
+	FC149AD1E8E57EEB3F9106B2F0432D1D3A74A02A41146844B211BB3EF1C413AC
+	2DEBD6ADDBBC7973773FDA4BA8FCC0030F302F20451C729D3A75888D71A18D1B
+	37FE92E5BB4560101022C417BDF3CE3BF81FC24E943676EC58E34F9E05070787
+	D87FA1500F0AC0F96D8D3C2695DF9EA22A81E056CEEA4836E444D0FBF2CB2F57
+	A95285C876F4E8D172D62584A32C0E478E1CB97FFF7E49B9E79E7B8C3FDF6691
+	BE090811E270F02DC48123468CE8D5AB17CED0F86BA259B366CD668FD78DBFEA
+	29BFA726BFAE6D043D77ECD891AA04674F28A0A2F6EDDBBFF4D24B93274F0E0A
+	0AC2D1199DAACED1A347DF78E38DFBEEBBEFC9279F5CB8702173018BC9C58B17
+	AF5BB70E0FA93259A4770242843AACE56AD5AA85C7337A4244121E1E7EF0E041
+	E3AB05F9DDCEC2850BEBAFECDDFD3109071CB2B108C437EEDEBDDBE56F0D8F19
+	33E68B2FBEE0140E96C5E4E6CD9B89456BD6AC29EFFD2D0284742EC22D5BB6C8
+	1F0614E2E2E2E6CE9D8BEA1A356AA492ECBF509823470E9CD25F7FFD2529B1B1
+	B18B162D4209458B16D5DF1CE4CF9FDFCC73CB42850A197FC270CF9E3D44B615
+	2A547076AAF0D65B6F2D58B0E0CF3FFF5CBE7C798B162D2CED0526E95C84EFBE
+	FB6E93264DB0EFD75F7F9D459AFCB077F6ECD90917550EFB5F8360F18672FAF5
+	EBF7DC73CFB1CC2326FCEAABAF0A162C68FCFB16C48A12B57A863527ECD8B1E3
+	E38F3FA6F880010370BC0F3DF490CB1F17CD93270F9E9910D7925F2093CE4588
+	A84A972E8D3B22D87BFBEDB7E7CD9B57AC5831B60E9F0BAD5FBFFE871F7E88AF
+	9B3F7F3E3BF8CFB265CBCE9933C7E8BED02A2274FEE56F244DA2EE30111B7E75
+	D7AE5DEFBCF3CE8C1933086B1B3468A07F30807858FFE480858590FEDF13125B
+	5EBA7489DEC5C7C7E3A3108CBC7C77263A3AFAF2E5CB84AC08096991599DB043
+	5479E6CC19CAEAEF1285E3C78F3386FA8FEA523C2A2A8A2D8B43915CCE9C3909
+	803945B68888080ED3EBFBAE54251DBF270CAC4FCC58DCB9582FEB2D2C2C520B
+	4B8416167EC612A185859FB1446861E1672C115A58F8194B8416167EC612A185
+	859FB1446861E1672C115A58F8194B8416167EC612A185859FB1446861E1672C
+	115A58F8194B8416167EC612A185859FB1446861E1672C115A58F8194B841616
+	7EC612A185859FB1446861E1672C115A58F8194B8416167EC612A185859FB144
+	6861E1672C115A58F8194B8416167EC612A185859FB1446861E1672C115A58F8
+	99742EC2B367CF8E1B376EE7CE9DEAF80EE1C68D1B1F7EF8A1FE97832DD237E9
+	5C8493274F9E3061C2D6AD5BD5F11DC2860D1BC68F1FFFCE3BEFE87FB8CE221D
+	E367115EBC78B167CF9ECF3EFB6C6A58DBF5EBD7BFF9E61B6AAE5CB9B24A3270
+	F5EAD5D75F7FBD59B366F1F1F12A29CD50BF7EFD02050AECD9B3273636562579
+	C9F9F3E7BFF8E28B2A55AA74EFDE7DF6ECD969B08F163AC917E18E1D3B5AB468
+	817D17295224BF9DB265CBDE77DF7D6DDBB6C5FA55268F9C3B77AE6BD7AECB97
+	2F27EE72B0B6FDFBF773EADE7BEFBDEBAEBB9A3469F2C71F7FA813DEB07EFDFA
+	9898185A052A290114F8FCF3CF7FFDF5D7FFFCF3CF99336754AACD76F3E6CD19
+	3366346AD4E8EEBBEFE6EA4C1058B33A9714E47CF5D557D10F65CB952B47B317
+	2E5C181717A74E27C025BEFAEAAB871E7A88AE55AA54E9E9A79F8E8E8E56E712
+	60002B56AC78E9D2A5356BD6A8246F2008EFD8B1E36BAFBD76F2E4498677F0E0
+	C143870EE5BAEAB4451A23F922BC7CF972444444505010524478D0BE7DFBDEBD
+	7BF7E9D32738385865720F653B75EAB479F3668CC3C10DB222C28056AE5C9927
+	4F9EDAB56BFFF7DF7F5DBA743974E8903A6D9A5DBB76D13C5A95295326956407
+	050E1A3468F1E2C55CC8E1D25BB66C193E7C3853408D1A35F0454B972E1D3366
+	8C192F7DE1C2851123467CF9E5970C0B3A2C53A6CCEEDDBB070E1CB868D12295
+	2381B56BD78E1A35EAC89123742D57AE5C089598D9E11234F881071E408AF3E6
+	CD3339A319993F7FFEB66DDB683FB7E3A9A79E0A0B0B9B3973E69F7FFEA94E5B
+	A431922FC26BD7AEE167AA55ABF6F9E79F4FB5F3F6DB6F0F183080002F43860C
+	2A931B98FB318EEDDBB7BBCC3967CE9CD5AB57E7CB976FC99225D3A74F7FF9E5
+	97910DC1953A6D9A4D9B3661DCF7DF7FBF3AB6439B7BF4E881BA5C466863C78E
+	25C35B6FBDF5D34F3F71697C1A8ED1CC739DF7DF7F9FA88FFCAB56ADA2E08205
+	0B901F530055393843D6A8E80AE1D1CD6FBFFD3677EEDC53A64C41F6EA7402CC
+	0248542A5149A6D9BB776FC68C1919376690F7DE7B6FC890215C1159AAD31669
+	8CE48B90E88B159D3AF09237DE78033785BB98366D9A4A32808FC2F230A0ECD9
+	B3878484105961A973E7CE750EED3C73F0E0416A2856AC983AB6C36441985AB0
+	60416242959400664A744A91E6CD9B7358B870E1FEFDFBE32D3FF8E083249DE1
+	BFFFFE4B408E74692A874C2EC49344A48494460D1378E3D80B152AD4B061430E
+	8B172F8E4F4621CE8D295AB42842E2EA274E9C5049A6B972E54A8E1C391E7DF4
+	513964A264EB100E58A41D922FC294AC318894086271740E0A010C08AB659DF9
+	C8238F480A2E91E5138ED739B4F3008E8EC8D0D9F2F2E6CD5BB76EDD59B366B1
+	7C554909B0F244332D5BB60C0F0FE710213DF1C413CC023816C42079DC412CFA
+	D9679FE109D531231B14848C69C3810307240525B3C6A383AD5AB52244943CDD
+	BA75CB9C39B3B39BCA92254B850A15D8715E3126099760CB6CC22030D9E17BE9
+	0BEB4F396B91D648BE08B9C7C9889484575F7D9520961AD4B101ECE6DCB97308
+	0F2B94146C17D7141B1BCB3A4A52CC8072D8627C59B366951401A3FFF1C71F4B
+	972EAD8E0DECDBB78F2D8B31BD5F5873F9F2E5694F924F17891E29A80EEC5084
+	152F1EA971E3C6924263C42B1221EB9740A5CC44C6874302CDA62C9388EEFF29
+	CB38B0BA9343E1D4A9532C7A71B9C6A523CD66D0881DEAD4A9D3A04183DF7FFF
+	9DA9871450395CC19C88F3648DA08E13A0144B53466CCF9E3D2AC9C2A7245F84
+	D9B26523F4E20E791B257A66F9F2E5A1A1A146E504070763A698A3573E81280E
+	DDE27070652A292970B6E8047B55C7361B512BD301F6EDD97C9D21FF37DF7CF3
+	F7DF7FE3F3F5D904774AFDC84F4256019F9F274F1EE75711088970944B474545
+	490A73C1D9B36759E8CA21302004CC1B366C709823B823AC14860E1DAA3FCD8A
+	8C8CECDAB5EB8A152BE4D025274F9EC46DF6E9D387704025D921AA677949859C
+	5549163E25F922C4BE510BD327AB179643E5CA95631EE5C63B4FEA5E81F16179
+	0472EAD80E6220312222C2BC18B078AA228EC594555252B0CAC539D317756CF7
+	5DC48A313131870F1F5649E6C0E8274E9C486B1910FD593187A82867CE9CA84E
+	52804BD0C2AB57AF3AF8794AC99B15AE2E29CC1164937D387EFCF8934F3E8926
+	1F7CF0C1050B1618036F9935B83BEFBDF71E01F0B7DF7E4B004CD9E1C387E378
+	552627C88098E969BF7EFDF44901413EF5D453C908892DCC937C11A293A79F7E
+	1A3B68D8B061D5AA55F1189805F79B7B9612DF78E1C205ACA178F1E2EAD84E95
+	2A55D89E3E7DDABC080183C394750D2409CA616671D07FA14285B0694EA96313
+	60CA63C78EA508EBDED6AD5BAB543B24A273E614756C074DA234F4A98EEDE0C0
+	6569AA2F47D1833EC131D42FBCF0C2C68D1B6BD6ACF9D5575FC90A538722087B
+	F4E8D13D7BF6BCF7DE7B9B356BF6D1471F2169B4C418AA4C4ED0000A22E655AB
+	5611F4D20BEEE373CF3D4714AA3B738BD420F922C43A070C18307EFCF859B366
+	2D5BB66CF5EAD5C4450F3DF41073F39B6FBEA932790F9AC13938C490F210C8DB
+	2528A68955813A4E0AA95F4C5F075BA43DEAC01C3FFFFCF3F4E9D37144C84025
+	252097C8952B971C0A2E2F81F2998FD4811DFD49185A1A3468D0BA75EB4A952A
+	F5DD77DFB12E90741D2ECD7A92B3FA883114152A5440EAB2547689D48F1B4487
+	6FBCF1C66FBFFD462FE80BF5EB0F5A2D5283E48BD008371BF1605BDDBA75C359
+	11D278E5B28C10AD6131AC43D4B19DCD9B37B345F65EE9817AB06F50C7498133
+	278275080BF13918A5F1B1A76730F4F7DF7F1F47F4E1871F3A38551A4FAC8B84
+	8E1D3BA692ECE082900D91B33AB68308E5E584EEE5242E658948F4C17C479358
+	0B382B1008A1D9B21C954381C9C5F39444B8CB966505412C571F366CD8983163
+	F081E85C5E7258A412BE11A18E7C4A9315BCF94F7B39903B776E8CDE41849829
+	222746352F426C1ACB663A301F1BE7CD9B9708D6F8F801E7803962880E01A43B
+	987AB060E237C6A14993260EADE5904B5CBC78D1F86A1E557015B4645C8B02F3
+	DAB973E7D8EA6E9396B0C535AD5FBF9E99857A1C5CA58EAC0F1D2A6476A3791E
+	264719287931FBF8E38FB30227007EF1C5176BD5AAE5D5DC67E12D3E16A1780C
+	8799DE2B1A376ECC9A50666501E33B70E000C66AFE3927942E5D9AFCB1B1B11E
+	1E453880ED62A3C6B5D9A953A758C5E9415D92D0F169D3A6215A4274E77514EE
+	1143E712C6190A77C7A1F3D32364C675D9EA0F8A9953D892B362C58ABD7AF5A2
+	1463651C281D29A23F561570F26ACF0D7A83B9C4071F7C50A74E9D56AD5A0D1E
+	3CD8B96D16BEC5C72294A788E683376750206EC738C7330D2F5DBA94A8AC4C99
+	322AC904784ECC1D23366F43F7DE7B2F766F7C0780DDEFDEBD9BA8D24C25F88D
+	279E7802553CF7DC73B81D956A80F6DC77DF7D5CC2F8D52A2E4100EC108B0272
+	FDF7DF7FD9D11F2C491BCA962D8BC2478D1A55AF5E3D743869D224396B442258
+	876730F855661971922EA17EDDE3D1AA4F3EF98405BF1C5AA42A3E16A17CF2A3
+	42850A0E8F37CC43F48518B04BFD9B13478F1E3D79F224E9CD9A3593149310BE
+	2269F31FFB6AD0A001DE60D1A245F2713C043C63C60CFC30B1A51911CE9E3D9B
+	39883555CF9E3D55526230716254EC7BF1E2C5E2C170EF5F7EF9255B870FB802
+	123A73E60C8A65252C291249E2065138ED442104B11F7FFCF1AA55AB24834E9E
+	3C79F0FFC678845E70C8A59D3F27A443FD085E5729538FC303248B54C2372264
+	DAE6AEA39C6FBFFD16BBC110CDAF228A162DAAF61268DFBE3DDBDEBD7B6388D1
+	D1D1DF7CF30DAA68D7AE9DEE134C52B56A551A862B53C74EC8E7C2744A952AD5
+	A85123C2B6050B162092BD7BF7A210CC7DC08001497607C1BCF9E69B68156D18
+	DFC53B50BE7C79C2BCE3C78FAF5CB932262666C78E1D5C82E8B1478F1E2A4702
+	DBB76FA70DB56BD7D61FCC30AFA10A0641C6A164C992B8411AF6EAABAF3ABC5E
+	A75FAC335F79E515D675289C5B83F3FCEBAFBF286EFC14C4534F3D3568D02075
+	607FEE85BC65E59924BFFEFAEBC30F3F9CBCAF985938907C11E2A0DE7DF75D6E
+	E4430F3D846141C3860D376CD850B76EDD975E7A4965B2B379F3E6162D5A6079
+	EA38314CCF6A2F81E6CD9B3FFEF8E3ACCD88B8F04E9F7DF659F6ECD9FBF7EFAF
+	4E9B068B67FBD34F3FC9A133CE9F9B7BF1C517511DE68BF5B769D3863561BF7E
+	FD3077753A01E71E7DF4D1476806E73970E040190D81659BC39B6E2EC162F5D9
+	679FE56C870E1D50C8F0E1C39DC3514612A784E754C7F6814242CC712029ACD9
+	880E70BFAFBFFE3A97964468D9B225AAE6BAE8848E70A161C386518A29D2F834
+	75DDBA75C60760A85D1EAB9A61FDFAF53B77EE4CC6F7CB2C9C499108D7AE5DFB
+	DF7FFFEDDBB70F4F857D54AB568DE51053BB83CBFAF1C71FFFFEFB6F6665756C
+	206FDEBC58649122458C4598DD478C18D1A74F1F26E6A8A8A8A64D9BCE9B372F
+	19F12DC6876BA2912E2F8D396273AC3F8D76C98AEBEBAFBF665AC1B72051A482
+	F89DDDA0738F6867A54A95D012E100AA100E1C38803B75F8B41701E1D4A95399
+	AA58F7123722DAAE5DBBAA7309E0C0B76CD9820839A55F1D3F467EE38CC0A9B1
+	63C712BDE3E508BC55AA5DAEB8C7D1A3479399B98C69E591471EF9FEFBEFC9A9
+	72D89106AB03FBBDC087BB1C67129128B7491DDBA38C62C58AE5CB974F1D5BA4
+	800CB2D200EE62920FD09201F5D7AA550B1B65DE757873751B78F2C927972E5D
+	3A6DDA341C974A4A31B7A147F8D8071F7C102B67BD6766391A083025A5D735AA
+	8F1FCC38839F242EC24FBA7C6098DA10E9315B3B879D29E136F4489C5E972E5D
+	2C050602A92E42964F2C96AA54A9E2BCF6BB0D942B578E80B97EFDFAEAD817DC
+	861EA170C2DD679E79461D5BA46B328E1A354AF6AEDB917D1FC28CCE72A24387
+	0E0E9FE1BA73497F3DBA232028F0CB3C7E1B48F535A185854F48C76BC2E488F0
+	C68D1B3366CC888C8C3C76EC587070705454D4A54B97E27CFAD55E8B3B8B9A35
+	6BBEFAEAABEA2075B0449888D3A74FF7ECD9533E401C1414C4022926260665AA
+	D316E91AC2C2CC993367C890213E3E3E3636B658B162AC60FBF4E9D3A54B1795
+	2375B0446861E167AC5714161616A98525420B0B3F6389D0C2C2CF5822B4B0F0
+	3396082D2CFC8C25420B0B3FF3FFAF282C2C2CFC82E5092D2CFC8C25420B0B3F
+	6389D0C2C2CF5822B4B0F03396082D2CFC8C25420B0B3F6389D0C2C2CF5822B4
+	B0F03396082D2CFC8C25420B0B3F6389D0C2C2CF5822B4B0F03396082D2CFC8C
+	25420B0B3FE3DD57992E3D65F6AF0EBA23FBD781F8CD290FE31698036261C412
+	61EA627EC42C35062C56389A5A203FAFE6AC944F70167728664588C334FE2DD8
+	644325D677F9DD61E9303031254251A04F7EE89E4A024187C99693A5C300C4D4
+	9A5014181B1B1B1313131717C7FECD9B37D53957E47BFB1EB5979898B1674243
+	43434242828383F53FBC9EFE7027A473230EE9D184F687E78382728F2A268746
+	ACC561A0614A84480E055EB972253A3AFAEAD5ABEC7B10E1BD9FD5567B8939FC
+	C2F6B0B0B01C397264CD9A151DA6D7BF41CB785EEEED38BF1C7A7EDBF5EBD719
+	347DB43364C8C008301995FCB0AAA418B17418509812210674EDDAB54B972E9D
+	3F7F1E1DB2EF21347D607633B567E0CF2E2BB264C98202C3C3C3B367CFCE7EA6
+	4C99D43903EE7C48CA8DD2B96693757A5B10A55DED13AC0E12F8BBFBAF0E7138
+	22C413CA5F38AAF2753D49D4C9FAE54DCEAA83DB88C9CE267B30D3086BD6AC59
+	BA74E9CB2FBF9C376F5E95E457CC8A100788FCCE9E3D2BCED0DDDFF46D38FF31
+	B567E09716733135DC60AE5CB9F2E5CB9733674EF61D44E84E7E463CDF69871A
+	F4CC1E6AF6AA42075C9645668C4C5C3FC73F28BBE6F1857A208AFC6407C41FD6
+	9BDB421D2790E5F3EBA41B730AE6ADDF434E970365B2B3C91893B4C6E1C3876B
+	D5AA853358BB762DD6A852FD8AD9E956666EC227403F88CA01125D2AF0E7477F
+	9035246A17AB32635B2E31994D87FC9E8BB8CB90644170CE43074584EAD8C043
+	F35AB345578C92C030329EE427B65FD57ADEDA277EDEDC63F5BE819B235F3F10
+	37FE2C95E8A2BD0D98E9ACBEF5409219FCCE810307BA76ED7AE6CC99BA75EBE2
+	0954AABF312542911F4A93451D0E2DB7130FCE69AE722746822ECC8E75A06895
+	1450A7BDBC73B7E13627BB3D8890E9C6DD5F2C7E78419B063FB5220A60F4809D
+	6CD9B28586863238224596DC04FC972F5F26D0A012E302325531D9DFDB30F2A9
+	CDC18307BB74E9B261C306F619F3DB36C249E29BA7A3EE1E872E69F23F8C0CF9
+	6170981D5A955814358A0E5DDEDA9B132F48ABB4686D486E4934E210F69019AE
+	3CEDF6494FF02757693004BDE0FAAF4C1A2B746E52FC07517A7B9C6BD0CB52BF
+	AC9CCF9D3B576C622549F4C0A1E7B7213C90F09E0161A9CCF8E4C993878162C4
+	18377DB672D747568FB40AD4B1C79CB2E36EA0F451A2B8CB611792CC96368352
+	14D8A953A74D9B36C961B76EDD3EFAE8233C8AC3E8F905539E90568A96B266CD
+	9A3D7B7691938E3B052E6D3ACB584A7F2E8A53956EBB54E0855147A2A2A22ED8
+	D176461D51270C180B620A3247A8E3C4047D741909E15E2EDA3937E2903A9118
+	2A911DE72645BF758C82B404D8E1509D48402F4233405B13C6C5FDD96585247A
+	A0C4A42A15BFA85BEB874709E3456F3403E3A606B654A5B7CA431F493499936A
+	4967AB8E13C3C4A78F123D753750C6C174978D06A8BD34030AECDCB9330ABCF7
+	DE7B9B356B861DD24819677DE8FC885911622288075B61B6A60F4654A6C4FCD2
+	622E45248215DDB2D57DA0BBB907E710191949C8CE56DF21519D760583C850E2
+	A5D57162C462CE9F3F8F77920A773DFBA73A6740ECD8A5F5E805A5311C9E18B6
+	5B9D4B402FC80E60EB34891190443310A912AF32BC12AE9362340E0F7D24D168
+	491E7212C5482CA38E13C32831EB193BAB4E24C64C3646C0D878BF73ECD831FC
+	DE5F7FFD55A04081D9B367B769D34646E90E1321880E6575076849887D3644E5
+	30B0AAF53CB68896350F61153E100522578C8C1AC4C8B855F6BC89402DCCAFD1
+	D1D10475C00E8724AAD306F4E20C2246EFD2B64EBFBA4FDCA9366F27C0A13A6D
+	4064E31CA7EDE8B3418A4B7BA4B8737BDC991DB180DA3347CDE98D6494E4B18D
+	4AF5D8471239A55FDD434E4265D2D9AA6303112FEE906E32E002FBEA9C81E343
+	7799C98671BBBCB97EE1F0E1C3EDDBB7FFE38F3F8A162DFAE5975F56A850E1C8
+	9123C4FF8C12014B1A69A75911BAC4653C0918343684316152C8CFA5029D2DFE
+	8F4ECB191D99DAC900EC704822A754A604284E0676D8CA804ABA112C06E5B0E8
+	C2F8B00C209B4B2BE42A54A20E0CE048E5A5A8BD39DA853824519D4EE0DA3399
+	38CB0EBD0324444F81996B65AB9FD677582AD9CCC06292E1121DEAF1825CDA65
+	1F4994E6C9A1879C0C02E92EF5899CE81483C01031E6E0B2062467261B899C72
+	392BDD665060870E1D366EDCC87EFFFEFD5BB66CC90EF6C09616CAB8A5857626
+	5F84EE14B8A2E58F580F4E92E01337081285EA0AA4DBBAD118E1EE724A825E8A
+	80D822899C52990CE8232896278946E431A3D449031C2CDB08F5BBB4A7DA331B
+	D79DD5B4CEFF9AB0C33F763864479D36C04D654B07254CE05AEC7048DBA87C43
+	C7655B7BADDD3BE06F7C8EE4F740E8B0FC14170DAB24F77D342A50709713E590
+	CE561D1B6066A1FDB496EB12BCC8CD52E70C309E66B2A511111E3F7EBC4B972E
+	FA93985CB9D413356C802DA394161A292453841E14C896DB83848C3E909E8B02
+	819EBBB4126C8E9C14090F0FCF6B473E5E43A24BE550095509A2010748C44AE4
+	933AF20C891D1AA64E1BC03FB87411E6E15A34926ED25ABA0C328990483BB172
+	7CB2ACA60871F7F4DF74F0B9AD475FFA4F157642864BEFB5E73ECA5939947D97
+	39C5EC1C14ABA38FBCFE6C569D3040CDDCD924B3A505111E3A7488B51F51A83A
+	B6D9187CB567C73E4E1AEAD8AF24DF133AF34B8BB9F40A03C2EEB955C04D62CA
+	149FA032D9ADC1E57C2C76C08CC5DDE536033B1C92C82995C90095B8332981EB
+	A20451A0184DCE9C3991873A6D0067954211CA8C80E645845C14D8E190BE6394
+	D42F4F896455891ACF9E3D2B8254551820D87639EFA412484BDACC10013B2ED5
+	65321B9D05CFB72655898888C007FEFDF7DFEAD88ECBF1BC9D83EC81E488D0A5
+	1BC4078A15CAC318BB065D3C0E250F77C8A52744BA14E4D68214977D1239A532
+	19A012AAF23099D1128C46EA910A811475DA007A7619F19A4766047AAA470165
+	3EA951E3FB87EBFFD892C6331D300232FBE0155996E01859898920FFEEFEABAA
+	C5C0ED34625A489B1967607C80A153E70C98CC46CB3DDC94D4C6B80EF4801F5B
+	E88CD72274A9C055ADE789098A1FD0CD9D4364697483745E6C511D1BE01E5384
+	DBCCADA520B0C321892E452876EF598414078AB32F50AD3A6D003DBB5C13EEEE
+	F7D7C957F644BF752C765C64DCF8B357DE3D79E6B5FDFB07FDB3A9DBAA358F2F
+	5CD9EAA7B54FFCBCEDA975C75EDE490D3406A5C5F4CD7C6B70F6B0E105551536
+	9BBC9E915E20515947317D70455D9092D3C8ED346586855192F1A1854C19A0CE
+	1930994D5A7EDB1A6F64FFFEFD6DDBB6FDF34F176FA15CE297463AE39D083D3C
+	0EC5FEC409C84CC98E189C518140B7B1579722D4EFAEAC88801D0E255D653240
+	2554E5611CC550A88466E870A84E1B70E79CC571491809F82E79D8437E4C4D4A
+	71081E1A53F18BBA04C344D784D6E2934590B48D3E52C4E56890C825D4412AA3
+	8F12EDE13E0AEA9C0193D9FC050AECD6ADDB962D5BD4F19D831722F4FC38140F
+	836DD95DA08B87313A189698EFDE01894276B87B4245FD1E4B0A3B221B4E498A
+	0EC545091E442855816E2B76B371D10B2AA12A7560003745C428EFA681551CEB
+	7B1C17B12B92B3774549511A03AA646250A03C6A025D907848662BE617DAA9F2
+	1910A97BE89D0F711E289798CCE617F6EEDD4B146ADE07A629CC8AD0E4E35059
+	C2615832CD4B1E07C4E2B130756CC0E11EB3232972684457A00733A5B85E9567
+	A49EADBDD6AAE3046ACF6C1C131383F7438DF8437638C44735F8A955E3C5ED9A
+	2DEBA84F3452034DCAF2B90BB79673C45D480EEDA140A545BB1A73E7CECDA035
+	5AF8B8CA6720252274F7414277981C2893D96E3FFBF6EDEBDEBDFB9DE80305B3
+	2274098B22AC044324B8C298CC7C36CD6EAB9AB1B255490632BD9447ED197099
+	E8A192D4831ED12FE3F7451E9AD7FAFE198F94F9A4065E82C6E012DD3D650D7E
+	313CF3CB79659EC20D8A202958755A7D95C3C0A1E7B79914A1B77A4B7FE003E5
+	5369EAF80EC494083177B597984716B5C521349CFF1886586ECAFD05C794091B
+	5EF0D6E0EC317D335F793A23CED3F95FECB3DAAB3391E8868ECB5445061C3E07
+	E7F2637114D42B51493EC2F9D32D756735ADF5C3A3F675AE06FBEA848133AFED
+	C7F3B38393C45B9E1F7958D29DB93930ABEDB91C1987E44690595F2DA4529DA0
+	1E1408EE46DE08F2567B761C0ED337AC033B75EA74472B10921621768035A803
+	5F20FA910506BE54A51A308A562519A0885E9CAA7CA243A947504989B9F7B3DA
+	F24F1D2706E7C61A98B2B82F568C2C23FF7D7ABD3AE73D4C31223F6737B8B3AF
+	EB27EF4C55325C2EE7ACF40A0A7CF2C927EFDC28542709114AD4876DA9635F20
+	12D29FC178F56D03F97286B1B83BD978059548B56C5DCE0B1E881D17294F74D9
+	473CB1F6AFE7B280FCADED22C9E015498E86C94FA26EEFFDBBDA4BA71C3870A0
+	63C78EF20DDD3B9DA445C83A27852FB21DC0E231590C57B75DF9D64592E85FCE
+	90B2F2C4DC27221455EB8FE051C29AC717AA73EE21EC94AF178A86A5258C1852
+	249E64D0E4A9957996379F433DE0797E4952A8112FEEF06DF092D63872E44897
+	2E5DFEF9E71F75EC110653EDA555FC2042EAC4C25011211C76CF18E16CD7B55B
+	BCEDA9752E3FDF4C22A7C840363253848252D683A57A85541B6A7F952FD572AD
+	8D9D7FD9DDCFF562E3E84BFF1D7A7E5B7474344E2FC6FE6522F28B78282E4AA6
+	61243271105E7A8E4EF15AF837F1C01494E9801DA04E12A90AA4B340CAB266B3
+	B5924EC48D3F1BF9FA019AE4DBE0254D4114DAB9736733EB40C6EA91471EA952
+	A58A3A4EAB24F1F316CCE8D7AE5D639173F6ECD9F3E7CFCB375948C73EB0D7AC
+	76E47168924E8922E4919C5827D5CA97FD30652C060BA31E165790CDFECB0E14
+	E15A5C910C70F5EA554A519C0CB972E5CA93274F76FB4F27928812A82A323292
+	2DFB14A455B973E7CE972F1F5BF6294522577199535E1E7045B4C48A8E6E720A
+	4F42295A226FF3B810ED97E72E9C654B66DA4C3A67A5CD64901AA81CE4752297
+	A0BFC89BDE81FEF28666539BBCFF0051B254C815E5ED858C0389CE778114AA95
+	119387D2E4E456528F2C4AD95244B2C96830685C9A14CE1ABBEF3050EE462979
+	D948F42DF8C0366DDA6CDDBA551D7BA461C3867DFAF4F9E9A79FE6CE9DFBEEBB
+	EF0E1F3E9CC4975E7A69C284092D5BB61C3F7E7CE1C28519438648F2FB0B530F
+	660013C12E817D6E36B08F9131FADC542C839B91246413C921578C0623E35631
+	0A180715529B181037959CC08ED813A7C84036325384829E5F457A058D413FD4
+	A64B85B689A290070D96F69C3B778E2DED9126D171AC9CBE908DB6510FF712B3
+	A338CD4315B4937AA89C0CE4A408F5E8DF4967CB3E29A216F29093E28890826C
+	D9A70D32AFD14DA0852452A7749C1B21E37FD1FE6D77192E5A4B0AADE2AC744D
+	6A481FE00389424D2AB0468D1A9D3A756227222242528CC82D4B23241D8E822E
+	3C956A572676831160A6A21CC0083C400671684CC6D4803D616D9AE34BF8B601
+	89580FD33C9999F2811D0E49E414191CF263F43EB130B154112135CBD4C03E1A
+	60A2112B473080A1B32F1E86D1106D900D645F2AA106633B39AB0B8611A00686
+	423E04470AE99C258F7410F5521C251B45C896CE4A06906982447D9AD0E7087D
+	C2D2DAE4BB0757698143870E11859A7C1273FFFDF70F1932845B40F7653E7280
+	31E44EA9037F938408E903C81DC50E6432660BA4900133C514304AA4E219F290
+	131814B15706029B239A02716ED4290E164307763824512C5B7252446C542C4C
+	D0DA97D042604752E4ACBBBE1873B2439DD4CC9DE32A6CD927030569B934892D
+	EDA712C949930055C88C20F5C829BD5F528F4891AAE80EB509EC93423A678DD7
+	A54EFACBA5E9A0D6EEC4222403B023C385DEA84A6F9EE899535408E251A56DD4
+	A66F49B1F7DEC540C98E24A63C9BAF387AF468F7EEDD1DBE9DE40E14F8C20B2F
+	30893331497BD4093BD230B646A7E25F328E1A354AEDBA829BAACB8C7D9ACE40
+	735FF541D7C73D49C88F1949B8859588716013BA714855EC6837D08E94922298
+	2636AA877992D3650BF52220D64C66CF39C5EEA55F7A4B644B36BD49922862A0
+	25A207CA52895C4572B215248553C60A650748E78A5C571A00D426538CB18340
+	9D6CED55FEFFE080D4A643851404EA644B663D914B4823A98741F0305026C7D3
+	64367BF3530A51688F1E3DD6AF37F5EAB576EDDACF3FFFFC89132758F2152D5A
+	B464C99238CF63C78E356AD4A85E3DEDCF0D2C5DBA74E3C68D04233B77EE5CB9
+	72E5423B0B162C986F67F1E2C5BFFDF61B112CABEB82050BFAAA0B9E49623E60
+	A0995F258E22F2619F1475CE4BE80FD68085616ADC27EC0F2BA1369C24D5D267
+	6087436EAD5C8522182B39C5B0801D0E49A7AC54EBDC42128D17625F86D2734E
+	B6D48C316155D2247C8B348914CA325062F79897B4079B93F690A2E923A14962
+	A0EEFAA50FB8D496640775A45AAAA2F1F402A44E63C3A881E29425B35C971D2E
+	41EF180AF25003053D0C945C823C9EC7D36436ADDD29031F68E6FB8142CD9A35
+	894259C58C1E3DFAF4E9D313264CA854A912FB08587F30434CFBBFFFFD4FF27B
+	A050A142D4F6C8238FF4EEDD9B4EA9D4D4210911720BB9CD0C3177D4288F64C0
+	2D11831353635F6C452E81A1CB562C9E448A908152D816905FB62482D40952DC
+	D842129D2F643227D64C361A208D211B487B402E4D932802D21E0E49A4A0D69A
+	0424BF54225BD0EB913C7A6DF6FEB9EDA011CA52094DA217409D52A114918649
+	0D24928D0CDC5F0EA5C17A3AB8ECBE64E094E751329F4D6B740A4081DDBA755B
+	BBD6F183F52EA951A3C6E0C183717168EFC89123850B177EEFBDF7EEB9E71EB4
+	470DBA08E7CE9DBB7AF56AEE9743F34861AC9850086271A4FFFCF38F74AA4993
+	26BD7AF5EAD8B1A3644B0D92102167196E314A60DF737E0F48B7B93760345C2A
+	D4AF22B756BF8A5E84AD5E444AE9E865F51692E8EE42DEE6D42105EC174F1404
+	EA459C9122520F5BB9A2244A06A94D1AC056AF0D24834BA8446A930A810AA594
+	B1492492415ACEA17450D24994B2D4265797B37A414E499E9467D35A9C5C8809
+	BB76EDFAFBEFA63EFA53BD7AF5E79E7B0E09BDF5D65BC78F1F27856072E2C489
+	E5CB97677DB866CD1A5D844972E9D225D6937BF7EE5DB56AD59429532E5FBECC
+	B43260C000244DD754269F928408810C820C343B92EE2D724BE4DE0892AE2357
+	01B990E021BF8E2A66A2A0CA67EE122AABA1E392C14C938C4825E0308052DCDB
+	DA406A03770DD3F3E8DD9453B26F4C07E7064859F049B6E471F2E4499CCFBA75
+	EBD4B1472A57AE4C14CA5C306AD428967F92483CF9C9279F942D5B76E0C081B8
+	3EF32234C2143079F2E43973E6B08F3FA442D62072CA87242D420B8BDB8CFC52
+	93C9273144A1FDFBF727241E33660C51A84AB5D98A14293275EAD4D2A54B73F6
+	D75F7FD545B872E54AD136F3853DA3428480D3C3853EF8E083A54A9592F48B17
+	2F12DFE260D97FFEF9E7C78E1D4BC82DA77C867D2EB3B0482B104CA201659D49
+	51B56AD52FBEF862C48811E1E18E5FE02274FCF6DB6F77EEDCD9B061430E11A1
+	D4DFA3470FC9E08E6CD9B2952B578E6C870E1D92223072E4484E11667FF7DD77
+	2AC977589ED0220D71F4E8D1CE9D3B9BF48128F0D9679FCD952BD70F3FFCB07F
+	FF7EE24F6260FC1BE01873E7CEFDCC33CF142E5C78D0A041C635218E91955EFE
+	FCF98954F169BAFD4BFCCCAA12777AE2C409F6CB9429F3DA6BAF8968AF5FBFDE
+	B76FDF69D3A6E5CD9B77EDDAB52C35B5323EC212A1455A01EBEFD4A993C9B711
+	28108DE5C99307F1A01C79818CA792B358358125FA647FF0E0C146110E1D3A74
+	FCF8F18D1B3766CD1962FF9C9671F97AD3FE0BB1070E1C40D8CC083972E4A0E0
+	8001033875FEFC794A6DDEBC59AFCA57A4F421B21199845CA27278832A995C54
+	2D166E46529D4B33C8DB08930ABCF7DE7BFBF4E943084ACC99254B16967F78B6
+	9CF6CF5DC9DB111488978BB7A3CA242029376EDC909C80747528453DAC33F181
+	75EAD4898E8E1E366CD8B265DA4F4070B9366DDAB0F3F9E79FEFDDBB57ABCB47
+	F8EC66A4B5FB2AA606EAD8220D83E769DBB6ADC9B711F22486B03053C2478E80
+	7D1C1AD22210057983AA2DB7DC3CA42503D9D481018A50907AF0A24F3EF964B5
+	6AD5AE5CB942142A9999262A55AA74F8F0E14D9B36F93084BC4D36EA4731583A
+	4CE31C3A74C8FCE7422B57AEDCB3674F148807C395C92781708688901B8D3000
+	E1B18F5B63EB4E849C120D53890E87403A65C9834B7CF4D147B9D0BC79F3962C
+	59424AF1E2C5AB57AFCECE860D1BAEB9FAF35EC9C337066A665630934720A773
+	1491120256871E46521C853AF01F070F1EECD1A387F12FB778A062C58A44A1E2
+	03F17EC88FA5A0FE695BD4423A3B9C924F148A325DEA9074F2500311AC54223B
+	6CA98D1A50231556A850016788DBD4E3E472E5CAB1DDBF7F7F5494FA23EA29C7
+	07D6C9ED9499C333E431D368B11BE20175EC230250879E479274BFEB9028B44B
+	972E26A350C4D0AF5FBF7CF9F289D2D04F0E3B28479C21E24142A4E0C1804451
+	A62A9F18AC91CCC49CB913FEFA10B00F94A54E11369594295386FCBB77EF262E
+	65A758B1629CA5E5172E5C482B22943BAD0E92C24C4E2ABC69FF70B03AB6482E
+	9E479274CEFA5184D8318B2E93BF998D0F7CEAA9A7F2E4C9230AD4C5C6967D40
+	18EC8BA2C886BA48419988D0A527249D0C64C3AF0AC81B649F4A7419B34F7E14
+	28F12797409FD1D1D11CFA6A16F381085DCEB52E030C33775D2A8C71F313BA54
+	EB190F8FD702CD19EA23B96FDFBE6DDBB6FDF5D75F8C0F5BF649219DB33EB1A1
+	648002CD7F3BA96AD5AAFDFBF7D77DA02E39B6E80449E86E90145D99A44848A9
+	6A490CC64006A987223AE21B054E9147CC1BCF2955A1BDB8B8389AC13EF6ACD5
+	9562526A974C0634541D18C059AB3D0384DA493A4332D06D974FAE806A9364F9
+	72C7BFADAD63C615A71BF491BC6AFFF63D6B180687AD7CF98874CEFA65405807
+	76EBD6CDE477E42B57AEDCB76F5FDC91B30FC4F064F1069C428A464481EE665E
+	D2C920AB47A02AD9A26AB98440CAE1C3DA4F39972C59127DB273F4E85106B060
+	C182B487D1F3C92C962211D20277938104D0CE987186623DEA203154EB99CB76
+	E6CD73FD1B8AC91835EE9603EA440A5015D951491E515913A3CE79444692C893
+	F91BE1313E6CD927C55F0AC4A689424DBE0F240A7DF6D967714AFA3A50F78168
+	86149199B829201BB0430A70CADDD351301604290BA267AE05A74E9D2270A012
+	79280A0411D8B0FC4294196336434A45E8F246FEF0C30FD7AF5F67AB8E0D24D9
+	6ECE823B6D4B7150C706249DF67069770B21797DA40EEC68E69C187522E1943A
+	30E02EDD88E431624C977DC13945474E813A4E8C3A97544BE0FEFBEF6FDCB871
+	9B366DDAB76FCF967D52D4B9DBCB912347BA77EF6EF2490C3E70D0A041BA0F44
+	12C80F1F880211002949CA4C70672D6CA5ACB106F6A9134D523F7EF2C71F7F3C
+	71E204F170A3468D38CB14263FF85DA1420532604B0EE6943C92BE851EA0050C
+	8D3A3040376480D4B101F2A7A4DDC659CA194E3170DC3377378618CCE4EC95A4
+	712799C119AF8A98CFEC2127A7B027759018D293D1859480023B77EE6CFEFB81
+	2810C97956A0CAED116A507B0648A406779680FD602753A64C993E7D3AFBFDFA
+	F52B5EBC38E96812117275446817A01658993127CF24FF36706D77FE4ABC3C5B
+	759C18933270093783DBC0CD90A5B3114276D06F922A901893223479777D65C4
+	CEC3E86DCD2EF393C85D60E5A38E13E379C9E4738842BB74E9F28789F781984D
+	D3A64D5F7AE9256EA528505F07264381C0BCACF60CC86A501D240623D9B469D3
+	CB2FBFFCC61B6F70483C4CFCCC0EC1FCF7DF7FCFB661C386458B16D5C49762F9
+	09C9FF0037D300511FAA50C709305BC834836D11FE3DF1C413EA440274837174
+	37880C01192E5CB8A07FA1CB086B09FD36A8A404E888AC7F28FEC0030FA8D4C4
+	B0AAE65E32FA14B78FA1F677DDD4B9E4C238A83D3BC9A836262646AC4A1C78B2
+	85E1D0120E197F2A67865249061861891A6E830EF18128D0E4931824D7A14307
+	6ED3A54B9718161AA9436B65E27017E918A1FB642380FCFAEBAFF7EEDDAB7FEA
+	1A75BDFFFEFBB8B276EDDA316B539B8C806C311E567D73E6CC898A8AE2B04F9F
+	3E1F7CF08118F9A44993860C1942368A6360F9F2E5A338D648ABCCB4C703C917
+	2116EF72965DB870212261B04412AD5BB756270CA0347766EA5984DBB76F6752
+	4445CEC5E908B2C7E68A152BA69212C3F4C6C0717719388A7393C8CFAD55A75D
+	71FAF469719E642E59B2A44A4D8CD1F46983996A1DE07ECB8871839D2717014F
+	42CDA0994C50904447CE9041EDD9F7E516D0659564E0E2C58BFA455552EAE0D5
+	AF5400AD72B7A44F09BA08698CCBA715461015CB66FC078A9514DA4F2C7DECD8
+	B166CD9A0D1C38B0408102BA2D2142C9936C9229424A619D2E1DFAB265CB4847
+	9F64B876ED1AA1853A61807432B89C3F3C8B3025E045F3E7CFCFECC5C486AD7B
+	305081F99B76A26AFC09BA22A5766DD77F1A4D377DCF76EF0E96FE3409E37327
+	5DD621544B1B1876068DC6239E6AD5AAA9D3893136C6EF9E90312496FBEDB7DF
+	D4B1FFD0453879F2E4A54B97328C0E1D67B848E42EA0AE3A75EA3469D2A45021
+	F5072457AC58412F4E9E3CC9DC377AF4E8BBEEBA2B8F1D77FEC05B9229425A8C
+	A939C7A28B162D227027A2E0EE6201972F5F26A868D5AA953A9D0032A3B72E6F
+	7F2A8970C99225D822E3CB564448FBB910539ACA9198DDBB7763BE64608B00C4
+	B26930F74632182183F4059D78AE16E4B3BFE4945BAE2F7898539DC713D6AE5D
+	AB7B631121D7A2FDCC62F5EBBBF82BBFD254F0DC189CBC28DF9DEF4D39F8C0EE
+	DDBB9BFCADB4D446172163C8B0308C20A7807D11A17370F7D9679F0D1D3A343A
+	3A9A617CFDF5D74B9428C1CD4281E1E1E198BA4F063099B3202D766931CC0A34
+	8BE94160DFE53C4159DD566E0384F8F631D7CC5776B83ACAC1B8550E2788D600
+	0B166708F29E4D9D4E0C7D94B92CC96A7FFDF557AA6562026628A95F3CADBB01
+	E1F64B364C47609F14D2558EC4E8F5786E0CE9FAE4921A1C3F7E3CED28D00877
+	9F1000CB446F3AF80C4951996CB653A74E7DFFFDF71D3B767CF6D96719EA72E5
+	CA3DFFFCF3850B17E65EEB45901FB5A90229203922C4E0301A75901869229D44
+	816CD9772942A086E439616F610180F6C47B8808255D6C54F61D58BD7A350AC1
+	DC6924F9A520E9E49F3DDBF5DF2473307DD977866A113392A672B42732601C80
+	69556532F0D34F3F91933C348091E4C6B3659F14D239ABF219208399C6C8A5D5
+	81AF61ED943615087BF6EC59B060014367FC13BF67CE9CF9E28B2F66CD9A45FA
+	D4A953FBF6EDDBAE5DBB1E3D7AC8ED6ED9B2E5E0C183EFB9E71ED1AA68586E84
+	3F4588C6D48101625169A22850B6A490AE7218E02CF5A883D4E1C71F7F9C3973
+	2623858AC482D91145D9CDDEED5482ABC146C94623D106E1A23C1C674E7137E8
+	32A708EEAA05FC8F5151C00E4D52A79D2033671946A256A22016B46CD9278574
+	772A225D35C57D63F406AB63DF111919D9AB572F2632759CC698387122EA628D
+	87975BBC78B124725B915FA74E9D48EFD7AFDFE79F7FBE7EFD7A6E53BD7AF55E
+	7CF1C5AE5DBB127C72A730004C02B06AEE1D19FC264277F75E5A09B44FDF02E9
+	2A4762DCD593727EF9E597F9F3E763678C91B40AAB0576B0DD24078E86518A98
+	9905A4FEB17AA4E8E1519819C73277EE5CAECEFDE32E52B9C03EAD72D7249AC1
+	45B9340DA019F9F3E73736C6DDC0D298D45097194E9E3C8929AF5CB9521D7B84
+	09A568D1A2851243C857A44811D285BB920B65EFB6C37D57D7B3430441784948
+	B26FDFBE3E7DFAE01549CC972FDFA44993BA75EB463A873400EDBDF1C61B64A8
+	51A3865811374ED6ED6CD9270511DAAB4C295E3F98213FD339A6A38E53000EC7
+	D9FEA89C058FBB0733A84B542DDEA34E9D3A92EE0CEB404428468F1F434E80ED
+	D272844428E8E12ACB972F2727E073284E0A778EDBC3CD6345E7F2792F555133
+	8343B4E9AEDA79F3E6511BD0001AC6967DEE28703BB13F95CFC0B265CBB05469
+	09C64436A44E34EBB931A4D318727AE8E3FEFDFB19104C8AF154492986756097
+	2E5D4C46A1152B56ECDCB9339DD2272F2C01649694ADA4271B6E07CC983163E3
+	C68DFA839961C3868D1B37EEFEFBEFC73C366FDECCB07FFDF5D7328CD81E81E8
+	37DF7C83C1B014AC5EBD3AC519731A433B192BEE855811B78C71F39508BDAE85
+	21F38902410C451D9803ABBA74E91246866DC1123BEA5C62DAB76FCF948C9533
+	768C29462C0367E6EED230F2DB65A805A220FB5289CA9418EE9F0478EAD81534
+	861AB88BE2D3987DE5091BAD725790CBE92D6147D00FDD35064F9864637C0E3E
+	90B0CDBC02B1F212254AA001DC8E800F840276181C2D02491954020EB30C23C3
+	B678F1E24F3FFD34CDA0D9B83B894BC9F9D1471F3DF3CC33D8D8A79F7ECAA429
+	7325F68015C9B0B383207103299F2374BC1321F755FAE02BBCB5153C923C1B34
+	22BF52EE124CDCE849185033B3970C3A264E11CD73D917BA1C92E86E02322342
+	2A91F6684E39E11BDC54C89D7657D0A125588999C6E0E799DD6EA7088F1D3BC6
+	12CBE4FBC00A152AB0EE6202621F533622196839EDF7095485C148B5464E9D3A
+	855530111026D078DA233FA9869D7CF0C107C812BB9A3D7B36C12A432D774DBF
+	5F62457A6B53CE1D26421D6909533E0687000839D489C4346CD83057AE5C0C37
+	4389059B1C3BAC1CC82F713FB0C3A1A4AB4C89A13149F685FB4733345F664754
+	44B53489B22A5362E48A7A4BC869A631F2DC3579039B0C30E89E3D7B9AFCBB11
+	E5CB97C7F451A07404B0E9D483FA5DDE71F4C9849E274F9E010306E0908F1E3D
+	8A0E972E5DCA29EE913CBC610067CD9A850E3121264DDD8A983469BCD4E313BC
+	AB8BA6633AEAC017501B75AA0313E007C494811D0E19688930DDE990A98EAB90
+	D3FCD8C9CD33E6678743B118497140265DCF762F4E8C2D702F351B49F0CCEE06
+	810C0E2D81241B83A4A53DEA3835C17CF181AB56AD52C71E21FC93EFC8D37819
+	0DEE23772795100B310E9D0E8902F1F0E0C183CB962D7BF8F06174B870E142CE
+	32451297D254E6B22FBFFC72FAF4E91288521B2D37338F7B8529A314B8A9EE26
+	EC9490A40331C240E8B1013058E24C3C0B8C229E333850AE5C39FB0DFA7FB729
+	2E08E4C7B69C3163F4B413B88BD4A392EC5090E22EBFE7EADC12F0DC18EA3133
+	23F88443870EA14093EBC04A952AF5EDDB575720F2C3B2B989E2677C8E444058
+	08B75EB5C000A3C7BD6016E32C3A9405EA912347060D1A24EB43CA8E1F3F9E75
+	2361C5871F7E8826C92F56E46711BA9BB05995E1B5972F5FBE7AF5EADF7FFF7D
+	C3860D7FFCF1075BF649219DB3EE566E5ECDD90C0D918C7DBD9D8F5882B12685
+	DBC94D65803CFC05566F07CE657E779598F9860E607CCE77D12E166D60DD0D82
+	BB8BBA4BF75C9B0F89888878E699674CF65D7E339BBB86DDE300D106F2E356AA
+	4728A9807CB20CF360C055230C702398BE2530A149E20F099AE81401AA3CEDC3
+	AE264D9A840E095CC78C19F3EEBBEFBA1BF314E28508B9B53822759018BC190B
+	B3AB57AF5EBE7CF9E2C58BFACF99B04F0AE9F2DCC2E5A7D7A9D39DB69D91E993
+	498EF165944587DC4E09151859779F68E194DA330735AB3D032E13CD230A7410
+	6192B8BBA8CB7477CF8A7DCEC18307BB74E962F27DA03C0BCD9F3F3FE6CE6DE2
+	667113EDEE4A835BA9F67C8A7842AEE5F2D693C829E60299C1991FD121F22B5D
+	BA34FE90B854FC2179264F9ECC5C8301BFFDF6DB6FBDF5566A04836645C8CCEA
+	EEF22CC65011D1B3CB4797A490CE590FD3B3F98894F1923521C32771A93EDC24
+	728F3DD8B779A90B0E8F3D1C0E75CCDB3D6D736E9E248A32E5C18033CE9776D7
+	18636D2A291560F9847F30F95B69E5CB97270A755020370ED8E12692924A6012
+	0C14A3A19A6200116248D200C9A6EBB064C992F843660D591F92EDE38F3FEED9
+	B32756FAE69B6F22450254A9C4577821427746ACCDED864F661A6FBF1CEA6741
+	9D488C077D3A403D0C16D139B7938163F8448A8C26B224850CB366CD52B91343
+	419357D191360B2AC909BD8F6C559297487119A21F7FFC51A526466B8101959A
+	18CA72CAE58DF021AC0351A0C94FA511851A7FAD10618802D9B2CFFD22515B28
+	A7025C51E27FD594C4303832954B638C3A7CEEB9E7F087C78E1DA3E5F2894BAA
+	FAF2CB2F994AB09FD1A3478F1D3B16C728F5F804B32244278C9A3A480C4D1707
+	A54D3E6EE02C3034AA4C62C8E0AD9B6210195F4687B1A3385204766809E9EE16
+	87EE6E49B249B9DD53506A108B615F9DF012BA2C953026EC40321A932428B06B
+	D7AE269F8556AA5409C7E2AC40EE14464F0AADA5BF326EA9876A4D62B82ED6E8
+	AC43C6AD408102F2DEE2F8F1E304A2E20FC9FFE9A79FB2ACA5C237DE788325A2
+	0F7568EA963301B88B45E7CE9D4BD3E909DD70F7988B74FA491E74E8F283FF60
+	3E223522E6AB8FA6A89D5BEEC194CD5C65D3A64D6ACF233EB17B8A480DDAEC6D
+	7F768A279F3973A63A6D0E6989D83A504FF21AE319F181269FC4B00E6465C5C2
+	D59D0269A187DB741BA0010C94CCE00EFEB060C1822FBEF8629932654E9D3A85
+	F0E6CF9F2F45A64E9D3A70E04076468D1AC5FAD0573A342B42779E4AC6179931
+	DCDA234B57C8C78E51233AA193AA6462CC47A40E702319359AA1EB50C63125CE
+	9075ECBFFFFEAB0EDC804E7C62F714A10B7A3DECD078123D7C0CC801728A9269
+	037310DD4F0D111E3972041FF8EBAFBFAA638F54AE5C1967129ED4AF15AADCA9
+	8CD8956EC072285BDD729C7588C51297A2C33367CEF4EEDD5B771E1F7EF821CB
+	4576581CC20DF75F5B338FA981F0108BEA73893B37A8430F11097D5625134325
+	DE46A43A62C48C1D957009B9CD8CA33B7F92E4ED97C7BCFFFDF71F96A7920C70
+	3F50B8AFEC9E2214146BA01EA02FB490D1E042CB962D73E77948E72C79B0276A
+	10630289057C2B421648BD7AF532E903EBD4A93378F060EE785A502030B66C69
+	801CD2001973B6B2238D74D6217EE5F9E79F2F55AAD4F9F3E70901F45F949E32
+	650AFAC4BBE00CD161B2ED5627E96F519001B77BC5FE79FC73E7CEB1659F145A
+	CFFDA6DDF288590446AF54B1C4480D515151D4C0162B670A11015396DEB2659F
+	94EB09DF6F888C8CD4AFA5E7A4E77A4E55B51D06828278B0E8E868868C4B5CBA
+	74292626867446937632B8D24EC69A2126FAF5F07507F9C42057012C8914693F
+	C8EB16A9963C0EDDA75AF224A3F16493F6008DA7A03C8223A7DE12315F2E116B
+	FFD10AA08864E314FDA272A0A7A2437D245DF6D1FCB728CCFF4E0CCD6BD2A409
+	0E931E717F9997693CED019A47ABA40BA9AD40EA97F1E1EE5CBC78119FCCBAEE
+	B3CF3EC3A171F561C386BDFFFEFB5DBA7479E79D77C880C1D04E3172C613B321
+	852DC5298B3D63452C1056AF5E4D66F9BE0523C6DDFFF8E38F5F7EF965CEBEFE
+	FAEB2FBCF0020640AF550BECF754B2A9638F242D42AAE3AED32CF403B48CB662
+	0A5C835BC88D344AC89D08C52030AFB367CF2212FC0C7D6644C48EA901B84FDC
+	246E1E39311DAFEC18681239E52ABA2993C229292EBE9A2DFBB413C5BA3350E6
+	3C8C9852201643AB1804A0235C88967BB67BAF1ACF2DA04EF98212C34B41469B
+	41E6A2B4931BC9B580FA3924335791C69081E2523FC348D7D832A4A4D042190D
+	777D342942F3BF170A34F2D34F3FA54E74FBC30F3FDC75D75DE2D8815ED024DA
+	0F2A77EA40FDDCB25DBB763568D060C890212C2BFAF6EDBB63C78EEAD5ABD7AB
+	578F162E5DBA74FBF6ED68E9F3CF3F67B8C68D1BB767CF1E6652CA329EC0B831
+	C29807B6DABA756B46EFC48913544506B23DFEF8E3DC6BCC15AD7EFBEDB71833
+	E96DDBB62D54A890DC0E817DCCA355AB560F3FFCB04A724FD222A43A0C02E310
+	11621FDC7ED2E90F9711FDC8BDF7A07B8C8C4A68371D934AB039D29D2B41F3C9
+	B063D04D99CA5120A3C3E5184ADACF5D910B61A68C239AA1A9544B369706BA68
+	D1228A88C5D01EA9997AD872965349DABDB78DE72ADC78D121ADA20BEC70C845
+	B93A57A472B67A665AC296E661DF5C9D1ED10CB6544E4FC5DCA5310CAC947220
+	4911729731D68E1D3B1E3A74482599A0458B16F22DC1D9B367338C8CBF3A717B
+	B9FBEEBB59BC3120B8E553A74EA95403747CE4C891DDBB77DFB66D5BBF7EFD9C
+	FB480684877499507080645327BC04275CAB56ADFCF9F3AB6357242142CE621C
+	BA08C5BD90824130D074129B06EC9B7BAF5B8933580C3715DB421B220F2C8C44
+	6C88DE62CABA08C92C97C38EB91CFB5C4E4C8D6CD831D928428AD46C444C5982
+	52344025E272E905AA1363A512C0F2C8493697225CB56A15462CDAA3B8583C90
+	280A642EA4CBD4063446B77BEA647C92D778D1B9E810182B8A3368D4C029B94D
+	6CB90A3B6CB922F57017A89066D01EBD251E66439D24454817A64E9D4A14CAFD
+	E572B40D180D690F30202AAB1D69187DAF5DBB36CE93F6CC9D3B77E7CE9D3452
+	064732A42A5C8216321A6FBEF966C18205478F1EFDCB2FBFD07EDA2CCD268F8C
+	0FAD3A73E6CC840913708F0C05012AC6C0CD6584A5A73852A03B13274E3C7EFC
+	380325ED278F5E8320BDB35FDF116C00F9E18AEBD6ADAB925C61568462D6E2C1
+	682217E6F633D0DC48FA8C91712F3D8C32F5303A0EF5302874C6A11E32734AE4
+	4A66716564C3EEC9208297D84F6A76803AE5420C1FC5B166B910634711B15794
+	406B492443E9D2A55549031B376EE48A18197D97FE8AC1518934987A5803000D
+	16BBE71419C84F8393D7788688AB909F2B521031D30BF6D1A13E11908741163B
+	A00B5C9AC6D00CDA636C8934C633498A9001DCB2650B4DE512D21EFA25ADA23D
+	B4D3C172681855914E072B55AAC48C434EA0B83E3EA90D6DA06D0C48891225B8
+	171B366CE02E90A84725E4A191F49A3991F6172F5EBC62C58A241275D347DAA9
+	DF026E166D467E5BB76EB58F68101552841DC684A1A612101B70D9475218312C
+	B064C992B447A5BAC29408699F7D76BECC0E8734940BD0192E2FCAA111989A2A
+	E306E91B778571612B86255DE2B669166D7F91C8907109864CB2618264E37274
+	5B2E47CFC5DA54BD89A1C1E4A71465A904D8E7D29CD2DBCC85B828898C914B11
+	1286D1235A4255B499F6B0433A358851D24EE9351592A88FBE5C3A258D1723E0
+	8A8C0FA34D0D20464F5564A0551467B4B93455D10660C7D812076B7086359E87
+	D818B81070512E4D47182899D4E81A0342BA6450B9EDD6CFD5A98A0A9968E46E
+	CAF8D09824DBE35B680C576424193A5A4E0427F3BE8890B1A26D684CE6440EC9
+	6FEC0E0541C65F6E2596AF5B2C19A89C7ED13BEAE19E520937977A48A72AA944
+	DA2077842D87FA296792162117C626644A1673A489BA1D8805B0CFC554193750
+	8A9B472554A55B953451A616AA6287B692EE90CDABCB71218A50964A80369342
+	47A89982722D8A738AF17529C2DDBB7733B2E4A4940C3D35902EADA519021948
+	0129052EFBE8ED585189D443CB650BD206902BCAA081F448EA94DB4C9B3994AA
+	DC91A408B9908CA1AE40B6A240D241E54B804BD30CB14B864E9F6B6895CA71BB
+	A025F611D2AECBB8A11F6242A0F17487441A46F3EC8B12ED111DCD26911ED165
+	AD7C023202DC4A6AA0EF6CE93BB7430C89FA29C85C4C0D74594468EC2F3BFA7D
+	670B940239EB40D222045AC3E58196498AB4436A976BBBBB800EA5A463C6AAEC
+	0D4B5495E474CEE6D5E528057A0DE0702D5218536CCBE59A70DFBE7D84AC0C31
+	996909509C748A73751DE766908D9A53D878A0945E155BBD2AA0AC5E215BBD42
+	D08B200655912B9624FE317267114A3D58B044404C55A2402C525AA2F219E0EA
+	46A3148B24A740852A5F2A23E32043CDB0D05ABA20AE8C1D0EC9C329DAC94C81
+	136347DA29D39C36BE09F78B747648C44E284EF7A506E98BE4A1CBF494D10686
+	518AE867B9909C654B4E0EE5AC33498810EC0DD3A0AD72C856AAD36F3F685993
+	42EA010F5569F91272EAD91CF2803D9727A40670792D069D399E09D2C3E37BA6
+	37C64EAF4148B20DF66B6AA4A4F13A521598A98D3C5889F8E102AE7EFA7EC68C
+	19D80A22A177F913FE2C077D54A713E02AD4236E10FB03763C28106886D81C83
+	86654B9DE4D78D5BB2DD0650022DA101A22E8682C6A31F8968240383403B8106
+	3392A4D34E90DE495F040E2948711901635FC84659C9261A939B2267E5940C88
+	A85432C85907921661BA8491656E63A9E0EDBB84B40C2682A1D01759BC89F189
+	26450CE4C12C1021CB21FA288FA3DD8990821417181C524877672D189F583FF5
+	03FB52895CD79D747D8EDE0C3A85C5735D5A2EE8FA118D716741B2718A76CA14
+	431E52A844744566D229CE68884AF51110BD9159E090AD9C02F645EDA240C684
+	0AC923A51CB044987E4488952018424779364BA7301D6CC8685E18049198FDBD
+	ACF64E48E231553E01728A5DEAC6A75BB007302FAA027DCAE7BA143453D657D0
+	06B17E60875E73756986B10D7A1E91999E8D3C201DE1145B3273561BC1843194
+	1A8C88AE64ABC32118D5AE0F8B339608D39508F17E2C74E52D2561249DD24D07
+	0BC014707D680F4F480765F1E66C19E417BB14A40670B033237256A042A99382
+	0267255B6A636C003BFAD50552C8233BA06723C598533F05E49753A097D5AE64
+	8044B59718A9C72E763531399715025484D82BC2D3ED15DB25456C949592846A
+	88901455E04E802EE009E9D4D9B367F599454E893520393A45D75020FE50166F
+	2E2D433346BB698A79C83649A42AB67A9DF66A34E430B57168807E69E70678C8
+	2989A0E5F3584992A88A0CA81389095C111A2337F6893798AEB0CB1C263E1290
+	36C16BD1111C200A9470946E727FB9F788507A8708E5D516FBF87994A90A3B11
+	9886914AB8939F86CDF67F850DB5CC1702A2850000000049454E44AE426082
+	]]>
+</Picture>
+
+<Ancestry SectVersion="1" SectionFlags="0" SubIdent="0" Template="false">
+	<MainGUID>F938E33A-329D-4A36-BE3E-85E126820996</MainGUID>
+	<MainGUID>B176ABF1-5813-478F-926B-28EE7C5DC1F7</MainGUID>
+	<MainGUID>4FD10D67-2F29-4844-A65A-6597589B0CB5</MainGUID>
+	<MainGUID>A73622DE-E40A-4E63-ADB7-52D13422BD06</MainGUID>
+</Ancestry>
+
+<!-- GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT -->
+
+<Script_1D SectVersion="20" SectionFlags="0" SubIdent="0">
+<![CDATA[
+EPS=0.0001
+dim dcomp[][2]
+dcomp[1][1]="num"
+dcomp[2][1]="name"
+dcomp[3][1]="calcarea"
+dcomp[4][1]="floor"
+dcomp[5][1]="cat"
+dcomp[6][1]="custparam"
+
+dcomp[1][2]="номер"
+dcomp[2][2]="имя"
+dcomp[3][2]="площадь"
+dcomp[4][2]="тип пола"
+dcomp[5][2]="категория"
+dcomp[6][2]="спец.пар."
+
+
+
+dim _iTypeZone[]
+_iTypeZone[1] = 0
+_iTypeZone[2] = 1
+_iTypeZone[3] = 2
+_iTypeZone[4] = 3
+_iTypeZone[5] = 4
+_iTypeZone[6] = 5
+_iTypeZone[7] = 6
+
+dim _stTypeZone[]
+_stTypeZone[1] = "0-Эскиз"
+_stTypeZone[2] = "1-Комнаты"
+_stTypeZone[3] = "2-Нежилые"
+_stTypeZone[4] = "3-Летние"
+_stTypeZone[5] = "4-Общедом."
+_stTypeZone[6] = "5-Обществ."
+_stTypeZone[7] = "6-Парковка"
+
+values{2} "iTypeZone"  _iTypeZone, _stTypeZone
+
+
+!bFullArea
+dim _iFullArea[]
+_iFullArea[1] = 0
+_iFullArea[2] = 1
+_iFullArea[3] = 2
+
+dim _stFullArea[]
+_stFullArea[1] = "k*S (S)"
+_stFullArea[2] = "Без ум."
+_stFullArea[3] = "Уменьш."
+values{2} "bFullArea"  _iFullArea, _stFullArea
+
+!========= параметры в аддона=================================
+!asAddOn_SubArea 	 ! тип пола
+!asAddOn_SubRegul 	 ! тип помещения
+!asAddOn_SubFinish 	 ! уменьшение площади %
+!asAddOn_CalcArea 	 ! вычисленая площадь с уменьшениями
+!asAddOn_FloorArea	 ! площадь пола для ведомости полов			
+!asAddOn_FillArea    ! площадь штриховки вычитаемой из зоны (под кухни ниши) ! перспектива под площадь пола ?
+
+! --------------------------------автозаполнение этажа------------------------------------------------------------ 
+if PositionCodeByStory then
+	err = REQUEST ("Home_story", "", index, story_name)
+	parameters asAddOn_stPositionCode=story_name
+	lock "asAddOn_stPositionCode"
+endif
+!==================================================================================================================
+!-------------------use Global-------------------------------------------------------------------------------------
+!==================================================================================================================
+if bypmv then
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "koefbycat", koefbycat)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "bzone", bzone)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "fzone", fzone)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "pzone", pzone)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "onepen", onepen)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "rzone", rzone)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "fszone", fszone)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "catpropid", catpropid)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "custparamid", custparamid)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "bfullarea", bfullarea)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "areaunit", areaunit)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "areadec", areadec)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "decbyproject", decbyproject )
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "brounded", brounded)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "catzoneforname", catzoneforname)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "TextPen", TextPen)
+	parameters	koefbycat=koefbycat, bzone=bzone, fzone=fzone, pzone=pzone, onepen=onepen, rzone=rzone, fszone=fszone, catpropid=catpropid, custparamid=custparamid,
+				bfullarea=bfullarea, areaunit=areaunit, areadec=areadec, decbyproject=decbyproject, brounded=brounded, catzoneforname=catzoneforname, TextPen=TextPen
+	lock	"koefbycat", "bzone", "fzone", "pzone", "onepen", "rzone", "fszone", "catpropid", "custparamid",
+			"bfullarea", "areaunit", "areadec", "decbyproject", "brounded", "catzoneforname", "TextPen"
+else
+	parameters	AC_TextPen_1=TextPen
+endif
+
+if bypmvattr then
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "TextFont", TextFont)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "TextSize", TextSize)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "TextStyle", TextStyle)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "bfill", bfill)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "penfill", penfill)
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "fillMark", fillMark)
+	parameters	TextFont=TextFont, TextSize=TextSize, TextStyle=TextStyle,
+				bfill=bfill, penfill=penfill, fillMark=fillMark
+	lock "TextFont", "TextSize", "TextStyle", "bfill", "penfill", "fillMark"
+else
+	parameters	AC_TextFont_1=TextFont, AC_TextSize_1=TextSize, AC_TextStyle_1=TextStyle
+endif
+success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "of_mov", of_mov)
+success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "numid", numid)
+!==================================================================================================================
+!-------------------use Global---end--------------------------------------------------------------------------------
+!==================================================================================================================
+
+!=================GDL тип помещения =================================================================
+
+if asAddOn_SubRegul = 0 then
+	values "ROOM_NAME",
+		"Комната",
+		"Гостиная",
+		"Спальная",
+		"Гостиная-кухня",
+		"Столовая",
+		"Кабинет",
+		"Коридор",
+		"Прихожая",
+		"Гардероб",
+		"Кладовая",
+		"Кухня",
+		"Кухня-столовая",
+		"Кухня-ниша",
+		"С/у",
+		"Туалет",
+		"Ванная",
+		"Постирочная",
+		"Балкон",
+		"Лоджия",
+		"Терраса",
+		"Веранда",
+		CUSTOM
+endif
+
+if asAddOn_SubRegul = 1 then
+	values "ROOM_NAME",
+		"Комната",
+		"Гостиная",
+		"Спальная",
+		"Гостинная-кухня",
+		"Столовая",
+		"Кабинет",
+		CUSTOM
+endif
+
+if asAddOn_SubRegul = 2 then
+	values "ROOM_NAME",
+		"Коридор",
+		"Прихожая",
+		"Гардероб",
+		"Кладовая",
+		"Кухня",
+		"Кухня-столовая",
+		"Кухня-ниша",
+		"С/у",
+		"Туалет",
+		"Ванная",
+		"Постирочная",
+		CUSTOM
+endif
+if asAddOn_SubRegul = 3 then
+values "ROOM_NAME",
+		"Балкон",
+		"Лоджия",
+		"Терраса",
+		"Веранда",
+		CUSTOM
+endif
+if asAddOn_SubRegul = 4 then
+values "ROOM_NAME",
+		"Коридор общий",
+		"Коридор",
+		"Лифтовой холл",
+		"Вестибюль",
+		"Тамбур",
+		"Тамбур-шлюз",
+		"С/у с ПУИ",
+		"С/у МГН",
+		"ПУИ",
+		"Колясочная",
+		"Лестничная клетка",
+		"Электрощитовая",
+		"ИТП",
+		"Насосная",
+		"Машинное помещение лифтов",
+		"Венткамера",
+		CUSTOM
+endif
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! КОЭФФИЦИЕНТЫ И ИМЕНА ЗОН !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+catname=""
+catcode=""
+success = REQUEST ("Zone_category", "", catname, catcode)			!!! запрос имени(catname) и кода(catcode) категории, к которой принадлежит зона
+
+!!!!!!! можно менять условие, по которому будет назначаться коэффициент и список возможных имен зон:
+!!!!!!! if catname="Жилая" then   - выбор по имени категории зоны
+!!!!!!! if catcode=1001 then   - выбор по коду категории зоны
+_koeff=1
+_catKnown=0
+if catcode<>"" then		!!! категории зон проекта (Менеджер реквизитов): код -> коэффициент площади, тип помещения, имена
+	_koeff=1			!!! коэффициент уменьшения площади по умолчанию
+	_subRegul=-1		!!! -1 — тип помещения не задаётся категорией (0 эскиз, 1 комнаты, 2 нежилые, 3 летние, 4 общедом., 5 обществ.)
+	_catKnown=0
+	if catcode="1010" then
+		_catKnown=1
+		_subRegul=1
+		values "ROOM_NAME", "Жилая комната", "Комната", "Гостиная", "Спальня", CUSTOM
+	endif
+	if catcode="1011" then
+		_catKnown=1
+		_subRegul=1
+		values "ROOM_NAME", "Кабинет", CUSTOM
+	endif
+	if catcode="1012" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Холл", CUSTOM
+	endif
+	if catcode="1020" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Кухня", CUSTOM
+	endif
+	if catcode="1021" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Зона кухни", "Кухня-ниша", CUSTOM
+	endif
+	if catcode="1022" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Кухня-столовая", CUSTOM
+	endif
+	if catcode="1030" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Прихожая", CUSTOM
+	endif
+	if catcode="1031" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Тамбур", CUSTOM
+	endif
+	if catcode="1040" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Коридор", CUSTOM
+	endif
+	if catcode="1050" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Совмещенный санузел", "Совм. с/у", CUSTOM
+	endif
+	if catcode="1051" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Санузел", "С/у", "Туалет", CUSTOM
+	endif
+	if catcode="1052" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Ванная", CUSTOM
+	endif
+	if catcode="1053" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Душевая", CUSTOM
+	endif
+	if catcode="1060" then
+		_catKnown=1
+		_koeff=0.3
+		_subRegul=3
+		values "ROOM_NAME", "Балкон", CUSTOM
+	endif
+	if catcode="1061" then
+		_catKnown=1
+		_koeff=0.3
+		_subRegul=3
+		values "ROOM_NAME", "Терраса", CUSTOM
+	endif
+	if catcode="1070" then
+		_catKnown=1
+		_koeff=0.5
+		_subRegul=3
+		values "ROOM_NAME", "Лоджия", CUSTOM
+	endif
+	if catcode="1080" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Гардеробная", "Зона гардероба", CUSTOM
+	endif
+	if catcode="1081" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Кладовая", CUSTOM
+	endif
+	if catcode="1082" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Постирочная", CUSTOM
+	endif
+	if catcode="2010" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Колясочная", CUSTOM
+	endif
+	if catcode="2011" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Вестибюль", CUSTOM
+	endif
+	if catcode="2012" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Тамбур", CUSTOM
+	endif
+	if catcode="2013" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Лифтовой холл", CUSTOM
+	endif
+	if catcode="2020" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Коридор", CUSTOM
+	endif
+	if catcode="2030" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Лестничная клетка задымляемая", CUSTOM
+	endif
+	if catcode="2031" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Лестничная клетка незадымляемая", CUSTOM
+	endif
+	if catcode="2040" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Пожаробезопасная зона", CUSTOM
+	endif
+	if catcode="2050" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Лифтовой холл", "Лифтовый холл", CUSTOM
+	endif
+	if catcode="2060" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Тамбур", CUSTOM
+	endif
+	if catcode="2061" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Тамбур-шлюз", CUSTOM
+	endif
+	if catcode="2070" then
+		_catKnown=1
+		_koeff=0.3
+		_subRegul=4
+		values "ROOM_NAME", "Переходной балкон", CUSTOM
+	endif
+	if catcode="3010" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Техническое подполье", CUSTOM
+	endif
+	if catcode="3020" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Тамбур", CUSTOM
+	endif
+	if catcode="3030" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Коридор", CUSTOM
+	endif
+	if catcode="3040" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Машинное помещение лифтов", CUSTOM
+	endif
+	if catcode="3050" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Пожаробезопасная зона", CUSTOM
+	endif
+	if catcode="3060" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Кладовая", CUSTOM
+	endif
+	if catcode="3061" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Блок кладовых", CUSTOM
+	endif
+	if catcode="4010" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Венткамера", CUSTOM
+	endif
+	if catcode="4011" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Венткамера приточная", CUSTOM
+	endif
+	if catcode="4012" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Венткамера вытяжная", CUSTOM
+	endif
+	if catcode="4020" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Водомерный узел", CUSTOM
+	endif
+	if catcode="4021" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Насосная", CUSTOM
+	endif
+	if catcode="4022" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "АУПТ-насосная пожаротушения", CUSTOM
+	endif
+	if catcode="4023" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Помещение водоочистки", CUSTOM
+	endif
+	if catcode="4030" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "ГРЩ", CUSTOM
+	endif
+	if catcode="4040" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "ИТП", CUSTOM
+	endif
+	if catcode="4050" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Электрощитовая", CUSTOM
+	endif
+	if catcode="4060" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Пространство для прокладки коммуникаций", CUSTOM
+	endif
+	if catcode="5010" then
+		_catKnown=1
+		_subRegul=5
+		values "ROOM_NAME", "Административное помещение", "Торговый зал", "Торгово-выставочный зал", "Подсобное помещение", "Обеденный зал", CUSTOM
+	endif
+	if catcode="5020" then
+		_catKnown=1
+		_subRegul=5
+		values "ROOM_NAME", "Кладовая №хххх", CUSTOM
+	endif
+	if catcode="5030" then
+		_catKnown=1
+		_subRegul=5
+		values "ROOM_NAME", "С/у", CUSTOM
+	endif
+	if catcode="5040" then
+		_catKnown=1
+		_subRegul=5
+		values "ROOM_NAME", "ПУИ с с/у", CUSTOM
+	endif
+	if catcode="5050" then
+		_catKnown=1
+		_subRegul=5
+		values "ROOM_NAME", "ПУИ", CUSTOM
+	endif
+	if catcode="6010" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Помещение консьержа", CUSTOM
+	endif
+	if catcode="6011" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Диспетчерская", CUSTOM
+	endif
+	if catcode="6012" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Помещение охраны", CUSTOM
+	endif
+	if catcode="6013" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Рабочее помещение", CUSTOM
+	endif
+	if catcode="6014" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Подсобное помещение", CUSTOM
+	endif
+	if catcode="6020" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "ПУИ", "ПУИ с с/у", CUSTOM
+	endif
+	if catcode="6030" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Мусоросборная камера", CUSTOM
+	endif
+	if catcode="6040" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "УК", CUSTOM
+	endif
+	if catcode="6050" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "С/у", CUSTOM
+	endif
+	if catcode="7010" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Технический чердак", CUSTOM
+	endif
+	if catcode="7020" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Машинной помещение лифтов", CUSTOM
+	endif
+	if catcode="7030" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Котельная", CUSTOM
+	endif
+	if catcode="7040" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Венткамера", CUSTOM
+	endif
+	if catcode="8010" then
+		_catKnown=1
+		values "ROOM_NAME", "Строительный объем", CUSTOM
+	endif
+	if catcode="8020" then
+		_catKnown=1
+		values "ROOM_NAME", "Площадь застройки", CUSTOM
+	endif
+	if catcode="8030" then
+		_catKnown=1
+		values "ROOM_NAME", "Площадь жилого здания", CUSTOM
+	endif
+	if catcode="8040" then
+		_catKnown=1
+		values "ROOM_NAME", "Площадь лестницы", CUSTOM
+	endif
+	if _subRegul >= 0 then		!!! тип помещения для ZoneSum — по категории (в окне не меняется)
+		iTypeZone = _subRegul
+		asAddOn_SubRegul = _subRegul
+		parameters iTypeZone = iTypeZone, asAddOn_SubRegul = asAddOn_SubRegul
+		lock "iTypeZone", "asAddOn_SubRegul"
+	endif
+endif
+
+if koefbycat or _catKnown then		!!! категория из списка — коэффициент площади по ней
+	parameters koeff = _koeff
+	parameters  room_area_factor = _koeff ! неа
+	parameters asAddOn_SubRegul = asAddOn_SubRegul
+	lock "koeff", "room_area_factor"
+else
+	if GLOB_MODPAR_NAME="room_area_factor" then
+		koeff = 1-room_area_factor 
+		parameters koeff = koeff 
+	else
+		room_area_factor = koeff
+		parameters room_area_factor = room_area_factor 
+		
+	endif
+endif
+
+
+if onepen then
+	for i=1 to 6
+		pzone[i]=TextPen
+	next i
+	parameters pzone=pzone
+	lock "pzone"
+else
+	lock "AC_TextPen_1", "TextPen"
+endif
+
+
+
+!--------------округления------------------------------------------------------------------------
+if decbyproject then
+	err = REQUEST ("Area_dimension", "", format_string)
+	posdec=strstr(format_string,".")+1
+	sareadec = STRSUB(format_string,posdec,1)
+	err = SPLIT (sareadec, "%n", areadec)
+	parameters areadec=areadec
+	lock "areadec"
+endif
+formatarea =  areadec
+div=10^areadec
+
+
+!================================================================================================
+! ИЗ МОЕЙ ЗОНЫ 
+!================================================================================================
+!---------------------------- Вычисления длинны плинтуса------------------------------------------
+N_PER = ROOM_NET_PERIMETER - ROOM_HOLES_PRM - ROOM_DOORS_WID
+! N_PER - наружный периметр бе дверей
+V_PER = ROOM_HOLES_PRM
+PlinthLenght = ROOM_NET_PERIMETER - ROOM_DOORS_WID 
+if bCorrection then PlinthLenght = PlinthLenght + CorrectionLen 
+PlinthLenght =INT(PlinthLenght * div + 0.5) / div
+parameters PlinthLenght = PlinthLenght
+
+
+!-------------------Площадь пола-----------------------------------------------------------------
+roomExtr = ROOM_COLUMN_EXTR_AREA + ROOM_WALL_EXTR_AREA !!!+ ROOM_FILL_EXTR_AREA
+!--> площадь пола
+FloorArea = (ROOM_BOT_SURFACE - roomExtr - (N_PER+V_PER) * FinishSize * bFinishWall)
+if bFloorAdd then
+	FloorArea = FloorArea + FloorAdd
+endif
+if brounded then
+	FloorArea = INT(FloorArea * div + 0.5) / div
+endif 
+parameters 	FloorArea = FloorArea
+
+!--> площадь штриховки
+fillArea = ROOM_FILL_EXTR_AREA
+if brounded then
+	fillArea = INT(ROOM_FILL_EXTR_AREA* div +0.5) / div
+endif 
+
+!--> площадь помещения
+CalcArea = ROOM_REDUCED_AREA - (N_PER+V_PER) * FinishSize * bFinishWall 
+if brounded then
+	CalcArea = INT(CalcArea * div + 0.5) / div
+endif 
+
+
+!--------------------Площадь потолка-------------------------------------------------------------
+UpArea = ROOM_TOP_SURFACE + ROOM_ROOF_TOP_SURF + ROOM_SLAB_TOP_SURF + ROOM_BEAM_TOP_SURF - roomExtr - (N_PER + V_PER) * FinishSize * bFinishWall
+UpArea =INT(UpArea * div + 0.5) / div
+parameters 	UpArea = UpArea 
+
+!-----------------------Вычисления низа стен-----------------------------------------------------
+bUseWallDown = 0		! особый низ стен не используется (отделка низа не моделируется)
+parameters bUseWallDown = 0
+if bUseWallDown then
+	WallFloorArea = N_PER * WallDownHigh - \
+	ROOM_WINDS_WID * (WallDownHigh - WallDownHighWindow) * (WallDownHigh > WallDownHighWindow)  
+	if bCorrection then WallFloorArea = WallFloorArea + CorrectionLen * WallDownHigh * bUseWallDown 
+else
+	WallFloorArea = 0
+endif
+WallFloorArea  =INT(WallFloorArea  * div + 0.5) / div
+parameters WallFloorArea = WallFloorArea
+
+!--------------------------Вычисления площади колон---------------------------------------------
+! Внимание высота колон считается по высоте зоны
+ColumnArea = V_PER * ROOM_HEIGHT
+ColumnArea  =INT(ColumnArea  * div + 0.5) / div
+parameters ColumnArea = ColumnArea
+
+! -------------------------Вычисления площади откосов окон--------------------------------------
+! из предположения что окна одинаковые 
+if WindowSideDepth > 0 and nWindow > 0 and ROOM_WINDS_WID > 0 and ROOM_WINDS_surf > 0 then
+	Wind_H = ROOM_WINDS_SURF / ROOM_WINDS_WID
+	parameters WindowSideArea = (nWindow * 2 * Wind_H + ROOM_WINDS_WID) * WindowSideDepth		
+else
+	parameters WindowSideArea = 0
+endif
+
+!--------------------------Вычисления площади откосов дверей-------------------------------------
+! Здесь должно быть все путем  Но бывают баги часть уходит к колонам
+DoorArea = ROOM_WALL_IN_TOP_SURF + ROOM_WALL_IN_SIDE_SURF
+DoorArea  =INT(DoorArea * div + 0.5) / div
+parameters DoorArea = DoorArea
+
+!--------------------------Вычисления площади стен-----------------------------------------------
+WallArea = ROOM_BOUNDARY_SURF  - ROOM_WINDS_SURF - ROOM_DOORS_SURF - WallFloorArea
+if not(bColumsAdd) then WallArea = WallArea - ColumnArea
+if bWindowAdd then WallArea= WallArea + WindowSideArea
+if bDoorAdd then WallArea = WallArea + DoorArea
+if bCorrection then WallArea = WallArea + CorrectionLen * ROOM_HEIGHT		! особого низа стен больше нет — поправка на всю высоту
+
+WallArea  =INT(WallArea * div + 0.5) / div
+parameters WallArea = WallArea
+
+!-------------- конец вычелений------------------------------------------
+LOCK "ColumnArea", "WindowSideArea", "DoorArea", "UpArea", "FloorArea", "WallArea", "WallFloorArea", "PlinthLenght"
+!================================================================================================
+! ИЗ МОЕЙ ЗОНЫ  КОНЕЦ
+!================================================================================================
+
+dim szone[]
+! szone[1] - Номер помещения 
+! szone[2] - Имя помещения
+! szone[3] - Значение площади
+! szone[4] - Тип пола
+! szone[5] - Категория помещения
+! szone[6] - Дополнительный параметр
+
+if numid then ! номер ИД
+	szone[1] = GLOB_ID
+	success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "dfloortype", dfloortype)
+	parameters dfloortype=dfloortype
+	values "ROOM_NUMBER" dfloortype, custom
+	szone[4] = ROOM_NUMBER
+else
+	szone[1] = ROOM_NUMBER ! номер помещения [1]
+	szone[4] = GLOB_ID ! ид в [4]
+endif
+
+if catzoneforname then
+	szone[2]=catname ! имя помещения из категории в [2]
+else	
+	szone[2]=ROOM_NAME ! имя помещения в [2]
+endif
+
+!--------------Уменьшеная площадь (площадь пола)----------------------------------------------------------------
+
+Area_With_K = CalcArea * koeff
+Rounded_Areat_With_K = INT(Area_With_K * div + 0.5) / div
+AreaCoeff = Area_With_K
+
+!----------------LAbpp----------------------------
+parameters LABPP_Area=ROOM_AREA
+Rounded_Area = INT(ROOM_REDUCED_AREA * div + 0.5) / div
+parameters LABPP_Rounded_Area = Rounded_Area
+parameters LABPP_Rounded_Area_With_K = Rounded_Areat_With_K
+!------------------------------------------------
+_stArea = str(CalcArea, areadec+1, areadec)
+_stDecArea = str(Area_With_K , areadec+1, areadec) ! значение площади с К [3]
+
+if brounded then 
+	_stDecArea = str(Rounded_Areat_With_K, areadec+1, areadec) ! значение площади с К округл [3]
+	AreaCoeff = Rounded_Areat_With_K
+endif
+
+
+
+szone[3] = _stArea ! обычная площадь помещений
+if bfullarea = 0 and koeff<1 then szone[3] = _stDecArea + " (" + _stArea + ")"  ! лоджии балконы 2.00(4.00)значение площади [3]
+if bfullarea = 1 and koeff<1 then szone[3] = _stArea	! лоджии балконы 2.00(4.00)значение площади [3]
+if bfullarea = 2 and koeff<1 then szone[3] = _stDecArea	! лоджии балконы 2.00 значение площади [3]
+
+szone[3] = szone[3]+ areaunit  !  дописываем м2
+
+value=""
+roundformat="%~."+str(areadec,1,0)+"m"
+category = cat
+if catpropid<>"ВСТРОЕННЫЙ ПАРАМЕТР ЗОНЫ" then
+	n = REQUEST ("Property_Value_Of_Parent", catpropid, type, dim1, dim2, value)
+	if vartype(value)=2 then
+		category = value ! если строка
+	else
+		category = str(roundformat,value) ! в строку
+	endif
+endif
+szone[5]= category ! категория [5]
+
+
+if custparamid="СПЕЦИАЛЬНЫЙ ПАРАМЕТР" then
+	custparameter=custparam
+else
+	if custparamid="ИМЯ КАТЕГОРИИ" then
+		custparameter=catname
+	else
+		if custparamid="КОД КАТЕГОРИИ" then
+			custparameter=catcode
+		else
+			if custparamid="ВЫСОТА ЗОНЫ" then
+				custparameter=str(roundformat,ZZYZX) + "м"
+			else
+				if custparamid="ОБЪЕМ ЗОНЫ" then
+					custparameter=str(roundformat,ROOM_VOLUME) + "м³"
+				else
+					if custparamid="ТИП ПОМЕЩЕНИЯ" then
+						custparameter=str(roundformat,asAddOn_SubRegul)
+					else
+						n = REQUEST ("Property_Value_Of_Parent", custparamid, type, dim1, dim2, value)
+						if vartype(value)=2 then
+							custparameter = value
+						else
+							custparameter = str(roundformat,value)
+						endif
+					endif
+				endif
+			endif
+		endif
+	endif
+endif
+szone[6]=custparameter ! кустом парамер
+
+for i=1 to 6 ! подавление пробелов
+	if szone[i]=" " then szone[i]=""
+	if szone[i]="  " then szone[i]=""
+	if szone[i]="   " then szone[i]=""
+next i
+
+! ----- Identification for Apartment/TOP Stamp Add-On -------
+! ----------- запись ид/номер как типа пола
+iNum = 0
+if numid then ! №зоны = ИД, а пол 
+	err = split(ROOM_NUMBER,"%n", iNum) ! получение числа
+else
+	err = split(GLOB_ID,"%n", iNum)! получение числа
+endif
+stFloorType = str(iNum,1,0) ! перевод в строку
+parameters 	stFloorType = stFloorType 
+lock "stFloorType"
+
+!--1-Тип пола ----------------------------------
+asAddOn_SubArea = iNum 
+!--2-Тип кваритры-------------------------------
+asAddOn_SubRegul = iTypeZone
+!--3-Коэфицент уменьшения-----------------------
+asAddOn_SubFinish = koeff
+!--4-Площадь помещения--------------------------
+asAddOn_CalcArea = CalcArea
+!--5-Площадь пола-------------------------------
+asAddOn_FloorArea = FloorArea
+!--6-Площадь штриховки-------------------------------
+asAddOn_FillArea = FillArea
+
+parameters asAddOn_SubRegul = asAddOn_SubRegul,
+			asAddOn_SubArea 	= asAddOn_SubArea,
+			asAddOn_SubFinish	= asAddOn_SubFinish,
+			asAddOn_CalcArea	= asAddOn_CalcArea,
+			asAddOn_FloorArea	= asAddOn_FloorArea,
+			asAddOn_FillArea  = asAddOn_FillArea 
+
+parameters AreaCoeff = AreaCoeff
+
+]]>
+</Script_1D>
+
+<!-- GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT -->
+
+<Script_PR SectVersion="20" SectionFlags="0" SubIdent="0">
+<![CDATA[]]>
+</Script_PR>
+
+<!-- GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT -->
+
+<Script_UI SectVersion="20" SectionFlags="0" SubIdent="0">
+<![CDATA[
+MAX_X = 442
+_dy = 23
+_y1=0
+_infH = 20
+_outfHeigth =0
+
+ui_dialog "HimeraZone_АСП - параметры маркера", 480 , 296
+ui_current_page gs_ui_current_page
+
+dim tabName[]
+	tabName[1]=" Вид и отображение"
+	tabName[2]=" Расположение - Локация помещения"
+	tabName[3]=" Параметры отделки"
+	tabName[4]=" Информация о поверхностях зоны"
+
+dim tabIcons[]
+	tabIcons[1] = "ui_tab_prefGJS"
+	tabIcons[2] = "ui_tab_prefHim"
+	tabIcons[3] = "ui_tab_areaHim"
+	tabIcons[4] = "ui_tab_infoHim"
+
+!===================== Страницы =================================
+TAB = 1
+ui_page TAB, -1, tabName[TAB], tabIcons[TAB]
+gosub "page_1"
+TAB = 2
+ui_page TAB, -1, tabName[TAB], tabIcons[TAB]
+gosub "page_2"
+TAB = 3
+ui_page TAB, -1, tabName[TAB], tabIcons[TAB]
+gosub "page_3"
+TAB = 4
+ui_page TAB, -1, tabName[TAB], tabIcons[TAB]
+gosub "page_4"
+
+
+
+end
+!==================================================================
+
+
+!===================== Страница 1 =================================
+"page_1":
+!===================== Страница 1 =================================
+_y1 = 0
+_dy = 23
+inh = 20
+_x1 = 7
+_x2 = _x1+60
+_x3 = _x2+17
+_x4 = _x3+115
+_x5 = _x4+33
+_x6 = _x5+33
+_x7 = _x6+35
+_x8 = MAX_X
+
+ui_style 0,1
+ui_groupbox "Состав маркера", 2, _y1, 440, _dy*8+18
+ui_style 0,0
+
+_y1 = _y1 + 15
+ui_separator	_x8-65,	_y1-2,	_x8-5,	_y1+20
+ui_infield	"bypmv",	_x8-63,	_y1,	55,	18,	
+	5, "", 2,2,0,0,0,0,
+	"","ПО ПМВ",
+	"", "ПО ПМВ"
+
+ui_infield	"TextPen",		_x7,			_y1,		_x6-_x5-3,	inh		ui_tooltip "перо всего маркера"
+ui_infield	"onepen",		_x7+_x7-_x6,	_y1,		14,			inh		ui_tooltip "единое перо на всё"
+
+dim parentProperties[]
+n = REQUEST ("Properties_Of_Parent", "", parentProperties)
+
+for i=1 to 6
+	ui_outfield		dcomp[i][2],	_x1,	_y1+3,	_x2-_x1-3,	inh, 1+4*(bypmv or not(bzone[i]))
+	ui_infield{3}	bzone[i],		_x2,	_y1,		14,			inh
+	if bzone[i] then
+		ui_infield{3}	fzone[i],	_x3,	_y1,		_x4-_x3-3,	inh,
+			8,"",11,11,0,0,0,0,
+			0, "---",			0,
+			1, "подчеркивание",	1,
+			2, "круг",			2,
+			3, "двойной круг",	3,
+			4, "овал",			4,
+			5, "треугольник",	5,
+			6, "переверн.треуг.",6,
+			7, "квадрат",		7,
+			8, "прямоугольник",	8,
+			9, "ромб",			9,
+			10, "шестиугольник",10		ui_tooltip "фигура компонента"
+		ui_infield{3}	rzone[i],	_x4,	_y1,	_x5-_x4-3,	inh		ui_tooltip "размер фигуры (0-автомат.по размеру шрифта)"
+		ui_infield{3}	fszone[i],	_x5,	_y1,	_x6-_x5-3,	inh		ui_tooltip "размер шрифта если отличается от основного (0-автомат.основной размер)"
+		ui_infield{3}	pzone[i],	_x6,	_y1,	_x7-_x6-5,	inh		ui_tooltip "перо компонента"
+	endif
+	if i = 5	then _y1 = _y1 + _dy
+	_y1 = _y1 + _dy
+next i
+
+_y1 = _y1 - _dy*2
+if bzone[5] then
+	ui_outfield	"↑↑↑",			15,	_y1+1,	18,	inh, 4*bypmv
+	n = REQUEST ("Property_Name", catpropid, typeName, groupName, propertyName)
+	UI_CUSTOM_POPUP_INFIELD "catpropid", 35, _y1, _x5-38, inh,
+		1, 3, 2, propertyName,
+		"ВСТРОЕННЫЙ ПАРАМЕТР ЗОНЫ","","","ВСТРОЕННЫЙ ПАРАМЕТР ЗОНЫ",
+		parentProperties				ui_tooltip "что выводить в категорию зоны"
+	
+	if catpropid="ВСТРОЕННЫЙ ПАРАМЕТР ЗОНЫ" then
+		ui_infield	"cat",		_x5,	_y1,		_x7-_x5-5,	inh
+	else
+		ui_outfield	category,	_x5,	_y1+3,	_x7-_x5-5,	inh
+	endif
+endif
+_y1 = _y1 + _dy*2
+
+if bzone[6] then
+	ui_outfield	"↑↑↑",			15,	_y1+1,	18,	inh, 4*bypmv
+	n = REQUEST ("Property_Name", custparamid, typeName, groupName, propertyName)
+	UI_CUSTOM_POPUP_INFIELD "custparamid", 35, _y1, _x5-38, inh,
+		1, 3, 2, propertyName,
+		"СПЕЦИАЛЬНЫЙ ПАРАМЕТР","","","СПЕЦИАЛЬНЫЙ ПАРАМЕТР",
+		"ИМЯ КАТЕГОРИИ","","","ИМЯ КАТЕГОРИИ",
+		"КОД КАТЕГОРИИ","","","КОД КАТЕГОРИИ",
+		"ВЫСОТА ЗОНЫ","","","ВЫСОТА ЗОНЫ",
+		"ОБЪЕМ ЗОНЫ","","","ОБЪЕМ ЗОНЫ",
+		parentProperties				ui_tooltip "пользовательский параметр или свойство"
+	
+	if custparamid="СПЕЦИАЛЬНЫЙ ПАРАМЕТР" then
+		ui_infield	"custparam",	_x5,	_y1,		_x7-_x5-5,	inh
+	else
+		ui_outfield	custparameter,	_x5,	_y1+3,	_x7-_x5-5,	inh
+	endif
+endif
+
+_y1 = _y1 - _dy*6
+if bzone[2] then
+	ui_outfield	"Имя = категория:",		_x7,		_y1+3,	_x8-_x7-25,	14,		4*bypmv
+	ui_infield	"catzoneforname",		_x8-20,	_y1,		14,			inh		ui_tooltip "показывать категорию в качестве имени"
+endif
+_y1 = _y1 + _dy
+
+if bzone[3] then
+	ui_outfield	"Ум. площ.",	_x7,		_y1+3,	_x8-_x7-25,	14,		4*bypmv
+	ui_infield{3}	"bfullarea",			_x8-75,	_y1, 69, inh,
+		8,"",11,11,
+		0,0,0,0, 
+		_ifullarea,_stfullarea,_ifullarea		ui_tooltip "Способы отображения площади балконов и лоджий"
+	_y1 = _y1 + _dy
+	ui_outfield	"Ед. площади:",			_x7,	_y1+3,	_x8-_x7-56,	14,		4*bypmv
+	ui_infield	"areaunit",				_x8-55,	_y1-1,	49,			inh		ui_tooltip "писать в маркере в конце площади"
+	_y1 = _y1 + _dy
+else
+	_y1 = _y1 + _dy*2
+endif
+
+ui_style 0,1
+ui_groupbox "Расчет площади", _x7, _y1+5, _x8-_x7-2, _dy*4-5
+ui_style 0,0
+_y1 = _y1 + _dy
+ui_outfield	"После запятой:",	_x7+3,	_y1+3,	_x8-_x7-59,	14,		4*bypmv
+ui_infield	"areadec",			_x8-55,	_y1-1,	30,			inh		ui_tooltip "количество знаков после запятой"
+ui_infield	"decbyproject",		_x8-20,	_y1,		14,			inh		ui_tooltip "брать из проекта (Параметры - Рабочая Среда Проекта - Размеры)"
+_y1 = _y1 + _dy
+ui_outfield	"Спец.округление:",	_x7+3,	_y1+3,	_x8-_x7-25,	14,		4*bypmv
+ui_infield	"brounded",			_x8-20,	_y1,		14,			inh		ui_tooltip "выводить в маркер принудительно округленные значения"
+_y1 = _y1 + _dy
+ui_outfield	"коэффиц:",		_x7+3,	_y1+3,	_x8-_x7-59,	14,		4*bypmv*koefbycat
+ui_infield	"koeff",			_x8-75,	_y1-1,	50,			inh		ui_tooltip "коэффициент уменьшения площади"
+ui_infield	"koefbycat",		_x8-20,	_y1,		14,			inh		ui_tooltip "брать из категории зоны (настраивается в коде)"
+
+
+_y1 = _y1 + _dy+4
+ui_style 0,1
+ui_groupbox "Отображение", 2, _y1, 440, _dy*2+17
+ui_style 0,0
+_y1 = _y1 + 15
+
+ui_outfield	"Шрифт",					_x1,		_y1+3,	45,		14,		4*bypmvattr
+ui_infield	"TextFont",					_x1+50,	_y1,		125,	inh
+ui_infield	"TextSize",					_x1+180,	_y1,		40,		inh		ui_tooltip "размер шрифта"
+ui_textstyle_infield "TextStyle",1+2+4,	_x1+225, _y1,		20,		20
+
+_y1 = _y1 + _dy
+ui_outfield	"Штриховка фона",			_x1,		_y1+3,	95,		14,		4*bypmvattr	ui_tooltip "фон штриховки - прозрачный"
+ui_infield	"bfill",					_x1+100,	_y1,		15,		inh
+ui_infield	"fillMark",					_x1+120,	_y1,		120,	inh
+ui_infield	"penfill",					_x1+245,	_y1,		40,		inh		ui_tooltip "перо переднего плана штриховки"
+
+_y1 = _y1 - _dy
+
+ui_separator	_x8-65,	_y1-3,	_x8-5,	_y1+20
+ui_infield	"bypmvattr",	_x8-63,		_y1-1,	55,	18,	
+	5, "", 2,2,0,0,0,0,
+	"","ПО ПМВ",
+	"", "ПО ПМВ"
+
+ui_outfield	"Выноски",					_x7,		_y1+3,	50,	14
+ui_infield	"bshowlines",				_x7+55,	_y1+3,	14,	14
+_y1 = _y1 + _dy
+ui_button UI_FUNCTION, "СБРОСИТЬ СМЕЩЕНИЯ", _x7,	_y1+1, _x8-_x7-5, 18, 1000	ui_tooltip "обнулить смещения компонентов и выноски"
+
+return
+
+!===================== Страница 2 =================================
+"page_2":
+!===================== Страница 2 =================================
+_y1 = 0
+_dy = 23
+_x1 = 7
+_x2 = 110
+_x3 = 220
+_dy = 24
+_infH = 23
+
+
+ui_outfield	"Параметры расположения комнаты в структуре дома - локация элементов",	_x3+5,_y1+3,	MAX_X-_x3-10,		30
+ui_outfield	"Комната-> Квартира-> Секция-> Здание-> Расположение",	_x3+5,_y1+41,	MAX_X-_x3-10,		30
+
+ui_outfield	"Квартира:",				_x1,	_y1 + 3,	_x2-_x1-5,		14
+ui_infield	"asAddOn_stApartmentCode",	_x2,	_y1,		_x3-_x2-5,		_infH
+_y1 = _y1 + _dy
+
+ui_outfield	"Секция:",					_x1,	_y1 + 3,	_x2-_x1-5,		14
+ui_infield	"asAddOn_stStaircaseCode",	_x2,	_y1,		_x3-_x2-5,		_infH
+_y1 = _y1 + _dy
+
+ui_outfield	"Здание:",					_x1,	_y1 + 3,	_x2-_x1-5,		14
+ui_infield	"asAddOn_stHouseCode",		_x2,	_y1,		_x3-_x2-5,		_infH
+_y1 = _y1 + _dy
+
+ui_outfield	"Расположение:",			_x1,	_y1 + 3,	_x2-_x1-5,		14
+ui_infield	"asAddOn_stPositionCode",	_x2,	_y1,		_x3-_x2-5,		_infH
+
+ui_infield	"PositionCodeByStory",		_x3 + 3, _y1,		14,	_infH
+ui_outfield	"Автозаполнение названием этажа",	_x3 + 20, _y1 + 3,	0,	14
+
+_y1 = _y1 + _dy + 5
+ui_outfield	"Тип помещения:",				_x1,	_y1 + 3,	_x2-_x1-5,		14
+ui_infield{3}	"iTypeZone",	_x2 ,_y1,	_x3 -_x2 - 5,	_infH,
+			8,"",11,11,
+			0,0,0,0,
+			_iTypeZone, _stTypeZone,_iTypeZone 	ui_tooltip "Выбор типа помещения"
+
+ui_infield	"ROOM_NUMBER",		_x3 + 3, _y1 ,		50,	_infH \
+ui_tooltip "Номер зоны "
+ui_infield	"ROOM_NAME",		_x3 + 58, _y1 ,		MAX_X-_x3-58,	_infH \
+ui_tooltip "Имя зоны "
+_y1 = _y1 + _dy
+
+ui_style 0,1
+ui_groupbox "Значения для аддона ZoneSum", 2, _y1, MAX_X - 2, _dy * 6-2
+ui_style 0,0
+ 
+ _dy = 20
+! asAddOn_SubArea
+_y1 = _y1 + _dy 
+_x1 = _x1 + 10
+_x2 = _x2 + 30
+
+ui_outfield	"asAddOn_SubArea",			 _x1,	_y1,	_x2 - _x1 - 5,		14
+ui_outfield str(asAddOn_SubArea, 4, 2), _x2,	_y1,	_x3 - _x2 - 5,		14 \
+ui_tooltip "Номер переведеный из ID или номера помещения"
+ui_outfield	"Номер для передачи ведомости пола", _x3,	_y1,	MAX_X - _x3 - 5,	14
+
+_y1 = _y1 + _dy 
+ui_outfield	"asAddOn_SubRegul",			 _x1,	_y1,	_x2 - _x1 - 5,		14
+ui_outfield str(asAddOn_SubRegul, 4, 0), _x2,	_y1,	_x3 - _x2 - 5,		14 \
+ui_tooltip "Тип помещения установленый в аддоне"
+ui_outfield	"Тип помещения зоны", _x3,	_y1,	MAX_X - _x3 - 5,			14
+
+_y1 = _y1 + _dy 
+ui_outfield	"asAddOn_SubFinish",					 _x1,	_y1,	_x2 - _x1 - 5,		14
+ui_outfield str(asAddOn_SubFinish, 4, 1), _x2,	_y1,	_x3 - _x2 - 5,		14 \
+ui_tooltip "Значение не 1.0  как признак балкона и лоджии"
+ui_outfield	"Уменьшение площади балконы", _x3,	_y1,	MAX_X - _x3 - 5,			14
+
+_y1 = _y1 + _dy 
+ui_outfield	"asAddOn_CalcArea",					 _x1,	_y1,	_x2 - _x1 - 5,		14
+ui_outfield str(asAddOn_CalcArea, 4, formatarea), _x2,	_y1,	_x3 - _x2 - 5,		14 \
+ui_tooltip "Точность управляется по параметрам GDL"
+ui_outfield	"Площадь вычисленная", 				_x3,	_y1,	MAX_X - _x3 - 5,			14
+
+_y1 = _y1 + _dy 
+ui_outfield	"asAddOn_FloorArea",					 _x1,	_y1,	_x2 - _x1 - 5,		14
+ui_outfield str(asAddOn_FloorArea, 4, formatarea), _x2,	_y1,	_x3 - _x2 - 5,		14 \
+ui_tooltip "Точность управляется по параметрам GDL"
+ui_outfield	"Площадь пола", 				_x3,	_y1,	MAX_X - _x3 - 5,			14
+
+_y1 = _y1 + _dy 
+ui_outfield	"asAddOn_FillArea",					 _x1,	_y1,	_x2 - _x1 - 5,		14
+ui_outfield str(asAddOn_FillArea, 4, formatarea), _x2,	_y1,	_x3 - _x2 - 5,		14 \
+ui_tooltip "Точность управляется по параметрам GDL"
+ui_outfield	"Площадь штриховки", 				_x3,	_y1,	MAX_X - _x3 - 5,			14
+return
+
+!===================== Страница 3 =================================
+"page_3":
+!===================== Страница 3 =================================
+! Отделка потолка и стен. Пол не задаётся: он моделируется перекрытием в слое «Полы».
+OutfieldHgt = 16
+_dy = 23
+_xL = 5		! подписи
+_xF = 150	! поля
+_wF = MAX_X - _xF
+_y1 = 8
+UI_STYLE 0,1
+ui_outfield `Потолок`, _xL, _y1 + 2, 140, OutfieldHgt
+UI_STYLE 0,0
+ui_infield "stUpMat", _xF, _y1, _wF, OutfieldHgt ui_tooltip `Отделка потолка — как в ведомости отделки`
+_y1 = _y1 + _dy
+ui_outfield `Площадь, м²`, _xL, _y1 + 2, 140, OutfieldHgt
+ui_infield "UpArea", _xF, _y1, 60, OutfieldHgt
+ui_outfield str(ROOM_TOP_SURFACE,4,2), _xF + 70, _y1 + 2, 60, OutfieldHgt ui_tooltip `ROOM_TOP_SURFACE — для сравнения`
+
+_y1 = _y1 + 30
+UI_SEPARATOR 0, _y1 - 7, MAX_X, _y1 - 7
+UI_STYLE 0,1
+ui_outfield `Стены`, _xL, _y1 + 2, 140, OutfieldHgt
+UI_STYLE 0,0
+ui_infield "stWallMat", _xF, _y1, _wF, OutfieldHgt ui_tooltip `Отделка стен — как в ведомости отделки`
+_y1 = _y1 + _dy
+ui_outfield `Площадь, м²`, _xL, _y1 + 2, 140, OutfieldHgt
+ui_infield "WallArea", _xF, _y1, 60, OutfieldHgt
+ui_outfield str(ROOM_BOUNDARY_SURF,4,2), _xF + 70, _y1 + 2, 60, OutfieldHgt ui_tooltip `ROOM_BOUNDARY_SURF — для сравнения`
+
+!------------------- добавки --------------------------------
+_y1 = _y1 + 30
+UI_SEPARATOR 0, _y1 - 7, MAX_X, _y1 - 7
+ui_outfield `Толщина отделки`, _xL, _y1 + 2, 110, OutfieldHgt
+ui_infield "FinishSize", _xL + 115, _y1, 45, OutfieldHgt ui_tooltip `Толщина штукатурки в мм`
+ui_infield "bFinishWall", _xL + 165, _y1, 20, OutfieldHgt ui_tooltip `Учитывать отделочный слой — уменьшает площадь помещения!`
+ui_infield "bColumsAdd", 230, _y1, 20, OutfieldHgt ui_tooltip `Добавить к основному полю стен колонны`
+ui_outfield `+ колонны`, 252, _y1 + 2, 120, OutfieldHgt
+ui_infield "ColumnArea", MAX_X - 60, _y1, 60, OutfieldHgt
+_y1 = _y1 + _dy
+ui_infield "bWindowAdd", 230, _y1, 20, OutfieldHgt ui_tooltip `Добавить к основному полю откосы окон`
+ui_outfield `+ откосы окон`, 252, _y1 + 2, 120, OutfieldHgt
+ui_infield "WindowSideArea", MAX_X - 60, _y1, 60, OutfieldHgt
+_y1 = _y1 + _dy
+ui_infield "bDoorAdd", 230, _y1, 20, OutfieldHgt ui_tooltip `Добавить к основному полю откосы дверных проёмов`
+ui_outfield `+ откосы дверей`, 252, _y1 + 2, 120, OutfieldHgt
+ui_infield "DoorArea", MAX_X - 60, _y1, 60, OutfieldHgt
+
+return
+!===================== Страница 4 =================================
+"page_4":
+!===================== Страница 4 =================================
+OutfieldHgt=16	! высота блока
+_x1 = 10 	! start Position X Coordinate
+_y1 = 10    	! start Position_y1 Coordinate
+_dy = 20
+_fullPrec = 4
+UI_STYLE 0,1
+ui_outfield  `Периметр:`, _x1, _y1
+UI_STYLE 0,0
+_y1 = _y1 + _dy
+ui_outfield  "ROOM_PERIM", _x1, _y1
+ui_outfield  str(ROOM_PERIM, _fullPrec+1, _fullPrec),_x1 +160,_y1 +2
+_y1 = _y1 + _dy
+ui_outfield  "ROOM_NET_PERIMETER", _x1, _y1
+ui_outfield  str( ROOM_NET_PERIMETER, _fullPrec+1, _fullPrec),_x1 +160,_y1 +2
+_y1 = _y1 + _dy  
+ui_outfield  "ROOM_HOLES_PRM", _x1, _y1
+ui_outfield  str( ROOM_HOLES_PRM, _fullPrec+1, _fullPrec),_x1 +160,_y1 +2
+_y1 = _y1 + _dy
+ui_outfield  "ROOM_WALLS_PRM", _x1, _y1
+ui_outfield  str(ROOM_WALLS_PRM, _fullPrec+1, _fullPrec),_x1 +160,_y1 +2
+_y1 = _y1 + _dy
+
+UI_STYLE 0,1
+ui_outfield  `Площади поверхн.`, _x1, _y1
+UI_STYLE 0,0
+_y1 = _y1 + _dy
+
+ui_outfield  "ROOM_BOUNDARY_SURF", _x1, _y1
+ui_outfield  str(ROOM_BOUNDARY_SURF, _fullPrec+1, _fullPrec),_x1 +160,_y1 +2
+_y1 = _y1 + _dy  
+ui_outfield  "ROOM_WALLS_SURF", _x1, _y1
+ui_outfield  str(ROOM_WALLS_SURF, _fullPrec+1, _fullPrec),_x1 +160,_y1 +2 
+_y1 = _y1 + _dy  
+
+ui_outfield  "ROOM_WINDS_SURF", _x1, _y1
+ui_outfield  str(ROOM_WINDS_SURF, _fullPrec+1, _fullPrec ),_x1 +160,_y1 +2
+_y1 = _y1 + _dy 
+
+ui_outfield  "ROOM_DOORS_SURF", _x1, _y1
+ui_outfield  str(ROOM_DOORS_SURF, _fullPrec+1, _fullPrec ),_x1 +160,_y1 +2
+_y1 = _y1 + _dy 
+
+ui_outfield  "ROOM_WALL_IN_TOP_SURF", _x1, _y1
+ui_outfield  str(ROOM_WALL_IN_TOP_SURF, _fullPrec+1, _fullPrec ),_x1 +160,_y1 +2
+_y1 = _y1 + _dy 
+
+ui_outfield  "ROOM_WALL_IN_BACK_SURF", _x1, _y1
+ui_outfield  str(ROOM_WALL_IN_BACK_SURF, _fullPrec+1, _fullPrec ),_x1 +160,_y1 +2
+_y1 = _y1 + _dy 
+ui_outfield  "ROOM_WALL_IN_SIDE_SURF", _x1, _y1
+ui_outfield  str(ROOM_WALL_IN_SIDE_SURF, _fullPrec+1,_fullPrec ),_x1 +160,_y1 +2
+_y1 = _y1 + _dy 
+
+_y1 = 10
+_x1 = _x1 +220
+ui_outfield  "ROOM_NET_AREA", _x1, _y1
+ui_outfield  str(ROOM_NET_AREA, _fullPrec+1, _fullPrec ),_x1 +160,_y1 +2
+_y1 = _y1 + _dy  
+ui_outfield  "ROOM_CALC_AREA", _x1, _y1
+ui_outfield  str(ROOM_CALC_AREA, _fullPrec+1, _fullPrec),_x1 +160,_y1 +2
+_y1 = _y1 + _dy  
+ui_outfield  "ROOM_TOP_SURFACE", _x1, _y1
+ui_outfield  str( ROOM_TOP_SURFACE, _fullPrec+1,_fullPrec),_x1 +160,_y1 +2
+_y1 = _y1 + _dy 
+ui_outfield  "ROOM_BOT_SURFACE", _x1, _y1
+ui_outfield  str(ROOM_BOT_SURFACE, _fullPrec+1, _fullPrec),_x1 +160,_y1 +2
+_y1 = _y1 + _dy 
+ui_outfield  "ROOM_TOTAL_EXTR_AREA", _x1, _y1
+ui_outfield  str(ROOM_TOTAL_EXTR_AREA, _fullPrec+1, _fullPrec),_x1 +160,_y1 +2
+ui_outfield  "ROOM_FILL_EXTR_AREA", _x1, _y1
+ui_outfield  str(ROOM_FILL_EXTR_AREA, _fullPrec+1, _fullPrec),_x1 +160,_y1 +2
+_y1 = _y1 + _dy 
+
+
+UI_STYLE 0,1
+ui_outfield  `Расчитанные площади:`, _x1, _y1
+UI_STYLE 0,0
+
+_y1 = _y1 + _dy 
+ui_outfield  "asAddOn_CalcArea", _x1, _y1
+ui_outfield  str(asAddOn_CalcArea, 4, formatarea ),_x1 +160,_y1 +2
+
+_y1 = _y1 + _dy
+ui_outfield  "UpArea", _x1, _y1
+ui_outfield  str( UpArea, 4, formatarea),_x1 +160,_y1 +2 
+_y1 = _y1 + _dy  
+ui_outfield  "WallArea", _x1, _y1
+ui_outfield  str( WallArea, 4, formatarea),_x1 +160,_y1 +2 
+_y1 = _y1 + _dy  
+ui_outfield  "FillArea", _x1, _y1
+ui_outfield  str(FillArea,4, formatarea ),_x1 +160,_y1 +2
+_y1 = _y1 + _dy 
+ui_outfield  "FloorArea", _x1, _y1
+ui_outfield  str(FloorArea,4, formatarea ),_x1 +160,_y1 +2
+_y1 = _y1 + _dy 
+ui_outfield  "AreaCoeff", _x1, _y1
+ui_outfield  str( AreaCoeff, 4, formatarea),_x1 +160,_y1 +2
+_y1 = _y1 + _dy 
+ui_outfield  "PlinthLenght", _x1, _y1
+ui_outfield  str( PlinthLenght, 4, formatarea),_x1 +160,_y1 +2
+_y1 = _y1 + _dy 
+return
+
+!===================== Страница 5 =================================
+"page_5":
+!===================== Страница 5 =================================
+
+ui_listfield 1, 10, 10, 432, 220, 1,"Описания", "Значения"
+ui_listitem 1, 1, "", 0, "", "Заголовок Группы 1" 
+ui_listitem 2, 1, "A", 1,"","Парметр А"
+ui_listitem 3, 1, "B", 1,"","Парметр B"
+ui_listitem 4, 1, "stClassKeyWord", 1,"","Хитро"
+return
+]]>
+</Script_UI>
+
+<Comment SectVersion="20" SectionFlags="0" SubIdent="0">
+<![CDATA[HimeraZone_АСП — штамп зоны: паспорт, отделка потолка и стен (для надстройки «Ведомость отделки»), параметры asAddOn_* для ZoneSum. Категории зон 1010…8040 зашиты: имена зоны, тип помещения, коэффициент площади. Особый низ стен убран.]]>
+</Comment>
+
+<CalledMacros SectVersion="2" SectionFlags="0" SubIdent="0">
+	<Macro>
+		<MName><![CDATA["[gjs]-LibraryGlobals"]]></MName>
+		<MainGUID>43E6F00E-5178-4564-BB9D-CA90232AF5F7</MainGUID>
+	</Macro>
+</CalledMacros>
+
+<Copyright SectVersion="1" SectionFlags="0" SubIdent="0">
+	<Author>GRAPHISOFT and GAJOS (Svetlana Kravchenko)</Author>
+	<License>
+		<Type>CC BY-ND</Type>
+		<Version>3.0</Version>
+	</License>
+</Copyright>
+
+<!-- GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT -->
+
+<Script_FWM SectVersion="20" SectionFlags="0" SubIdent="0">
+<![CDATA[]]>
+</Script_FWM>
+
+<!-- GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT ===== GDL SCRIPT -->
+
+<Script_BWM SectVersion="20" SectionFlags="0" SubIdent="0">
+<![CDATA[]]>
+</Script_BWM>
+
+<Keywords SectVersion="1" SectionFlags="0" SubIdent="0">
+<![CDATA[ZoneSum; Alexey Krikunov; Паспорт Квартиры; Паспорт Секции;Паспорт Здания; Сетка квартир;Экспликация квартир;ТЭП]]>
+</Keywords>
+
+</Symbol>
