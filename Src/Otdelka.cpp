@@ -786,6 +786,8 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 	LayerCache layerCache;
 	const std::vector<ElemGeo> allElems = LoadElemGeo (stories, st.skipHidden, layerCache);
 	std::map<API_Guid, std::vector<OpeningInfo>> openCache;
+	std::map<API_Guid, const ElemGeo*> geoByGuid;
+	for (const ElemGeo& e : allElems) geoByGuid[e.guid] = &e;
 	std::map<int, double> storyLevel;
 	for (const auto& sr : stories) storyLevel[sr.index] = sr.level;
 
@@ -1004,8 +1006,13 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 				p.column = w.column;
 				const double t1 = std::min (part.tBeg, part.tEnd), t2 = std::max (part.tBeg, part.tEnd);
 				p.length = t2 - t1;
-				p.elemHeight = w.height;
-				const double lo = z.floorThick, hi = w.height - ceil;
+				// высота отделки = высота зоны − пол − потолок; стена ниже зоны — на свою высоту
+				double wBot = zBot, wTop = zBot + w.height;
+				const auto gi = geoByGuid.find (part.guid);
+				if (gi != geoByGuid.end ()) { wBot = gi->second->bot; wTop = gi->second->top; }
+				const double bot = std::max (wBot, zBot), top = std::min (wTop, zTop);
+				p.elemHeight = top - bot;
+				const double lo = bot + z.floorThick, hi = top - ceil;
 				p.finishHeight = std::max (0.0, hi - lo);
 				for (const OpeningInfo& o : openings) {
 					if (o.owner != part.guid)
@@ -1013,7 +1020,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 					const double ow = std::min (o.loc + o.width / 2, t2) - std::max (o.loc - o.width / 2, t1);
 					if (ow <= 1e-4)
 						continue;
-					const double oh = otd::OpeningOverlap (o.lower, o.height, lo, hi);
+					const double oh = otd::OpeningOverlap (wBot + o.lower, o.height, lo, hi);
 					if (oh <= 0)
 						continue;
 					p.openings += ow * oh;
