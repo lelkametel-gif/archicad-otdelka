@@ -49,6 +49,7 @@ struct CheckRow {
 	double			area = 0;
 	double			wall[kWallColumns + 1] = { 0, 0, 0, 0 };	// площадь стен по столбцам, м² ([0] — не определён)
 	double			wallLen = 0, openings = 0;	// суммарная длина граней стен и колонн, м; вычтенные проёмы, м²
+	double			len[kWallColumns + 1] = { 0, 0, 0, 0 };	// длина по столбцам, м
 	double			height = 0, minH = 0;		// высота отделки зоны; наименьшая у элементов (ниже зоны), м
 	bool			excluded = false;
 };
