@@ -37,6 +37,8 @@ int main (int argc, char** argv)
 	}
 	CHECK (r.groupByCode.size () == 9);
 	CHECK (r.groupOrder.front () == L"Тех.помещения (подвал)");
+	CHECK (r.groupOrder.size () > 5 && r.groupOrder[1] == L"Встроенные помещения" && r.groupOrder[2] == L"Квартиры" &&
+		   r.groupOrder[3] == L"Типовой этаж" && r.groupOrder[4] == L"1 этаж" && r.groupOrder[5] == L"Общедомовые помещения");
 	CHECK (r.groupOrder.size () == 8);		// 7 подкатегорий + «Прочие»
 	{
 		auto G = [&r] (const wchar_t* code, const wchar_t* name = L"") {
@@ -328,12 +330,12 @@ int main (int argc, char** argv)
 		NEAR (sh.rows[1].wallArea[1], 6 * 2.5);
 		NEAR (sh.rows[1].wallArea[3], 6 * 2.5);
 		CHECK (sh.rows[1].wallFinish == L"Оклейка обоями светлых тонов");
-		CHECK (sh.rows[2].title == L"Лифтовый холл (2 эт.)");
-		CHECK (sh.rows[3].title == L"Лифтовый холл (15 эт.)");
-		CHECK (sh.rows[2].wallSpan == 2 && sh.rows[3].wallSpan == 0);	// одинаковые стены — одна ячейка
-		NEAR (sh.rows[2].wallSum[1], 10.0);
+		CHECK (sh.rows[3].title == L"Лифтовый холл (2 эт.)");
+		CHECK (sh.rows[4].title == L"Лифтовый холл (15 эт.)");
+		CHECK (sh.rows[3].wallSpan == 2 && sh.rows[4].wallSpan == 0);	// одинаковые стены — одна ячейка
+		NEAR (sh.rows[3].wallSum[1], 10.0);
 		CHECK (sh.rows[1].wallSpan == 1);
-		CHECK (sh.rows[4].group == L"1 этаж" && sh.rows[4].title == L"Административное помещение");
+		CHECK (sh.rows[2].group == L"1 этаж" && sh.rows[2].title == L"Административное помещение");	// порядок как в томе АР
 		NEAR (sh.unknownArea, 2.5);
 	}
 

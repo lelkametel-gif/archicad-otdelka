@@ -49,7 +49,7 @@ struct Rules {
 	int								col3Else = 2;
 };
 
-const int		kRulesVersion = 7;
+const int		kRulesVersion = 8;
 extern const wchar_t* const kExcludedGroup;		// «-»: зона не входит в ведомость
 std::wstring	DefaultRulesText ();
 int				RulesVersion (const std::wstring& text);	// «# Версия правил: N»; нет строки — 1

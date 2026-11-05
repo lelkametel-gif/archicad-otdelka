@@ -888,8 +888,13 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 		API_RoomRelation rel;
 		const bool hasRel = ACAPI_Element_GetRelations (g, API_ElemType (API_ZombieElemID), &rel) == NoError;
 
-		// толщина пола: перекрытие в слое «Полы» -> «Толщина пола» в параметрах зоны -> по категории из окна
-		if (hasRel && st.floorFromSlab && FloorFromSlabs (rel, st.floorLayer, z.floorThick, z.floorSource)) {
+		// высота отделки = высота зоны (пол в ней уже учтён). Если полы ещё не замоделированы (нет перекрытия
+		// в слое «Полы» в зоне) — вычитается толщина пола: «Толщина пола» в параметрах зоны, иначе по категории из окна
+		double slabThick = 0;
+		std::wstring slabSrc;
+		if (hasRel && st.floorFromSlab && FloorFromSlabs (rel, st.floorLayer, slabThick, slabSrc)) {
+			z.floorThick = 0;
+			z.floorSource = L"полы замоделированы (" + slabSrc + L") — учтено в высоте зоны";
 			++rs.floorFromSlab;
 		} else if (el.zone.roomFlThick > 0.0005) {
 			z.floorThick = el.zone.roomFlThick;
@@ -903,7 +908,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 		// ---- стены и колонны: грани, обращённые в зону (по плану, без учёта связей зоны)
 		const double zBot = (storyLevel.count (el.header.floorInd) ? storyLevel[el.header.floorInd] : 0.0) + el.zone.roomBaseLev;
 		const double zTop = zBot + (el.zone.roomHeight > 0.1 ? el.zone.roomHeight : 3.0);
-		z.finishH = std::max (0.0, (zTop - ceil) - (zBot + z.floorThick));
+		z.finishH = std::max (0.0, (zTop - ceil) - (zBot + z.floorThick));		// строго по высоте зоны
 		double zx1 = 1e30, zy1 = 1e30, zx2 = -1e30, zy2 = -1e30;
 		for (const auto& poly : polys)
 			for (const auto& pt : poly) {
@@ -987,7 +992,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 			}
 			otd::WallPiece p;
 			// высота отделки = высота зоны − пол − потолок; элемент ниже зоны — до своего верха
-			const double lo = std::max (zBot + z.floorThick, e.bot), hi = std::min (zTop - ceil, e.top);
+			const double lo = zBot + z.floorThick, hi = zTop - ceil;		// строго по высоте зоны
 			p.length = len;
 			p.elemHeight = e.top - e.bot;
 			p.finishHeight = std::max (0.0, hi - lo);
@@ -1071,7 +1076,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 				const auto gi = geoByGuid.find (part.guid);
 				if (gi != geoByGuid.end ()) { wBot = gi->second->bot; wTop = gi->second->top; }
 				p.elemHeight = wTop - wBot;
-				const double lo = std::max (zBot + z.floorThick, wBot), hi = std::min (zTop - ceil, wTop);
+				const double lo = zBot + z.floorThick, hi = zTop - ceil;		// строго по высоте зоны
 				p.finishHeight = std::max (0.0, hi - lo);
 				p.lowBy = std::max (0.0, (zTop - ceil) - wTop);
 				for (const OpeningInfo& o : openings) {
@@ -1451,9 +1456,9 @@ void DoOtdelka (bool checkOnly)
 		lines.push_back (L"Зоны других объектов (не «" + st.zoneLib + L"…», не вошли): " + JoinCounts (rs.otherLib) + L".");
 	lines.push_back (L"Потолки: " + otd::FormatNum (ceilSum, 1) + L" м². Стены: монолит " + otd::FormatNum (wall[1], 1) +
 					 L", кладка/КБ " + otd::FormatNum (wall[2], 1) + L", ГКЛ " + otd::FormatNum (wall[3], 1) + L" м².");
-	lines.push_back (L"Толщина пола: из перекрытий слоя «" + st.floorLayer + L"» — " + std::to_wstring (rs.floorFromSlab) +
-					 L" зон, из параметров зоны — " + std::to_wstring (rs.floorFromZone) + L", у остальных — по категории из окна. Потолок — " +
-					 std::to_wstring (st.ceilMm) + L" мм.");
+	lines.push_back (L"Высота отделки — по высоте зоны. Полы замоделированы (слой «" + st.floorLayer + L"», пол не вычитается) — " +
+					 std::to_wstring (rs.floorFromSlab) + L" зон; пол вычтен из параметров зоны — " + std::to_wstring (rs.floorFromZone) +
+					 L", у остальных — по категории из окна. Потолок — " + std::to_wstring (st.ceilMm) + L" мм.");
 	if (!rs.unknown.empty ()) {
 		lines.push_back (L"");
 		lines.push_back (L"Не удалось определить столбец (" + otd::FormatNum (wall[0], 1) + L" м²) — добавьте код в правила, раздел [Материалы]:");
