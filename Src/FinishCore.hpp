@@ -97,6 +97,11 @@ struct FaceRun {
 };
 
 bool					PointInPolys (const Polys& p, double x, double y);
+using Shape = std::vector<Pt>;					// контур элемента в плане (прямоугольник стены/колонны или многоугольная стена)
+Shape					BoxShape (const Box& b);
+std::vector<FaceRun>	ExposedFaces (const Polys& zone, const std::vector<Shape>& shapes, size_t idx, double step = 0.01,
+									  const std::vector<int>& prio = std::vector<int> ());
+std::vector<double>		ContourGaps (const Polys& zone, const std::vector<Shape>& shapes, double minLen = 0.1, double step = 0.01);
 // Отделываемые участки граней прямоугольника boxes[idx]
 // prio — приоритет элемента на общей грани (колонна вырезает стену: у колонны больше); пусто — все равны
 std::vector<FaceRun>	ExposedFaces (const Polys& zone, const std::vector<Box>& boxes, size_t idx, double step = 0.01,

@@ -204,6 +204,27 @@ int main (int argc, char** argv)
 		CHECK (std::fabs (s1 - (0.6 * 2 + 0.2)) < 0.02);
 	}
 
+	// --- электрощитовая: КБ-стенка, вырезанная пилоном; Г-образная штукатурка 10 мм на пилоне
+	{
+		Polys zone = { { { 0, 0 }, { 4, 0 }, { 4, 6 }, { 0, 6 } } };
+		std::vector<Shape> sh;
+		sh.push_back (BoxShape ({ 2.0, 3.0, 2.2, 6.0 }));		// 0 КБ-стенка (под пилоном)
+		sh.push_back (BoxShape ({ 2.0, 3.0, 2.2, 6.0 }));		// 1 пилон на том же месте
+		const std::vector<int> pr = { 0, 1 };
+		auto tot = [&] (const std::vector<Shape>& v, const std::vector<int>& p, size_t i) {
+			double s = 0; for (const auto& f : ExposedFaces (zone, v, i, 0.01, p)) s += f.Length (); return s;
+		};
+		CHECK (tot (sh, pr, 0) < 0.02);							// стенка вырезана — не считается
+		CHECK (std::fabs (tot (sh, pr, 1) - (3.0 * 2 + 0.2)) < 0.03);	// пилон: две грани + торец
+		// Г-образная штукатурка по левой грани и торцу пилона
+		std::vector<Shape> s2;
+		s2.push_back (BoxShape ({ 2.0, 3.0, 2.2, 6.0 }));		// 0 пилон
+		s2.push_back ({ { 1.99, 2.99 }, { 2.2, 2.99 }, { 2.2, 3.0 }, { 2.0, 3.0 }, { 2.0, 6.0 }, { 1.99, 6.0 } });	// 1 штукатурка
+		const std::vector<int> p2 = { 1, 0 };
+		CHECK (std::fabs (tot (s2, p2, 0) - 3.0) < 0.03);		// у пилона открыта только правая грань
+		CHECK (std::fabs (tot (s2, p2, 1) - (3.01 + 0.21)) < 0.04);	// штукатурка: левая грань + низ
+	}
+
 	// --- площади
 	NEAR (OpeningOverlap (0, 2.1, 0.08, 2.9), 2.02);
 	NEAR (OpeningOverlap (0.9, 1.5, 0.08, 2.9), 1.5);

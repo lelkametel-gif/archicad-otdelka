@@ -687,6 +687,8 @@ struct ElemGeo {
 	API_Coord	begC = {}, endC = {};				// ось стены
 	double		height = 0;
 	bool		hidden = false;						// скрытый слой: не считается, но закрывает грани за собой
+	bool		polyWall = false;					// многоугольная стена (контур из memo)
+	otd::Shape	shape;								// контур в плане: прямоугольник или многоугольник стены
 };
 
 std::vector<ElemGeo> LoadElemGeo (const std::vector<StoryRec>& stories, bool skipHidden, LayerCache& layers)
@@ -726,6 +728,18 @@ std::vector<ElemGeo> LoadElemGeo (const std::vector<StoryRec>& stories, bool ski
 			if (ACAPI_Element_CalcBounds (&el.header, &box) != NoError)
 				continue;
 			w.x1 = box.xMin; w.y1 = box.yMin; w.x2 = box.xMax; w.y2 = box.yMax;
+			w.shape = otd::BoxShape ({ w.x1, w.y1, w.x2, w.y2 });
+			if (!w.isColumn && el.wall.type == APIWtyp_Poly) {		// многоугольная стена — по её контуру
+				API_ElementMemo memo = {};
+				if (ACAPI_Element_GetMemo (g, &memo, APIMemoMask_Polygon) == NoError && memo.coords != nullptr && memo.pends != nullptr) {
+					const Int32 i2 = (*memo.pends)[1];
+					otd::Shape sh;
+					for (Int32 k = 1; k < i2; ++k)
+						sh.push_back ({ (*memo.coords)[k].x, (*memo.coords)[k].y });
+					if (sh.size () >= 3) { w.shape = sh; w.ortho = true; w.polyWall = true; }
+				}
+				ACAPI_DisposeElemMemoHdls (&memo);
+			}
 			res.push_back (w);
 		}
 	}
@@ -892,7 +906,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 				zx2 = std::max (zx2, pt.first); zy2 = std::max (zy2, pt.second);
 			}
 		std::vector<const ElemGeo*> nearElems;			// элементы у зоны, проходящие по её высоте
-		std::vector<otd::Box> boxes;
+		std::vector<otd::Shape> boxes;
 		std::vector<int> prio;						// колонна вырезает стену
 		const bool excludedZone = otd::IsExcluded (z, rules);		// 8NNN/9NNN — в ведомость не входит, по плану не считаем
 		for (const ElemGeo& e : allElems) {
@@ -902,7 +916,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 			if (std::min (e.top, zTop) - std::max (e.bot, zBot) < 0.3)
 				continue;
 			nearElems.push_back (&e);
-			boxes.push_back ({ e.x1, e.y1, e.x2, e.y2 });
+			boxes.push_back (e.shape);
 			prio.push_back (e.isColumn ? 1 : 0);
 		}
 		// Основное — связи зоны: стены зоны считаются ниже по связям. По плану добавляются только
@@ -948,7 +962,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 					auto it = openCache.find (e.guid);
 					if (it == openCache.end ()) it = openCache.emplace (e.guid, WallOpenings (e.guid)).first;
 					const double wl = std::hypot (e.endC.x - e.begC.x, e.endC.y - e.begC.y);
-					if (wl > 1e-6 && !it->second.empty ()) {
+					if (wl > 1e-6 && !e.polyWall && !it->second.empty ()) {
 						const double ux = (e.endC.x - e.begC.x) / wl, uy = (e.endC.y - e.begC.y) / wl;
 						for (const auto& r : runs) {
 							const double ta = (r.ax - e.begC.x) * ux + (r.ay - e.begC.y) * uy;

@@ -763,84 +763,122 @@ bool PointInPolys (const Polys& p, double x, double y)
 }
 
 
-static bool InBox (const Box& b, double x, double y)
+Shape BoxShape (const Box& b)
 {
-	return x > b.x1 && x < b.x2 && y > b.y1 && y < b.y2;
+	return { { b.x1, b.y1 }, { b.x2, b.y1 }, { b.x2, b.y2 }, { b.x1, b.y2 } };
 }
 
 
-std::vector<FaceRun> ExposedFaces (const Polys& zone, const std::vector<Box>& boxes, size_t idx, double step, const std::vector<int>& prio)
+static double SignedArea (const Shape& s)
+{
+	double a = 0;
+	for (size_t i = 0, n = s.size (); i < n; ++i)
+		a += s[i].first * s[(i + 1) % n].second - s[(i + 1) % n].first * s[i].second;
+	return a / 2;
+}
+
+
+static bool InShape (const Shape& s, double x, double y)
+{
+	bool in = false;
+	const size_t n = s.size ();
+	for (size_t i = 0, j = n - 1; i < n; j = i++) {
+		const double xi = s[i].first, yi = s[i].second, xj = s[j].first, yj = s[j].second;
+		if ((yi > y) != (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi)
+			in = !in;
+	}
+	return in;
+}
+
+
+static double DistToBoundary (const Shape& s, double x, double y)
+{
+	double best = 1e30;
+	for (size_t i = 0, n = s.size (); i < n; ++i) {
+		const double ax = s[i].first, ay = s[i].second, bx = s[(i + 1) % n].first, by = s[(i + 1) % n].second;
+		const double dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+		double t = l2 > 0 ? ((x - ax) * dx + (y - ay) * dy) / l2 : 0;
+		t = std::max (0.0, std::min (1.0, t));
+		best = std::min (best, std::hypot (x - (ax + t * dx), y - (ay + t * dy)));
+	}
+	return best;
+}
+
+
+std::vector<FaceRun> ExposedFaces (const Polys& zone, const std::vector<Shape>& shapes, size_t idx, double step, const std::vector<int>& prio)
 {
 	static const double kDepth[] = { 0.005, 0.015, 0.03, 0.05 };
+	const double e = 1e-4;
 	std::vector<FaceRun> res;
-	const Box& b = boxes[idx];
-	for (int f = 0; f < 4; ++f) {
-		// грань: от (sx,sy) до (ex,ey), наружная нормаль (nx,ny)
-		double sx, sy, ex, ey, nx, ny;
-		switch (f) {
-			case 0:  sx = b.x1; sy = b.y1; ex = b.x2; ey = b.y1; nx = 0; ny = -1; break;
-			case 1:  sx = b.x2; sy = b.y1; ex = b.x2; ey = b.y2; nx = 1; ny = 0; break;
-			case 2:  sx = b.x1; sy = b.y2; ex = b.x2; ey = b.y2; nx = 0; ny = 1; break;
-			default: sx = b.x1; sy = b.y1; ex = b.x1; ey = b.y2; nx = -1; ny = 0; break;
-		}
+	const Shape& sh = shapes[idx];
+	const size_t n = sh.size ();
+	if (n < 3) return res;
+	const bool ccw = SignedArea (sh) > 0;
+	auto wins = [&] (size_t o) {
+		const int po = o < prio.size () ? prio[o] : 0, pi = idx < prio.size () ? prio[idx] : 0;
+		return po > pi || (po == pi && o < idx);
+	};
+	for (size_t f = 0; f < n; ++f) {
+		const double sx = sh[f].first, sy = sh[f].second, ex = sh[(f + 1) % n].first, ey = sh[(f + 1) % n].second;
 		const double len = std::hypot (ex - sx, ey - sy);
 		if (len < step) continue;
-		const int n = (int) std::floor (len / step);
-		const double st = len / n, ux = (ex - sx) / len, uy = (ey - sy) / len;
+		const double ux = (ex - sx) / len, uy = (ey - sy) / len;
+		const double nx = ccw ? uy : -uy, ny = ccw ? -ux : ux;		// наружная нормаль
+		const int m = (int) std::floor (len / step);
+		const double st = len / m;
 		int runStart = -1;
 		auto flush = [&] (int endK) {
 			if (runStart < 0) return;
-			FaceRun r; r.face = f;
+			FaceRun r; r.face = (int) f;
 			r.ax = sx + ux * runStart * st; r.ay = sy + uy * runStart * st;
 			r.bx = sx + ux * endK * st;     r.by = sy + uy * endK * st;
 			res.push_back (r);
 			runStart = -1;
 		};
-		for (int k = 0; k < n; ++k) {
+		for (int k = 0; k < m; ++k) {
 			const double px = sx + ux * (k + 0.5) * st, py = sy + uy * (k + 0.5) * st;
-			bool exposed = false;
-			// грань внутри соседнего элемента (стык стен) — не отделывается;
-			// совпадающие грани двух элементов (одна линия, одна сторона) считаются один раз:
-			// у элемента с большим приоритетом (колонна перед стеной), при равном — у первого
-			auto wins = [&] (size_t o) {
-				const int po = o < prio.size () ? prio[o] : 0, pi = idx < prio.size () ? prio[idx] : 0;
-				return po > pi || (po == pi && o < idx);
-			};
+			// грань внутри соседнего элемента (стык) не отделывается; совпадающие грани (одна линия, одна сторона)
+			// считаются один раз — у элемента с большим приоритетом (колонна перед стеной), при равном — у первого
 			bool inside = false;
-			for (size_t o = 0; o < boxes.size () && !inside; ++o) {
+			for (size_t o = 0; o < shapes.size () && !inside; ++o) {
 				if (o == idx) continue;
-				const Box& ob = boxes[o];
-				const double e = 1e-4;
-				if (px > ob.x1 + e && px < ob.x2 - e && py > ob.y1 + e && py < ob.y2 - e) {
-					// колонна внутри стены (стена проходит сквозь колонну) — грань колонны не прячется за стеной
-					if (!(idx < prio.size () && o < prio.size () && prio[idx] > prio[o])) { inside = true; break; }
+				const Shape& os = shapes[o];
+				if (InShape (os, px, py) && DistToBoundary (os, px, py) > e) {
+					// колонна, сквозь которую проходит стена, не прячется за стеной
+					if (!(idx < prio.size () && o < prio.size () && prio[idx] > prio[o])) inside = true;
 					continue;
 				}
-				if (wins (o) && px >= ob.x1 - e && px <= ob.x2 + e && py >= ob.y1 - e && py <= ob.y2 + e) {
-					const double face = (f == 0) ? ob.y1 : (f == 1) ? ob.x2 : (f == 2) ? ob.y2 : ob.x1;
-					const double mine = (f == 0) ? b.y1 : (f == 1) ? b.x2 : (f == 2) ? b.y2 : b.x1;
-					if (std::fabs (face - mine) < e) inside = true;
-				}
+				if (wins (o) && DistToBoundary (os, px, py) <= e && InShape (os, px - nx * 0.001, py - ny * 0.001))
+					inside = true;
 			}
+			bool exposed = false;
 			for (double d : kDepth) {
 				if (inside) break;
 				const double qx = px + nx * d, qy = py + ny * d;
 				bool blocked = false;
-				for (size_t o = 0; o < boxes.size () && !blocked; ++o)
-					if (o != idx && InBox (boxes[o], qx, qy)) blocked = true;
+				for (size_t o = 0; o < shapes.size () && !blocked; ++o)
+					if (o != idx && InShape (shapes[o], qx, qy) && DistToBoundary (shapes[o], qx, qy) > e) blocked = true;
 				if (blocked) break;
 				if (PointInPolys (zone, qx, qy)) { exposed = true; break; }
 			}
 			if (exposed) { if (runStart < 0) runStart = k; }
 			else flush (k);
 		}
-		flush (n);
+		flush (m);
 	}
 	return res;
 }
 
 
-std::vector<double> ContourGaps (const Polys& zone, const std::vector<Box>& boxes, double minLen, double step)
+std::vector<FaceRun> ExposedFaces (const Polys& zone, const std::vector<Box>& boxes, size_t idx, double step, const std::vector<int>& prio)
+{
+	std::vector<Shape> sh;
+	for (const Box& b : boxes) sh.push_back (BoxShape (b));
+	return ExposedFaces (zone, sh, idx, step, prio);
+}
+
+
+std::vector<double> ContourGaps (const Polys& zone, const std::vector<Shape>& shapes, double minLen, double step)
 {
 	std::vector<double> res;
 	for (const auto& poly : zone) {
@@ -862,7 +900,7 @@ std::vector<double> ContourGaps (const Polys& zone, const std::vector<Box>& boxe
 						for (double d : { 0.005, 0.02, 0.05 }) {
 							const double qx = px - uy * d * side, qy = py + ux * d * side;
 							if (PointInPolys (zone, qx, qy)) continue;		// это сторона зоны
-							for (const Box& bx : boxes) if (InBox (bx, qx, qy)) { covered = true; break; }
+							for (const Shape& s : shapes) if (InShape (s, qx, qy)) { covered = true; break; }
 							if (covered) break;
 						}
 				}
@@ -873,6 +911,15 @@ std::vector<double> ContourGaps (const Polys& zone, const std::vector<Box>& boxe
 	}
 	return res;
 }
+
+
+std::vector<double> ContourGaps (const Polys& zone, const std::vector<Box>& boxes, double minLen, double step)
+{
+	std::vector<Shape> sh;
+	for (const Box& b : boxes) sh.push_back (BoxShape (b));
+	return ContourGaps (zone, sh, minLen, step);
+}
+
 
 // ============================================================================= столбец 3 — только квартиры
 
