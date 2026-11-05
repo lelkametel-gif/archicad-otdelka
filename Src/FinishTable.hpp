@@ -47,6 +47,7 @@ struct CheckRow {
 	int				floor = 0;
 	std::wstring	floorName, number, zoneName, category, code, group, row, guid, note;
 	double			area = 0;
+	double			wall[kWallColumns + 1] = { 0, 0, 0, 0 };	// площадь стен по столбцам, м² ([0] — не определён)
 	bool			excluded = false;
 };
 std::vector<CheckRow>	CheckRows (const std::vector<ZoneData>& zones, const Rules& r);

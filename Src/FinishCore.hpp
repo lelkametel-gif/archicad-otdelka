@@ -123,6 +123,7 @@ struct WallPiece {
 	double			finishHeight = 0;	// высота отделки = высота стены − пол − потолок
 	double			openings = 0;	// м², вычтенные проёмы
 	int				nOpenings = 0;
+	double			lowBy = 0;			// > 0 — элемент заканчивается ниже зоны на столько, м (проверить высоту)
 	bool			col3Moved = false;	// ГКЛ не в квартире -> столбец «Иначе»
 	bool			byContour = false;	// найдена по контуру зоны (Archicad не связал стену с зоной)
 	double			Area () const;

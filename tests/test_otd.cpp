@@ -268,6 +268,7 @@ int main (int argc, char** argv)
 	zones.back ().roomName = L"Электрощитовая";
 	zones.back ().guid = L"G-electro";
 	zones.back ().notes.push_back (L"СТН-018 5,81");
+	zones.back ().pieces[0].lowBy = 0.4; zones.back ().pieces[0].elemId = L"СТН-022";
 	zone (L"ТП_Санузел", -1, L"3051", L"00 Покраска", L"00 Покраска", 2.0, {});
 	zones.back ().roomName = L"С/У";
 	zone (L"ВПП_Административное помещение", 1, L"4099", L"00 Покраска", L"00 Покраска", 20.0, {});
@@ -360,6 +361,13 @@ int main (int argc, char** argv)
 		bool hasNote = false;
 		for (const auto& tx : ct.texts) if (tx.text.find (L"СТН-018") != std::wstring::npos && tx.bold) hasNote = true;
 		CHECK (hasNote);
+		std::wstring all;
+		for (const auto& tx : ct.texts) all += tx.text + L" ";
+		CHECK (all.find (L"ниже зоны") != std::wstring::npos && all.find (L"0,40") != std::wstring::npos);
+		CHECK (all.find (L"монолит,") != std::wstring::npos);
+		const std::vector<CheckRow> cr2 = CheckRows (zones, r);
+		double w2 = 0; for (const auto& c : cr2) if (c.guid == L"G-electro") w2 = c.wall[2];
+		NEAR (w2, 4.0 * 2.5);
 		size_t tagged = 0;
 		for (const auto& tx : ct.texts) if (tx.tag == L"G-electro") ++tagged;
 		CHECK (tagged >= 6);		// все тексты строки зоны помечены её GUID

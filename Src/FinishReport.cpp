@@ -140,7 +140,8 @@ xlsx::Sheet MakeDetailsSheet (const std::vector<ZoneData>& zones, const Rules& r
 			else x.Set (r, 12, L"не определён", xlsx::Plain);
 			x.SetNum (r, 13, w.length, xlsx::Num2);
 			x.SetNum (r, 14, w.elemHeight, xlsx::Num2);
-			x.SetNum (r, 15, w.finishHeight, xlsx::Num2);
+			if (w.lowBy > 0.02) x.Set (r, 15, FormatNum (w.finishHeight, 2) + L" (ниже зоны на " + FormatNum (w.lowBy, 2) + L" — проверить)", xlsx::Plain);
+			else x.SetNum (r, 15, w.finishHeight, xlsx::Num2);
 			x.SetNum (r, 16, w.nOpenings, xlsx::Default);
 			x.SetNum (r, 17, w.openings, xlsx::Num2);
 			x.SetNum (r, 18, w.Area (), xlsx::Num2);

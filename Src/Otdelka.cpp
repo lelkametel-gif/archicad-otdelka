@@ -973,6 +973,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 			p.length = len;
 			p.elemHeight = e.top - e.bot;
 			p.finishHeight = std::max (0.0, hi - lo);
+			p.lowBy = std::max (0.0, (zTop - ceil) - e.top);		// заканчивается ниже зоны — проверить
 			if (e.isColumn) {
 				p.elemId = ElemId (e.guid);
 				// размеры в плане и центр — чтобы найти колонну на плане по листу «Расчёт»
@@ -1041,6 +1042,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 				p.elemHeight = wTop - wBot;
 				const double lo = std::max (zBot + z.floorThick, wBot), hi = std::min (zTop - ceil, wTop);
 				p.finishHeight = std::max (0.0, hi - lo);
+				p.lowBy = std::max (0.0, (zTop - ceil) - wTop);
 				for (const OpeningInfo& o : openings) {
 					if (o.owner != part.guid)
 						continue;
