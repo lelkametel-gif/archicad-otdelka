@@ -118,6 +118,12 @@ int main (int argc, char** argv)
 		double x, y;
 		PassportPlace (*a1, 0, 0, 20, 14, 2, 1.4, 0.8, x, y);		// у верхнего края этажа -> над ним
 		NEAR (y, 14.8); NEAR (x, 5 - 1);
+		Apartment b = *a1; b.y2 = 12.5;			// фасад секции отступает от края этажа — паспорт у стены квартиры
+		PassportPlace (b, 0, 0, 20, 14, 2, 1.4, 0.8, x, y);
+		NEAR (y, 13.3);
+		Apartment s = *a1; s.x1 = 18; s.x2 = 19.6; s.y1 = 6; s.y2 = 8;	// у правого края -> справа
+		PassportPlace (s, 0, 0, 20, 14, 2, 1.4, 0.8, x, y);
+		NEAR (x, 20.4); NEAR (y, 7 - 0.7);
 	}
 	if (a2) {
 		CHECK (a2->label == L"1К");

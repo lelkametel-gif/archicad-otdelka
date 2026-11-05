@@ -27,7 +27,7 @@ _w2 = wArea * k
 _hr = hRow * k
 _wTot = _w1 + _w2
 _hTot = 4 * _hr
-_num = bShowApt and stApt <> ""
+_num = bAptNum and stApt <> ""
 
 hotspot2 0, 0
 hotspot2 _wTot, 0
@@ -205,6 +205,20 @@ next i
 			</Flags>
 			<Value><![CDATA[""]]></Value>
 		</String>
+		<RealNum Name="rPlaceX">
+			<Description><![CDATA["Где поставила надстройка: X"]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="rPlaceY">
+			<Description><![CDATA["Где поставила надстройка: Y"]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
 		<Title Name="tiView">
 			<Description><![CDATA["Оформление"]]></Description>
 		</Title>
@@ -257,7 +271,7 @@ next i
 			</Flags>
 			<Value>0</Value>
 		</Boolean>
-		<Boolean Name="bShowApt">
+		<Boolean Name="bAptNum">
 			<Description><![CDATA["Номер квартиры в паспорте (слева сверху)"]]></Description>
 			<Flags>
 				<ParFlg_Child/>

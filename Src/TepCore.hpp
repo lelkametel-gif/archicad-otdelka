@@ -73,7 +73,8 @@ std::vector<Apartment>	BuildApartments (const std::vector<Room>& rooms, const Co
 // Числа паспорта: жилая, площадь квартиры, общая, приведённая
 std::wstring			PassportNum (double v, const Config& c);
 
-// Место паспорта: снаружи у ближайшего края этажа секции. Паспорт w×h (м), отступ gap (м).
+// Место паспорта: снаружи у наружной стены квартиры. Сторона — край этажа (bx1…by2), ближайший к квартире;
+// паспорт w×h (м) — по центру квартиры вдоль этой стороны, на расстоянии gap (м) от границы квартиры.
 // Возвращает левый нижний угол.
 void					PassportPlace (const Apartment& a, double bx1, double by1, double bx2, double by2,
 									   double w, double h, double gap, double& x, double& y);

@@ -1528,6 +1528,12 @@ bool FillPassport (au::Params& P, const tep::Apartment& a, const tep::Config& c)
 	return changed;
 }
 
+void SetPlaced (au::Params& P, double x, double y)
+{
+	P.SetReal ("rPlaceX", x);
+	P.SetReal ("rPlaceY", y);
+}
+
 struct PassportObj {
 	API_Guid	guid = APINULLGuid;
 	short		floor = 0;
@@ -1589,15 +1595,19 @@ GSErrCode CreatePassport (Int32 libInd, short floor, double x, double y, const t
 	{
 		au::Params P (memo.params);
 		FillPassport (P, a, c);
+		SetPlaced (P, x, y);
 	}
 	err = ACAPI_Element_Create (&el, &memo);
 	ACAPI_DisposeElemMemoHdls (&memo);
 	return err;
 }
 
-GSErrCode UpdatePassport (const API_Guid& g, const tep::Apartment& a, const tep::Config& c, bool& changed)
+// Цифры обновляются всегда. Место — только если паспорт не двигали после того, как его поставила надстройка
+// (или место ещё не записано — паспорта прежней версии): тогда он переносится в (x, y).
+GSErrCode UpdatePassport (const API_Guid& g, const tep::Apartment& a, const tep::Config& c, double x, double y,
+						  bool& changed, bool& moved)
 {
-	changed = false;
+	changed = moved = false;
 	API_Element el = {};
 	el.header.guid = g;
 	GSErrCode err = ACAPI_Element_Get (&el);
@@ -1605,15 +1615,27 @@ GSErrCode UpdatePassport (const API_Guid& g, const tep::Apartment& a, const tep:
 	API_ElementMemo memo = {};
 	err = ACAPI_Element_GetMemo (g, &memo, APIMemoMask_AddPars);
 	if (err != NoError) return err;
+	API_Element mask;
+	ACAPI_ELEMENT_MASK_CLEAR (mask);
 	{
 		au::Params P (memo.params);
 		changed = FillPassport (P, a, c);
+		const double px = P.Real ("rPlaceX", 0), py = P.Real ("rPlaceY", 0);
+		const bool notRecorded = std::fabs (px) < 1e-9 && std::fabs (py) < 1e-9;
+		const bool untouched = std::fabs (el.object.pos.x - px) < 1e-3 && std::fabs (el.object.pos.y - py) < 1e-3;
+		if ((notRecorded || untouched) && (std::fabs (el.object.pos.x - x) > 1e-3 || std::fabs (el.object.pos.y - y) > 1e-3)) {
+			el.object.pos.x = x;
+			el.object.pos.y = y;
+			ACAPI_ELEMENT_MASK_SET (mask, API_ObjectType, pos);
+			moved = true;
+		}
+		if (notRecorded || untouched) {
+			if (std::fabs (px - x) > 1e-6 || std::fabs (py - y) > 1e-6) changed = true;
+			SetPlaced (P, x, y);
+		}
 	}
-	if (changed) {
-		API_Element mask;
-		ACAPI_ELEMENT_MASK_CLEAR (mask);
+	if (changed || moved)
 		err = ACAPI_Element_Change (&el, &mask, &memo, APIMemoMask_AddPars, true);
-	}
 	ACAPI_DisposeElemMemoHdls (&memo);
 	return err;
 }
@@ -1954,13 +1976,13 @@ void DoPassports ()
 			ACAPI_DisposeAddParHdl (&pars);
 		}
 	}
-	const double k = scale / 1000.0, w = wMm * k, h = hMm * k, gap = 6 * k;
+	const double k = scale / 1000.0, w = wMm * k, h = hMm * k, gap = 12 * k;
 
-	// габарит этажа секции — паспорт ставится снаружи у ближайшего к квартире края
+	// габарит этажа (все секции) — по нему выбирается наружная сторона квартиры; паспорт — у стены квартиры
 	std::map<std::wstring, std::vector<double>> box;
 	for (const auto& r : d.rooms) {
 		if (d.cfg.excluded.Has (r.catCode)) continue;
-		auto& b = box[r.section + L"|" + std::to_wstring (r.story)];
+		auto& b = box[std::to_wstring (r.story)];
 		if (b.empty ()) b = { 1e30, 1e30, -1e30, -1e30 };
 		b[0] = std::min (b[0], r.x1); b[1] = std::min (b[1], r.y1);
 		b[2] = std::max (b[2], r.x2); b[3] = std::max (b[3], r.y2);
@@ -1968,28 +1990,29 @@ void DoPassports ()
 
 	int inHot = 0;
 	std::vector<PassportObj> objs = FindPassports (libInd, inHot);
-	int created = 0, updated = 0, same = 0, deleted = 0, errs = 0, noKey = 0;
+	int created = 0, updated = 0, same = 0, deleted = 0, errs = 0, noKey = 0, movedN = 0;
 	GSErrCode firstErr = NoError;
 	std::map<std::wstring, int> createdBySt;
 	ACAPI_CallUndoableCommand (au::FromW (L"Паспорта квартир"), [&] () -> GSErrCode {
 		for (const auto& a : d.apts) {
+			const auto bi = box.find (std::to_wstring (a.story));
+			double x = a.x1, y = a.y2;
+			if (bi != box.end ())
+				tep::PassportPlace (a, bi->second[0], bi->second[1], bi->second[2], bi->second[3], w, h, gap, x, y);
 			bool found = false;
 			for (auto& o : objs) {
 				if (o.used || o.floor != a.story || o.key != a.Key ()) continue;
 				o.used = true;
 				found = true;
-				bool ch = false;
-				const GSErrCode e = UpdatePassport (o.guid, a, d.cfg, ch);
+				bool ch = false, mv = false;
+				const GSErrCode e = UpdatePassport (o.guid, a, d.cfg, x, y, ch, mv);
 				if (e != NoError) { if (errs++ == 0) firstErr = e; }
-				else if (ch) ++updated;
+				else if (ch || mv) ++updated;
 				else ++same;
+				if (e == NoError && mv) ++movedN;
 				break;
 			}
 			if (found) continue;
-			const auto bi = box.find (a.section + L"|" + std::to_wstring (a.story));
-			double x = a.x1, y = a.y2;
-			if (bi != box.end ())
-				tep::PassportPlace (a, bi->second[0], bi->second[1], bi->second[2], bi->second[3], w, h, gap, x, y);
 			const GSErrCode e = CreatePassport (libInd, (short) a.story, x, y, a, d.cfg);
 			if (e != NoError) { if (errs++ == 0) firstErr = e; }
 			else { ++created; createdBySt[a.storyName] += 1; }
@@ -2010,8 +2033,10 @@ void DoPassports ()
 	lines.push_back (L"Поставлено новых паспортов: " + std::to_wstring (created) + (createdBySt.empty () ? std::wstring () : L" (" + JoinCounts (createdBySt, 30) + L")") + L".");
 	lines.push_back (L"Обновлено: " + std::to_wstring (updated) + L", без изменений: " + std::to_wstring (same) +
 					 L", удалено (квартиры больше нет или повтор): " + std::to_wstring (deleted) + L".");
-	if (created > 0)
-		lines.push_back (L"Новые паспорта стоят снаружи у ближайшего края этажа секции — передвиньте их как нужно: при следующем запуске место сохранится, обновятся только цифры.");
+	if (movedN > 0)
+		lines.push_back (L"Перенесено к своим квартирам (их не двигали вручную): " + std::to_wstring (movedN) + L".");
+	if (created > 0 || movedN > 0)
+		lines.push_back (L"Паспорт стоит снаружи у наружной стены своей квартиры (сторона, ближайшая к краю этажа). Передвинутые вручную паспорта больше не переносятся — обновляются только цифры.");
 	if (noKey > 0)
 		lines.push_back (L"Паспортов без ключа (поставлены вручную, не тронуты): " + std::to_wstring (noKey) + L".");
 	if (inHot > 0)

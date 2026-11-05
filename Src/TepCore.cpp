@@ -310,10 +310,10 @@ void PassportPlace (const Apartment& a, double bx1, double by1, double bx2, doub
 	const double vMin = std::min (dTop, dBot), hMin = std::min (dLeft, dRight);
 	if (vMin <= hMin + 0.5) {		// сверху / снизу (как правило — у фасада)
 		x = cx - w / 2;
-		y = dTop <= dBot ? by2 + gap : by1 - gap - h;
+		y = dTop <= dBot ? a.y2 + gap : a.y1 - gap - h;
 	} else {
 		y = cy - h / 2;
-		x = dLeft <= dRight ? bx1 - gap - w : bx2 + gap;
+		x = dLeft <= dRight ? a.x1 - gap - w : a.x2 + gap;
 	}
 }
 
