@@ -947,6 +947,12 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 				   L" (центр X " + otd::FormatNum ((e.x1 + e.x2) / 2, 2) + L" Y " + otd::FormatNum ((e.y1 + e.y2) / 2, 2) + L")";
 		};
 		auto runsLen = [] (const std::vector<otd::FaceRun>& rr) { double s = 0; for (const auto& r : rr) s += r.Length (); return s; };
+		std::map<API_Guid, double> geoRel;			// стены из связей зоны: открытая в зону длина по плану
+		for (size_t i = 0; i < nearElems.size (); ++i) {
+			const ElemGeo& e = *nearElems[i];
+			if (!e.isColumn && e.ortho && relWalls.count (e.guid) != 0)
+				geoRel[e.guid] = runsLen (otd::ExposedFaces (polys, boxes, i, 0.01, prio));
+		}
 		for (size_t i = 0; i < nearElems.size (); ++i) {
 			const ElemGeo& e = *nearElems[i];
 			const bool related = e.isColumn ? relCols.count (e.guid) != 0 : relWalls.count (e.guid) != 0;
@@ -1037,6 +1043,10 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 		// ---- стены из связей зоны (основной расчёт)
 		if (hasRel) {
 			const std::vector<OpeningInfo> openings = st.subtractOpenings ? ReadOpenings (rel) : std::vector<OpeningInfo> ();
+			// стена из связей частично закрыта колоннами / ж/б (пилоны на стене КБ): длина участков уменьшается
+			// пропорционально открытой по плану длине, чтобы закрытые части не считались дважды
+			std::map<API_Guid, double> relSum;
+			for (const API_WallPart& part : rel.wallPart) relSum[part.guid] += std::fabs (part.tEnd - part.tBeg);
 			for (const API_WallPart& part : rel.wallPart) {
 				const WallInfo w = ReadWall (part.guid, rules, wallCache);
 				if (!w.ok)
@@ -1047,6 +1057,15 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 				p.column = w.column;
 				const double t1 = std::min (part.tBeg, part.tEnd), t2 = std::max (part.tBeg, part.tEnd);
 				p.length = t2 - t1;
+				{
+					const auto gi2 = geoRel.find (part.guid);
+					const double rsum = relSum[part.guid];
+					if (gi2 != geoRel.end () && gi2->second > 0.05 && rsum > 1e-6 && gi2->second < rsum - 0.05) {
+						const double cut = p.length * (1.0 - gi2->second / rsum);
+						p.length -= cut;
+						p.construction += L" (минус " + otd::FormatNum (cut, 2) + L" м под колоннами / ж/б)";
+					}
+				}
 				// высота отделки = высота зоны − пол − потолок; стена ниже зоны — на свою высоту
 				double wBot = zBot, wTop = zBot + w.height;
 				const auto gi = geoByGuid.find (part.guid);
