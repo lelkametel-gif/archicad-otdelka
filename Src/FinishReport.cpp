@@ -155,6 +155,11 @@ xlsx::Sheet MakeDetailsSheet (const std::vector<ZoneData>& zones, const Rules& r
 			x.SetNum (r, 13, g, xlsx::Num2);
 			++r;
 		}
+		for (const auto& sk : z.skipped) {
+			zoneCols (r);
+			x.Set (r, 11, sk, xlsx::Plain);
+			++r;
+		}
 		if (z.perimeter > 0) {		// сверка: периметр контура и длина посчитанных граней
 			double len = 0, gap = 0;
 			for (const WallPiece& w : z.pieces) len += w.length;

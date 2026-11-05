@@ -681,6 +681,7 @@ bool ReadPropertyText (const API_Guid& elem, const API_Guid& def, std::wstring& 
 struct ElemGeo {
 	API_Guid	guid = APINULLGuid;
 	bool		isColumn = false;
+	int			floor = 0;							// собственный этаж (индекс)
 	bool		ortho = false;						// прямоугольник в плане точный
 	double		x1 = 0, y1 = 0, x2 = 0, y2 = 0;		// габарит в плане
 	double		bot = 0, top = 0;					// абсолютные отметки, м
@@ -709,6 +710,7 @@ std::vector<ElemGeo> LoadElemGeo (const std::vector<StoryRec>& stories, bool ski
 			w.hidden = skipHidden && ReadLayer (el.header.layer, layers).hidden;
 			w.guid = g;
 			w.isColumn = type == API_ColumnID;
+			w.floor = el.header.floorInd;
 			const double base = lev.count (el.header.floorInd) ? lev[el.header.floorInd] : 0.0;
 			if (w.isColumn) {
 				const double a = std::fmod (std::fabs (el.column.axisRotationAngle), 1.5707963267948966);
@@ -931,20 +933,45 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 			if (rel.elementsGroupedByType.ContainsKey (ct))
 				for (const API_Guid& cg : rel.elementsGroupedByType[ct]) relCols.insert (cg);
 		}
+		std::vector<otd::Shape> noHidden = boxes;	// для диагностики: без элементов скрытых слоёв
+		for (size_t i = 0; i < nearElems.size (); ++i)
+			if (nearElems[i]->hidden) noHidden[i].clear ();
+		auto elemLabel = [&] (const ElemGeo& e) {
+			const std::wstring id = ElemId (e.guid);
+			return (e.isColumn ? std::wstring (L"колонна ") : std::wstring (L"стена ")) + (id.empty () ? std::wstring (L"без ID") : id) +
+				   L" (центр X " + otd::FormatNum ((e.x1 + e.x2) / 2, 2) + L" Y " + otd::FormatNum ((e.y1 + e.y2) / 2, 2) + L")";
+		};
+		auto runsLen = [] (const std::vector<otd::FaceRun>& rr) { double s = 0; for (const auto& r : rr) s += r.Length (); return s; };
 		for (size_t i = 0; i < nearElems.size (); ++i) {
 			const ElemGeo& e = *nearElems[i];
-			if (!e.ortho || e.hidden || (!e.isColumn && relWalls.count (e.guid) != 0))
+			const bool related = e.isColumn ? relCols.count (e.guid) != 0 : relWalls.count (e.guid) != 0;
+			if (!e.isColumn && related)
+				continue;						// стена зоны — по связям ниже
+			if (!e.ortho)
 				continue;
 			const std::vector<otd::FaceRun> runs = otd::ExposedFaces (polys, boxes, i, 0.01, prio);
-			double len = 0;
-			for (const auto& r : runs) len += r.Length ();
-			if (len < 0.02)
+			const double len = runsLen (runs);
+			// не берём: скрытый слой; не связан с зоной и стоит на другом этаже (на плане зоны его не видно)
+			std::wstring why;
+			if (e.hidden) why = L"скрытый слой";
+			else if (!related && e.floor != el.header.floorInd) why = L"другой этаж (на плане этажа зоны не виден)";
+			if (!why.empty ()) {
+				if (len >= 0.05)
+					z.skipped.push_back (L"не взят по плану: " + elemLabel (e) + L", " + otd::FormatNum (len, 2) + L" м — " + why);
 				continue;
+			}
+			if (len < 0.02) {
+				const double len2 = runsLen (otd::ExposedFaces (polys, noHidden, i, 0.01, prio));
+				if (len2 >= 0.05)
+					z.skipped.push_back (L"не взят по плану: " + elemLabel (e) + L", " + otd::FormatNum (len2, 2) +
+										 L" м — закрыт элементом скрытого слоя");
+				continue;
+			}
 			otd::WallPiece p;
-			const double bot = std::max (e.bot, zBot), top = std::min (e.top, zTop);
-			const double lo = bot + z.floorThick, hi = top - ceil;
+			// высота отделки = высота зоны − пол − потолок; элемент ниже зоны — до своего верха
+			const double lo = std::max (zBot + z.floorThick, e.bot), hi = std::min (zTop - ceil, e.top);
 			p.length = len;
-			p.elemHeight = top - bot;
+			p.elemHeight = e.top - e.bot;
 			p.finishHeight = std::max (0.0, hi - lo);
 			if (e.isColumn) {
 				p.elemId = ElemId (e.guid);
@@ -957,7 +984,8 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 			} else {
 				const WallInfo wi = ReadWall (e.guid, rules, wallCache);
 				p.elemId = wi.id;
-				p.construction = wi.construction;
+				p.construction = wi.construction + L" (центр X " + otd::FormatNum ((e.x1 + e.x2) / 2, 2) + L" Y " +
+								 otd::FormatNum ((e.y1 + e.y2) / 2, 2) + L")";
 				p.column = wi.column;
 				p.byContour = true;
 				if (st.subtractOpenings) {
@@ -1010,9 +1038,8 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 				double wBot = zBot, wTop = zBot + w.height;
 				const auto gi = geoByGuid.find (part.guid);
 				if (gi != geoByGuid.end ()) { wBot = gi->second->bot; wTop = gi->second->top; }
-				const double bot = std::max (wBot, zBot), top = std::min (wTop, zTop);
-				p.elemHeight = top - bot;
-				const double lo = bot + z.floorThick, hi = top - ceil;
+				p.elemHeight = wTop - wBot;
+				const double lo = std::max (zBot + z.floorThick, wBot), hi = std::min (zTop - ceil, wTop);
 				p.finishHeight = std::max (0.0, hi - lo);
 				for (const OpeningInfo& o : openings) {
 					if (o.owner != part.guid)

@@ -143,6 +143,7 @@ struct ZoneData {
 	std::wstring			floorSource;		// «перекрытие …» / «из настроек»
 	std::vector<WallPiece>	pieces;
 	std::vector<std::wstring>	notes;			// что добавлено по плану — проверить
+	std::vector<std::wstring>	skipped;		// элементы у контура, не взятые по плану, и почему
 	double					perimeter = 0;		// периметр контура зоны, м (для сверки с длиной стен)
 	std::vector<double>		gaps;				// участки контура без стен, м (проходы, проёмы без стены, несвязанные элементы)
 };
