@@ -46,19 +46,24 @@ xlsx::Sheet MakeVedomostSheet (const Sheet& sh)
 			x.Set (r, 2, row.ceilFinish.empty () ? L"-" : row.ceilFinish, xlsx::Text);
 			if (row.ceilArea >= kMinArea) x.SetNum (r, 3, row.ceilArea, xlsx::Num1);
 			else x.Set (r, 3, L"-", xlsx::Text);
-			for (int c = 1; c <= kWallColumns; ++c) {
-				if (row.wallArea[c] >= kMinArea) {
-					x.Set (r, 2 + 2 * c, row.wallFinish.empty () ? L"?" : row.wallFinish, xlsx::Text);
-					x.SetNum (r, 3 + 2 * c, row.wallArea[c], xlsx::Num1);
-				} else {
-					x.Set (r, 2 + 2 * c, L"-", xlsx::Text);
-					x.Set (r, 3 + 2 * c, L"-", xlsx::Text);
-				}
-			}
 			std::wstring note;
-			if (row.wallArea[0] >= kMinArea)
-				note = L"Стены без столбца: " + FormatNum (row.wallArea[0], 1) + L" м² (см. лист «Расчёт»)";
-			x.Set (r, lastCol, note, xlsx::Text);
+			if (row.wallSpan > 0) {
+				const int r2 = r + row.wallSpan - 1;
+				for (int c = 1; c <= kWallColumns; ++c) {
+					if (row.wallSum[c] >= kMinArea) {
+						x.Set (r, 2 + 2 * c, row.wallFinish.empty () ? L"?" : row.wallFinish, xlsx::Text);
+						x.SetNum (r, 3 + 2 * c, row.wallSum[c], xlsx::Num1);
+					} else {
+						x.Set (r, 2 + 2 * c, L"-", xlsx::Text);
+						x.Set (r, 3 + 2 * c, L"-", xlsx::Text);
+					}
+					if (r2 > r) { x.Merge (r, 2 + 2 * c, r2, 2 + 2 * c); x.Merge (r, 3 + 2 * c, r2, 3 + 2 * c); }
+				}
+				if (row.wallSum[0] >= kMinArea)
+					note = L"Стены без столбца: " + FormatNum (row.wallSum[0], 1) + L" м² (см. лист «Расчёт»)";
+				x.Set (r, lastCol, note, xlsx::Text);
+				if (r2 > r) x.Merge (r, lastCol, r2, lastCol);
+			}
 			// высота строки — по самому длинному тексту (≈ 22 символа в строке ячейки)
 			size_t longest = std::max (row.title.size (), std::max (row.ceilFinish.size (), row.wallFinish.size ()));
 			longest = std::max (longest, note.size () / 2);

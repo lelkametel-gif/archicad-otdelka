@@ -232,6 +232,9 @@ int main (int argc, char** argv)
 		CHECK (sh.rows[1].wallFinish == L"Оклейка обоями светлых тонов");
 		CHECK (sh.rows[2].title == L"Лифтовый холл (2 эт.)");
 		CHECK (sh.rows[3].title == L"Лифтовый холл (15 эт.)");
+		CHECK (sh.rows[2].wallSpan == 2 && sh.rows[3].wallSpan == 0);	// одинаковые стены — одна ячейка
+		NEAR (sh.rows[2].wallSum[1], 10.0);
+		CHECK (sh.rows[1].wallSpan == 1);
 		CHECK (sh.rows[4].group == L"1 этаж" && sh.rows[4].title == L"Административное помещение");
 		NEAR (sh.unknownArea, 2.5);
 	}

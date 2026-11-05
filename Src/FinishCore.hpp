@@ -144,6 +144,10 @@ struct SheetRow {
 	std::set<int>	floors;
 	int				zones = 0;
 	std::vector<std::wstring>	names;		// имена зон строки (без повторов)
+	// Соседние строки подкатегории с одинаковой отделкой стен — стены одной объединённой ячейкой (как в томе АР):
+	// у первой строки wallSpan = число строк и wallSum — сумма площадей, у остальных wallSpan = 0
+	int				wallSpan = 1;
+	double			wallSum[kWallColumns + 1] = { 0, 0, 0, 0 };
 };
 
 struct Sheet {

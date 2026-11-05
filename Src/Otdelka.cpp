@@ -886,7 +886,9 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 			}
 		std::vector<const ElemGeo*> nearElems;			// элементы у зоны, проходящие по её высоте
 		std::vector<otd::Box> boxes;
+		const bool excludedZone = otd::IsExcluded (z, rules);		// 8NNN/9NNN — в ведомость не входит, по плану не считаем
 		for (const ElemGeo& e : allElems) {
+			if (excludedZone) break;
 			if (e.x2 < zx1 - 0.1 || e.x1 > zx2 + 0.1 || e.y2 < zy1 - 0.1 || e.y1 > zy2 + 0.1)
 				continue;
 			if (std::min (e.top, zTop) - std::max (e.bot, zBot) < 0.3)
@@ -1001,7 +1003,8 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 		}
 
 		// ---- участки контура без стен и колонн (проходы)
-		z.gaps = otd::ContourGaps (polys, boxes);
+		if (!excludedZone)
+			z.gaps = otd::ContourGaps (polys, boxes);
 		if (!z.gaps.empty ()) ++rs.zonesWithGaps;
 		res.push_back (z);
 	}

@@ -93,12 +93,15 @@ TableLayout LayoutSheet (const Sheet& sh, const TableStyle& st)
 			add (r, 1, r, 1, row.title);
 			add (r, 2, r, 2, row.ceilFinish.empty () ? L"-" : row.ceilFinish);
 			add (r, 3, r, 3, row.ceilArea >= kMinArea ? FormatNum (row.ceilArea, 1) : L"-");
-			for (int c = 1; c <= kWallColumns; ++c) {
-				const bool has = row.wallArea[c] >= kMinArea;
-				add (r, 2 + 2 * c, r, 2 + 2 * c, has ? (row.wallFinish.empty () ? L"?" : row.wallFinish) : L"-");
-				add (r, 3 + 2 * c, r, 3 + 2 * c, has ? FormatNum (row.wallArea[c], 1) : L"-");
+			if (row.wallSpan > 0) {
+				const int r2 = r + row.wallSpan - 1;
+				for (int c = 1; c <= kWallColumns; ++c) {
+					const bool has = row.wallSum[c] >= kMinArea;
+					add (r, 2 + 2 * c, r2, 2 + 2 * c, has ? (row.wallFinish.empty () ? L"?" : row.wallFinish) : L"-");
+					add (r, 3 + 2 * c, r2, 3 + 2 * c, has ? FormatNum (row.wallSum[c], 1) : L"-");
+				}
+				add (r, lastCol, r2, lastCol, row.wallSum[0] >= kMinArea ? L"Стены без столбца: " + FormatNum (row.wallSum[0], 1) + L" м²" : L"");
 			}
-			add (r, lastCol, r, lastCol, row.wallArea[0] >= kMinArea ? L"Стены без столбца: " + FormatNum (row.wallArea[0], 1) + L" м²" : L"");
 			++r; ++i;
 		}
 		add (first, 0, r - 1, 0, g, true);

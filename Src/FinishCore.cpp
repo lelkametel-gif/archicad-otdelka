@@ -614,6 +614,7 @@ Sheet BuildSheet (const std::vector<ZoneData>& zones, const Rules& r, const std:
 		const int ga = groupIdx (a.group), gb = groupIdx (b.group);
 		if (ga != gb) return ga < gb;
 		if (a.group != b.group) return a.group < b.group;
+		if (a.wallFinish != b.wallFinish) return Lower (a.wallFinish) < Lower (b.wallFinish);	// одинаковые стены — подряд
 		if (*a.floors.begin () != *b.floors.begin ()) return *a.floors.begin () < *b.floors.begin ();
 		return Lower (a.title) < Lower (b.title);
 	});
@@ -626,6 +627,17 @@ Sheet BuildSheet (const std::vector<ZoneData>& zones, const Rules& r, const std:
 	for (size_t i = 0; i < rows.size (); ++i)
 		if (same[i] > 1)
 			rows[i].title += L" (" + FloorsLabel (rows[i].floors) + L")";
+	// объединение стен у соседних строк с одинаковой отделкой стен
+	for (size_t i = 0; i < rows.size (); ) {
+		size_t j = i + 1;
+		while (j < rows.size () && rows[j].group == rows[i].group && rows[j].wallFinish == rows[i].wallFinish) ++j;
+		rows[i].wallSpan = (int) (j - i);
+		for (size_t k = i; k < j; ++k) {
+			if (k > i) rows[k].wallSpan = 0;
+			for (int c = 0; c <= kWallColumns; ++c) rows[i].wallSum[c] += rows[k].wallArea[c];
+		}
+		i = j;
+	}
 	sh.rows = rows;
 	return sh;
 }
