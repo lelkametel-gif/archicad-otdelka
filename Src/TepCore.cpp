@@ -524,8 +524,9 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 	for (const Room& r : rooms) if (!c.excluded.Has (r.catCode) || c.building.Has (r.catCode) || c.volume.Has (r.catCode) || c.houseArea.Has (r.catCode)) secs.push_back (r.section);
 	t.sections = SortSections (secs);
 
-	// этажи: Count — есть зоны, кроме общедомовых (этаж только с ЛК не считается); Living — есть помещения квартир
-	std::map<std::wstring, std::set<int>> storiesAll, storiesUnder, storiesLiving;
+	// этажи: Above — надземные с зонами; Under — подземные с зонами; Living — надземные с помещениями квартир.
+	// Этажность — надземные этажи с первого до последнего этажа с квартирами; количество этажей = этажность + подземные.
+	std::map<std::wstring, std::set<int>> storiesAbove, storiesUnder, storiesLiving;
 	Acc build, vol, volUnder, house, houseUnder, base, baseTech, builtIn, living, aptArea, aptTotal, aptReduced, storage, nonRes, nonResN, common;
 	for (const Room& r : rooms) {
 		const std::wstring& s = r.section;
@@ -534,10 +535,8 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 		if (c.volume.Has (k)) { vol.v[s] += r.volume; if (r.underground) volUnder.v[s] += r.volume; }
 		if (c.houseArea.Has (k)) { house.v[s] += r.area; if (r.underground) houseUnder.v[s] += r.area; }
 		if (c.excluded.Has (k)) continue;
-		if (!c.common.Has (k)) {
-			storiesAll[s].insert (r.story);
-			if (r.underground) storiesUnder[s].insert (r.story);
-		}
+		if (r.underground) storiesUnder[s].insert (r.story);
+		else storiesAbove[s].insert (r.story);
 		if (c.apartment.Has (k) && !r.underground) storiesLiving[s].insert (r.story);
 		const double a = RoundTo (r.area, c.dec);
 		if (r.underground) {
@@ -573,11 +572,18 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 		for (const auto& s : t.sections) r.cells.push_back (Area (acc.v.count (s) ? acc.v.at (s) : 0, d));
 		r.total = Area (acc.Total (), d);
 	};
+	auto floorsAbove = [&] (const std::wstring& s) {
+		if (!storiesLiving.count (s) || !storiesAbove.count (s)) return 0;
+		const int top = *storiesLiving.at (s).rbegin ();
+		int n = 0;
+		for (int st : storiesAbove.at (s)) if (st <= top) ++n;		// с первого надземного до последнего с квартирами
+		return n;
+	};
 	auto floorsRow = [&] (TepRow& r, int mode) {		// 0 этажность, 1 количество этажей, 2 подземных
 		std::set<int> vals;
 		for (const auto& s : t.sections) {
-			auto n = [&s] (const std::map<std::wstring, std::set<int>>& m) { return m.count (s) ? (int) m.at (s).size () : 0; };
-			const int v = mode == 0 ? n (storiesUnder) + n (storiesLiving) : (mode == 1 ? n (storiesAll) : n (storiesUnder));
+			const int un = storiesUnder.count (s) ? (int) storiesUnder.at (s).size () : 0;
+			const int v = mode == 0 ? floorsAbove (s) : (mode == 1 ? floorsAbove (s) + un : un);
 			r.cells.push_back (v == 0 ? std::wstring (L"-") : std::to_wstring (v));
 			vals.insert (v);
 		}
