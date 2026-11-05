@@ -49,6 +49,7 @@ struct Room {
 	double			area = 0;				// площадь помещения, м² (как в штампе зоны)
 	double			volume = 0;				// объём зоны, м³
 	double			x1 = 0, y1 = 0, x2 = 0, y2 = 0;	// габарит в плане, м
+	otd::Polys		polys;					// контур зоны (для поиска свободного места под паспорт)
 };
 
 struct Apartment {
@@ -78,6 +79,28 @@ std::wstring			PassportNum (double v, const Config& c);
 // Возвращает левый нижний угол.
 void					PassportPlace (const Apartment& a, double bx1, double by1, double bx2, double by2,
 									   double w, double h, double gap, double& x, double& y);
+
+// Свободное место на плане этажа: занято зонами, стенами, колоннами и уже стоящими паспортами
+struct Rect { double x1 = 0, y1 = 0, x2 = 0, y2 = 0; };
+
+class FreeSpace {
+public:
+	void	AddShape (const std::vector<otd::Pt>& poly);	// многоугольник (контур зоны, стены)
+	void	AddRect (const Rect& r);
+	bool	IsFree (const Rect& r) const;
+	size_t	Count () const { return shapes.size () + rects.size (); }
+private:
+	std::vector<std::vector<otd::Pt>>	shapes;
+	std::vector<Rect>					shapeBox;
+	std::vector<Rect>					rects;
+};
+
+// Ближайшее к квартире свободное место для паспорта w×h: перебираются стороны квартиры (сначала — ближайшая
+// к краю этажа bx1…by2), отступ от границы квартиры от minGap до maxGap шагом step и сдвиг вдоль стороны.
+// margin — зазор до занятого. false — свободного места нет (x, y — как PassportPlace).
+bool					PlaceFree (const Apartment& a, double bx1, double by1, double bx2, double by2, double w, double h,
+								   double minGap, double maxGap, double step, double margin, const FreeSpace& fs,
+								   double& x, double& y);
 
 // ----------------------------------------------------------------------------- ТЭП
 struct TepRow {

@@ -317,6 +317,114 @@ void PassportPlace (const Apartment& a, double bx1, double by1, double bx2, doub
 	}
 }
 
+// ----------------------------------------------------------------------------- свободное место
+static bool Overlap (const Rect& a, const Rect& b)
+{
+	return a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2;
+}
+
+static bool InPoly (const std::vector<otd::Pt>& p, double x, double y)
+{
+	bool in = false;
+	for (size_t i = 0, j = p.size () - 1; i < p.size (); j = i++) {
+		if (((p[i].second > y) != (p[j].second > y)) &&
+			x < (p[j].first - p[i].first) * (y - p[i].second) / (p[j].second - p[i].second) + p[i].first)
+			in = !in;
+	}
+	return in;
+}
+
+static bool SegHitsRect (double ax, double ay, double bx, double by, const Rect& r)
+{
+	// отсечение отрезка прямоугольником (Лян — Барски)
+	double t0 = 0, t1 = 1;
+	const double dx = bx - ax, dy = by - ay;
+	const double p[4] = { -dx, dx, -dy, dy };
+	const double q[4] = { ax - r.x1, r.x2 - ax, ay - r.y1, r.y2 - ay };
+	for (int i = 0; i < 4; ++i) {
+		if (std::fabs (p[i]) < 1e-12) { if (q[i] < 0) return false; continue; }
+		const double t = q[i] / p[i];
+		if (p[i] < 0) { if (t > t1) return false; if (t > t0) t0 = t; }
+		else { if (t < t0) return false; if (t < t1) t1 = t; }
+	}
+	return t1 - t0 > 1e-9;
+}
+
+void FreeSpace::AddShape (const std::vector<otd::Pt>& poly)
+{
+	if (poly.size () < 3) return;
+	Rect b { 1e30, 1e30, -1e30, -1e30 };
+	for (const auto& p : poly) {
+		b.x1 = std::min (b.x1, p.first); b.y1 = std::min (b.y1, p.second);
+		b.x2 = std::max (b.x2, p.first); b.y2 = std::max (b.y2, p.second);
+	}
+	shapes.push_back (poly);
+	shapeBox.push_back (b);
+}
+
+void FreeSpace::AddRect (const Rect& r) { rects.push_back (r); }
+
+bool FreeSpace::IsFree (const Rect& r) const
+{
+	for (const Rect& q : rects)
+		if (Overlap (r, q)) return false;
+	for (size_t i = 0; i < shapes.size (); ++i) {
+		if (!Overlap (r, shapeBox[i])) continue;
+		const auto& p = shapes[i];
+		if (InPoly (p, (r.x1 + r.x2) / 2, (r.y1 + r.y2) / 2)) return false;		// паспорт внутри зоны / стены
+		for (size_t k = 0; k < p.size (); ++k) {
+			const auto& a = p[k];
+			const auto& b = p[(k + 1) % p.size ()];
+			if (SegHitsRect (a.first, a.second, b.first, b.second, r)) return false;
+		}
+	}
+	return true;
+}
+
+bool PlaceFree (const Apartment& a, double bx1, double by1, double bx2, double by2, double w, double h,
+				double minGap, double maxGap, double step, double margin, const FreeSpace& fs, double& x, double& y)
+{
+	PassportPlace (a, bx1, by1, bx2, by2, w, h, minGap, x, y);
+	step = std::max (step, 0.01);
+	// стороны по близости к краю этажа: 0 верх, 1 низ, 2 лево, 3 право
+	std::vector<std::pair<double, int>> sides = { { by2 - a.y2, 0 }, { a.y1 - by1, 1 }, { a.x1 - bx1, 2 }, { bx2 - a.x2, 3 } };
+	std::stable_sort (sides.begin (), sides.end ());
+	const double cx = (a.x1 + a.x2) / 2, cy = (a.y1 + a.y2) / 2;
+	const double sidePenalty = 4 * step + (w + h) / 2;		// другая сторона «дороже» небольшого отступа
+	bool found = false;
+	double best = 1e30;
+	for (size_t rank = 0; rank < sides.size (); ++rank) {
+		const int side = sides[rank].second;
+		const bool horiz = side <= 1;
+		const double span = horiz ? a.x2 - a.x1 : a.y2 - a.y1;
+		const double size = horiz ? w : h;
+		const double maxOff = std::max (0.0, span / 2 - size / 2) + size / 2;		// паспорт — в пределах стороны квартиры
+		for (double d = minGap; d <= maxGap + 1e-9; d += step) {
+			const double base = d + rank * sidePenalty;
+			if (base >= best) break;
+			bool hit = false;
+			for (int k = 0; ; ++k) {
+				const double off = ((k + 1) / 2) * step * (k % 2 == 1 ? 1 : -1);
+				if (std::fabs (off) > maxOff + 1e-9) break;
+				const double score = base + 0.5 * std::fabs (off);
+				if (score >= best) break;
+				double px, py;
+				if (side == 0) { px = cx - w / 2 + off; py = a.y2 + d; }
+				else if (side == 1) { px = cx - w / 2 + off; py = a.y1 - d - h; }
+				else if (side == 2) { px = a.x1 - d - w; py = cy - h / 2 + off; }
+				else { px = a.x2 + d; py = cy - h / 2 + off; }
+				const Rect r { px - margin, py - margin, px + w + margin, py + h + margin };
+				if (fs.IsFree (r)) {
+					best = score; x = px; y = py; found = true; hit = true;
+					break;
+				}
+			}
+			if (hit) break;
+		}
+	}
+	return found;
+}
+
 // ----------------------------------------------------------------------------- ТЭП
 std::vector<std::wstring> SortSections (std::vector<std::wstring> s)
 {

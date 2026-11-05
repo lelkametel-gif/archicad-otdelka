@@ -1383,6 +1383,7 @@ std::vector<tep::Room> ReadRooms (const Settings& st, const std::vector<StoryRec
 					r.x2 = std::max (r.x2, pt.first); r.y2 = std::max (r.y2, pt.second);
 				}
 			if (polys.empty ()) { r.x1 = r.y1 = r.x2 = r.y2 = 0; }
+			r.polys = polys;
 		}
 		ACAPI_DisposeElemMemoHdls (&memo);
 		r.guid = au::ToW (APIGuidToString (g));
@@ -1539,6 +1540,8 @@ struct PassportObj {
 	short		floor = 0;
 	std::wstring key;
 	bool		used = false;
+	bool		movable = false;		// стоит там, где поставила надстройка (не двигали) — можно переставить
+	double		x = 0, y = 0, wMm = 18, hMm = 14;
 };
 
 std::vector<PassportObj> FindPassports (Int32 libInd, int& inHotlinks)
@@ -1560,7 +1563,17 @@ std::vector<PassportObj> FindPassports (Int32 libInd, int& inHotlinks)
 		PassportObj p;
 		p.guid = g;
 		p.floor = el.header.floorInd;
-		p.key = otd::Trim (au::ToW (au::Params (memo.params).Str ("stKey")));
+		{
+			au::Params P (memo.params);
+			p.key = otd::Trim (au::ToW (P.Str ("stKey")));
+			p.x = el.object.pos.x;
+			p.y = el.object.pos.y;
+			p.wMm = P.Real ("wType", 8) + P.Real ("wArea", 10);
+			p.hMm = 4 * P.Real ("hRow", 3.5);
+			const double px = P.Real ("rPlaceX", 0), py = P.Real ("rPlaceY", 0);
+			p.movable = (std::fabs (px) < 1e-9 && std::fabs (py) < 1e-9) ||
+						(std::fabs (p.x - px) < 1e-3 && std::fabs (p.y - py) < 1e-3);
+		}
 		ACAPI_DisposeElemMemoHdls (&memo);
 		res.push_back (p);
 	}
@@ -1990,15 +2003,45 @@ void DoPassports ()
 
 	int inHot = 0;
 	std::vector<PassportObj> objs = FindPassports (libInd, inHot);
-	int created = 0, updated = 0, same = 0, deleted = 0, errs = 0, noKey = 0, movedN = 0;
+	int created = 0, updated = 0, same = 0, deleted = 0, errs = 0, noKey = 0, movedN = 0, noFree = 0;
 	GSErrCode firstErr = NoError;
 	std::map<std::wstring, int> createdBySt;
+
+	// свободное место по этажам: занято зонами (все секции), стенами, колоннами и паспортами, которые двигали вручную
+	std::map<int, tep::FreeSpace> space;
+	{
+		std::set<int> aptStories;
+		for (const auto& a : d.apts) aptStories.insert (a.story);
+		for (const auto& r : d.rooms) {
+			if (d.cfg.excluded.Has (r.catCode) || aptStories.count (r.story) == 0) continue;
+			for (const auto& poly : r.polys) space[r.story].AddShape (poly);
+		}
+		std::map<int, double> lev;
+		for (const auto& sr : d.stories) lev[sr.index] = sr.level;
+		LayerCache lc;
+		for (const ElemGeo& e : LoadElemGeo (d.stories, false, lc)) {
+			for (int s : aptStories) {
+				const double z = (lev.count (s) ? lev[s] : 0) + 1.0;		// на высоте 1 м над этажом
+				if (e.floor == s || (e.bot < z && e.top > z)) space[s].AddShape (e.shape);
+			}
+		}
+		for (const auto& o : objs)
+			if (!o.movable)
+				space[o.floor].AddRect ({ o.x, o.y, o.x + o.wMm * k, o.y + o.hMm * k });
+	}
+	const double minGap = 2 * k, maxGap = 80 * k, step = 1.5 * k, margin = 0.8 * k;
+
 	ACAPI_CallUndoableCommand (au::FromW (L"Паспорта квартир"), [&] () -> GSErrCode {
 		for (const auto& a : d.apts) {
 			const auto bi = box.find (std::to_wstring (a.story));
 			double x = a.x1, y = a.y2;
-			if (bi != box.end ())
-				tep::PassportPlace (a, bi->second[0], bi->second[1], bi->second[2], bi->second[3], w, h, gap, x, y);
+			if (bi != box.end ()) {
+				if (!tep::PlaceFree (a, bi->second[0], bi->second[1], bi->second[2], bi->second[3], w, h, minGap, maxGap, step, margin,
+									 space[a.story], x, y)) {
+					++noFree;
+					tep::PassportPlace (a, bi->second[0], bi->second[1], bi->second[2], bi->second[3], w, h, gap, x, y);
+				}
+			}
 			bool found = false;
 			for (auto& o : objs) {
 				if (o.used || o.floor != a.story || o.key != a.Key ()) continue;
@@ -2010,12 +2053,13 @@ void DoPassports ()
 				else if (ch || mv) ++updated;
 				else ++same;
 				if (e == NoError && mv) ++movedN;
+				if (o.movable) space[a.story].AddRect ({ x, y, x + w, y + h });
 				break;
 			}
 			if (found) continue;
 			const GSErrCode e = CreatePassport (libInd, (short) a.story, x, y, a, d.cfg);
 			if (e != NoError) { if (errs++ == 0) firstErr = e; }
-			else { ++created; createdBySt[a.storyName] += 1; }
+			else { ++created; createdBySt[a.storyName] += 1; space[a.story].AddRect ({ x, y, x + w, y + h }); }
 		}
 		// паспорта квартир, которых больше нет (номер квартиры изменён / зоны удалены), и повторы
 		GS::Array<API_Guid> del;
@@ -2036,7 +2080,9 @@ void DoPassports ()
 	if (movedN > 0)
 		lines.push_back (L"Перенесено к своим квартирам (их не двигали вручную): " + std::to_wstring (movedN) + L".");
 	if (created > 0 || movedN > 0)
-		lines.push_back (L"Паспорт стоит снаружи у наружной стены своей квартиры (сторона, ближайшая к краю этажа). Передвинутые вручную паспорта больше не переносятся — обновляются только цифры.");
+		lines.push_back (L"Паспорт ставится в ближайшее к квартире свободное место (не на зоны любых секций, стены, колонны и другие паспорта), сначала — со стороны, ближайшей к краю этажа. Передвинутые вручную паспорта не переносятся — обновляются только цифры.");
+	if (noFree > 0)
+		lines.push_back (L"Свободного места рядом не нашлось (до 80 мм листа от квартиры): " + std::to_wstring (noFree) + L" — поставлены у стены квартиры, передвиньте вручную.");
 	if (noKey > 0)
 		lines.push_back (L"Паспортов без ключа (поставлены вручную, не тронуты): " + std::to_wstring (noKey) + L".");
 	if (inHot > 0)
