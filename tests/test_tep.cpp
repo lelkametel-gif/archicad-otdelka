@@ -218,8 +218,19 @@ int main (int argc, char** argv)
 	const TepRow* r3 = find (L"3");
 	CHECK (r3 && r3->cells[1] == L"1 461,6");
 	const TepRow* r2 = find (L"2"); const TepRow* r21 = find (L"2.1");
-	CHECK (r2 && r2->cells[1] == L"2" && r2->cells[0] == L"2");		// секция 2: этажи -1, 1, 2 -> надземных 2
-	CHECK (r21 && r21->cells[1] == L"3" && r21->total == L"перем.");
+	// секция 2: подвал (-1), 1 этаж — офисы, 2 — квартиры -> этажность 1 + 1 = 2, этажей 3
+	// секция 1: 3 и 4 этажи с квартирами -> 2 и 2
+	CHECK (r2 && r2->cells[1] == L"2" && r2->cells[0] == L"2");
+	CHECK (r21 && r21->cells[1] == L"3" && r21->cells[0] == L"2" && r21->total == L"перем.");
+	{	// этаж только с ЛК не считается ни в этажность, ни в количество этажей
+		std::vector<Room> r2r = rooms;
+		r2r.push_back (R (L"2", 11, L"", L"2010", L"Лестничная клетка", 15.7));
+		const Tep t3 = BuildTep (r2r, apts, c);
+		for (const auto& r : t3.rows) {
+			if (r.num == L"2") CHECK (r.cells[1] == L"2");
+			if (r.num == L"2.1") CHECK (r.cells[1] == L"3");
+		}
+	}
 	const TepRow* r16 = find (L"16");
 	CHECK (r16 && r16->cells[1] == L"3" && r16->total == L"5 (100%)");
 	const TepRow* st = find (L"", L"1-комнатных (студий)");
