@@ -215,6 +215,7 @@ std::vector<Apartment> BuildApartments (const std::vector<Room>& rooms, const Co
 	std::vector<std::wstring> order;
 	std::map<std::wstring, std::vector<std::wstring>> noCode;	// этаж -> зоны квартир без номера
 	std::map<std::wstring, std::vector<std::wstring>> notApt;
+	std::map<std::wstring, double> bestLiving;
 	for (size_t i = 0; i < rooms.size (); ++i) {
 		const Room& r = rooms[i];
 		if (c.excluded.Has (r.catCode)) continue;
@@ -252,13 +253,21 @@ std::vector<Apartment> BuildApartments (const std::vector<Room>& rooms, const Co
 			a.total += ar;
 			a.reduced += ar;
 		}
-		if (c.living.Has (r.catCode)) { a.living += ar; ++a.livingRooms; }
+		if (c.living.Has (r.catCode)) {
+			a.living += ar;
+			++a.livingRooms;
+			if (ar > bestLiving[key]) {		// самая большая жилая комната — у неё паспорт
+				bestLiving[key] = ar;
+				a.ax1 = r.x1; a.ay1 = r.y1; a.ax2 = r.x2; a.ay2 = r.y2;
+			}
+		}
 		if (c.kitchenDining.Has (r.catCode)) a.hasKitchenDining = true;
 		if (c.kitchen.Has (r.catCode)) a.hasKitchen = true;
 	}
 	std::vector<Apartment> res;
 	for (const auto& key : order) {
 		Apartment a = byKey[key];
+		if (bestLiving.count (key) == 0) a.AnchorAll ();
 		const bool studio = a.livingRooms == 1 && !a.hasKitchenDining && !a.hasKitchen;
 		a.label = studio ? c.studioLabel : (a.livingRooms > 0 ? std::to_wstring (a.livingRooms) + L"К" : std::wstring (L"?"));
 		a.typeName = TypeName (a.livingRooms, a.hasKitchenDining, studio);
@@ -305,15 +314,15 @@ std::wstring PassportNum (double v, const Config& c)
 
 void PassportPlace (const Apartment& a, double bx1, double by1, double bx2, double by2, double w, double h, double gap, double& x, double& y)
 {
-	const double dTop = by2 - a.y2, dBot = a.y1 - by1, dLeft = a.x1 - bx1, dRight = bx2 - a.x2;
-	const double cx = (a.x1 + a.x2) / 2, cy = (a.y1 + a.y2) / 2;
+	const double dTop = by2 - a.ay2, dBot = a.ay1 - by1, dLeft = a.ax1 - bx1, dRight = bx2 - a.ax2;
+	const double cx = (a.ax1 + a.ax2) / 2, cy = (a.ay1 + a.ay2) / 2;
 	const double vMin = std::min (dTop, dBot), hMin = std::min (dLeft, dRight);
-	if (vMin <= hMin + 0.5) {		// сверху / снизу (как правило — у фасада)
+	if (vMin <= hMin + 2.0) {		// сверху / снизу (продольный фасад; лоджии отодвигают край этажа)
 		x = cx - w / 2;
-		y = dTop <= dBot ? a.y2 + gap : a.y1 - gap - h;
+		y = dTop <= dBot ? a.ay2 + gap : a.ay1 - gap - h;
 	} else {
 		y = cy - h / 2;
-		x = dLeft <= dRight ? a.x1 - gap - w : a.x2 + gap;
+		x = dLeft <= dRight ? a.ax1 - gap - w : a.ax2 + gap;
 	}
 }
 
@@ -387,16 +396,19 @@ bool PlaceFree (const Apartment& a, double bx1, double by1, double bx2, double b
 	PassportPlace (a, bx1, by1, bx2, by2, w, h, minGap, x, y);
 	step = std::max (step, 0.01);
 	// стороны по близости к краю этажа: 0 верх, 1 низ, 2 лево, 3 право
-	std::vector<std::pair<double, int>> sides = { { by2 - a.y2, 0 }, { a.y1 - by1, 1 }, { a.x1 - bx1, 2 }, { bx2 - a.x2, 3 } };
+	// продольные фасады (верх / низ) предпочтительнее торцов: лоджии и балконы отодвигают край этажа до ~2 м
+	const double kLongBias = 2.0;
+	std::vector<std::pair<double, int>> sides = { { by2 - a.ay2 - kLongBias, 0 }, { a.ay1 - by1 - kLongBias, 1 },
+												  { a.ax1 - bx1, 2 }, { bx2 - a.ax2, 3 } };
 	std::stable_sort (sides.begin (), sides.end ());
-	const double cx = (a.x1 + a.x2) / 2, cy = (a.y1 + a.y2) / 2;
+	const double cx = (a.ax1 + a.ax2) / 2, cy = (a.ay1 + a.ay2) / 2;
 	const double sidePenalty = 4 * step + (w + h) / 2;		// другая сторона «дороже» небольшого отступа
 	bool found = false;
 	double best = 1e30;
 	for (size_t rank = 0; rank < sides.size (); ++rank) {
 		const int side = sides[rank].second;
 		const bool horiz = side <= 1;
-		const double span = horiz ? a.x2 - a.x1 : a.y2 - a.y1;
+		const double span = horiz ? a.ax2 - a.ax1 : a.ay2 - a.ay1;
 		const double size = horiz ? w : h;
 		const double maxOff = std::max (0.0, span / 2 - size / 2) + size / 2;		// паспорт — в пределах стороны квартиры
 		for (double d = minGap; d <= maxGap + 1e-9; d += step) {
@@ -409,10 +421,10 @@ bool PlaceFree (const Apartment& a, double bx1, double by1, double bx2, double b
 				const double score = base + 0.5 * std::fabs (off);
 				if (score >= best) break;
 				double px, py;
-				if (side == 0) { px = cx - w / 2 + off; py = a.y2 + d; }
-				else if (side == 1) { px = cx - w / 2 + off; py = a.y1 - d - h; }
-				else if (side == 2) { px = a.x1 - d - w; py = cy - h / 2 + off; }
-				else { px = a.x2 + d; py = cy - h / 2 + off; }
+				if (side == 0) { px = cx - w / 2 + off; py = a.ay2 + d; }
+				else if (side == 1) { px = cx - w / 2 + off; py = a.ay1 - d - h; }
+				else if (side == 2) { px = a.ax1 - d - w; py = cy - h / 2 + off; }
+				else { px = a.ax2 + d; py = cy - h / 2 + off; }
 				const Rect r { px - margin, py - margin, px + w + margin, py + h + margin };
 				if (fs.IsFree (r)) {
 					best = score; x = px; y = py; found = true; hit = true;

@@ -63,6 +63,9 @@ struct Apartment {
 	std::wstring		typeName;			// «2-х комнатных с кухней-столовой»
 	int					typeOrder = 0;
 	double				x1 = 1e30, y1 = 1e30, x2 = -1e30, y2 = -1e30;
+	// у чего ставить паспорт: габарит самой большой жилой комнаты (нет жилых — вся квартира)
+	double				ax1 = 0, ay1 = 0, ax2 = 0, ay2 = 0;
+	void				AnchorAll () { ax1 = x1; ay1 = y1; ax2 = x2; ay2 = y2; }
 	std::wstring		Key () const { return section + L"|" + code; }
 };
 
@@ -74,7 +77,7 @@ std::vector<Apartment>	BuildApartments (const std::vector<Room>& rooms, const Co
 // Числа паспорта: жилая, площадь квартиры, общая, приведённая
 std::wstring			PassportNum (double v, const Config& c);
 
-// Место паспорта: снаружи у наружной стены квартиры. Сторона — край этажа (bx1…by2), ближайший к квартире;
+// Место паспорта: снаружи у наружной стены самой большой жилой комнаты квартиры (габарит ax1…ay2). Сторона — край этажа (bx1…by2), ближайший к квартире;
 // паспорт w×h (м) — по центру квартиры вдоль этой стороны, на расстоянии gap (м) от границы квартиры.
 // Возвращает левый нижний угол.
 void					PassportPlace (const Apartment& a, double bx1, double by1, double bx2, double by2,
@@ -95,7 +98,7 @@ private:
 	std::vector<Rect>					rects;
 };
 
-// Ближайшее к квартире свободное место для паспорта w×h: перебираются стороны квартиры (сначала — ближайшая
+// Ближайшее к жилой комнате квартиры свободное место для паспорта w×h: перебираются стороны комнаты (сначала — ближайшая
 // к краю этажа bx1…by2), отступ от границы квартиры от minGap до maxGap шагом step и сдвиг вдоль стороны.
 // margin — зазор до занятого. false — свободного места нет (x, y — как PassportPlace).
 bool					PlaceFree (const Apartment& a, double bx1, double by1, double bx2, double by2, double w, double h,

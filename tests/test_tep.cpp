@@ -115,19 +115,20 @@ int main (int argc, char** argv)
 		CHECK (a1->typeName == L"2-х комнатных с кухней-столовой");
 		CHECK (PassportNum (a1->reduced, c) == L"61.1");
 		NEAR (a1->x1, 0); NEAR (a1->y2, 14);
+		NEAR (a1->ax1, 0); NEAR (a1->ax2, 4); NEAR (a1->ay1, 10);		// у самой большой жилой комнаты (10,9)
 		double x, y;
-		PassportPlace (*a1, 0, 0, 20, 14, 2, 1.4, 0.8, x, y);		// у верхнего края этажа -> над ним
-		NEAR (y, 14.8); NEAR (x, 5 - 1);
-		Apartment b = *a1; b.y1 = 9; b.y2 = 12.5; b.x1 = 2;			// фасад секции отступает от края этажа — паспорт у стены квартиры
+		PassportPlace (*a1, 0, 0, 20, 14, 2, 1.4, 0.8, x, y);		// у верхнего края этажа -> над ней
+		NEAR (y, 14.8); NEAR (x, 2 - 1);
+		Apartment b = *a1; b.y1 = 9; b.y2 = 12.5; b.x1 = 2; b.x2 = 10; b.AnchorAll ();			// фасад секции отступает от края этажа — паспорт у стены квартиры
 		PassportPlace (b, 0, 0, 20, 14, 2, 1.4, 0.8, x, y);
 		NEAR (y, 13.3);
-		Apartment s = *a1; s.x1 = 18; s.x2 = 19.6; s.y1 = 6; s.y2 = 8;	// у правого края -> справа
+		Apartment s = *a1; s.x1 = 18; s.x2 = 19.6; s.y1 = 6; s.y2 = 8; s.AnchorAll ();	// у правого края -> справа
 		PassportPlace (s, 0, 0, 20, 14, 2, 1.4, 0.8, x, y);
 		NEAR (x, 20.4); NEAR (y, 7 - 0.7);
 	}
 	if (a1) {	// свободное место: сверху занято (соседняя секция), ближайшее свободное — снизу? нет: левее/правее по стороне
 		FreeSpace fs;
-		Apartment q = *a1; q.x1 = 0; q.x2 = 10; q.y1 = 9; q.y2 = 14;
+		Apartment q = *a1; q.x1 = 0; q.x2 = 10; q.y1 = 9; q.y2 = 14; q.AnchorAll ();
 		fs.AddShape ({ { 0, 9 }, { 10, 9 }, { 10, 14 }, { 0, 14 } });			// сама квартира
 		double x, y;
 		CHECK (PlaceFree (q, 0, 0, 20, 14, 2, 1.4, 0.2, 6, 0.2, 0.1, fs, x, y));
@@ -146,8 +147,26 @@ int main (int argc, char** argv)
 		CHECK (a2->typeName == L"1-комнатных с кухней-столовой");
 		NEAR (a2->area, 38.2); NEAR (a2->total, 38.2); NEAR (a2->living, 10.8);
 		double x, y;
-		PassportPlace (*a2, 0, 0, 20, 14, 2, 1.4, 0.8, x, y);		// у нижнего края -> под ним
-		NEAR (y, -0.8 - 1.4);
+		PassportPlace (*a2, 0, 0, 20, 14, 2, 1.4, 0.8, x, y);		// у нижнего края -> под комнатой
+		NEAR (y, -0.8 - 1.4); NEAR (x, 2 - 1);
+	}
+	{
+		std::vector<Room> rr = {
+			R (L"2", 2, L"115", L"1022", L"Кухня-столовая", 19.4, 0, 8, 4, 14),
+			R (L"2", 2, L"115", L"1030", L"Прихожая", 5.1, 4, 5, 6, 8),
+			R (L"2", 2, L"115", L"1010", L"Комната", 10.9, 0, 0, 3.6, 4),
+			R (L"2", 2, L"115", L"1010", L"Комната", 10.3, 3.6, 0, 6.6, 4),
+			R (L"2", 2, L"115", L"1070", L"Лоджия", 2.4, 3.6, -1.2, 6, 0) };
+		const auto aa = BuildApartments (rr, c);
+		CHECK (aa.size () == 1);
+		if (!aa.empty ()) {
+			FreeSpace fs;
+			for (const auto& r : rr) fs.AddShape ({ { r.x1, r.y1 }, { r.x2, r.y1 }, { r.x2, r.y2 }, { r.x1, r.y2 } });
+			double x = 0, y = 0;
+			CHECK (PlaceFree (aa[0], 0, -1.2, 6.6, 14, 1.8, 1.4, 0.2, 6, 0.15, 0.08, fs, x, y));
+			CHECK (y + 1.4 <= 0 + 1e-6);					// внизу, под комнатой 10,9
+			CHECK (x + 1.8 <= 3.6 + 0.9 + 1e-6);			// не под лоджией
+		}
 	}
 	if (a3) {
 		CHECK (a3->label == L"С");
