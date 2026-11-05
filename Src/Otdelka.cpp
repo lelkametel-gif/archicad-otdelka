@@ -803,7 +803,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 		if (onFloors) ++rs.onFloors;
 		const std::wstring libName = otd::Trim (au::ToW (au::LibPartName (el.zone.libInd)));
 		const std::wstring lib = otd::Lower (libName);
-		if (lib.compare (0, libPrefix.size (), libPrefix) != 0) {
+		if (lib.find (libPrefix) == std::wstring::npos) {		// имя объекта содержит «HimeraZone» (АСП_HimeraZone, HimeraZone22)
 			if (onFloors)
 				rs.otherLib[libName.empty () ? std::wstring (L"(без объекта)") : libName] += 1;
 			continue;
