@@ -924,7 +924,9 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 			p.finishHeight = std::max (0.0, hi - lo);
 			if (e.isColumn) {
 				p.elemId = ElemId (e.guid);
-				p.construction = L"колонна / пилон";
+				// размеры в плане и центр — чтобы найти колонну на плане по листу «Расчёт»
+				p.construction = L"колонна / пилон " + otd::FormatNum (e.x2 - e.x1, 2) + L"×" + otd::FormatNum (e.y2 - e.y1, 2) +
+								 L" м, центр X " + otd::FormatNum ((e.x1 + e.x2) / 2, 2) + L" Y " + otd::FormatNum ((e.y1 + e.y2) / 2, 2);
 				p.isColumn = true;
 				p.column = rules.columnsColumn;
 				p.byContour = relCols.count (e.guid) == 0;
