@@ -865,8 +865,16 @@ std::vector<FaceRun> ExposedFaces (const Polys& zone, const std::vector<Shape>& 
 				if (inside) break;
 				const double qx = px + nx * d, qy = py + ny * d;
 				bool blocked = false;
-				for (size_t o = 0; o < shapes.size () && !blocked; ++o)
-					if (o != idx && InShape (shapes[o], qx, qy) && DistToBoundary (shapes[o], qx, qy) > e) blocked = true;
+				for (size_t o = 0; o < shapes.size () && !blocked; ++o) {
+					if (o == idx || !InShape (shapes[o], qx, qy) || DistToBoundary (shapes[o], qx, qy) <= e)
+						continue;
+					// элемент ниже по приоритету, который проходит сквозь наш (пилон внутри стены КБ, чуть более толстой),
+					// нашу грань не закрывает — наш элемент его вырезает
+					const int po = o < prio.size () ? prio[o] : 0, pi = idx < prio.size () ? prio[idx] : 0;
+					if (po < pi && InShape (shapes[o], px - nx * 0.001, py - ny * 0.001))
+						continue;
+					blocked = true;
+				}
 				if (blocked) break;
 				if (PointInPolys (zone, qx, qy)) { exposed = true; break; }
 			}
