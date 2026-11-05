@@ -160,6 +160,32 @@ int main (int argc, char** argv)
 		CHECK (s > 5.5);
 	}
 
+	// --- ЖБ первым, Ж/Б, столбец 3 только в квартирах
+	{
+		CHECK (ClassifyWall (L"| Ст_Н| Подвал| ЖБ 200_ГИ 2 слоя_ЭППС 50", r) == 1);
+		CHECK (ClassifyWall (L"| Ст_Н| Парапет| ЖБ 200_Кирп 120", r) == 1);		// есть ЖБ — монолит
+		CHECK (ClassifyWall (L"Ж/Б | монолит-V", r) == 1);
+		CHECK (ClassifyWall (L"ж/б | Сборный", r) == 1);
+		CHECK (ClassifyWall (L"| Ст_В| Ш 15_КБ 190", r) == 2);
+		CHECK (ClassifyWall (L"| Ст_П_О | ГКЛ 15_Возд 25", r) == 3);
+		auto Z = [] (const wchar_t* code, const wchar_t* cat, const wchar_t* room) {
+			ZoneData q; q.catCode = code; q.name = cat; q.roomName = room; q.floor = 2;
+			WallPiece p; p.column = 3; p.length = 1; p.finishHeight = 2.5; q.pieces.push_back (p);
+			return q;
+		};
+		ZoneData a1 = Z (L"1010", L"Комната", L"Жилая комната");
+		ZoneData a2 = Z (L"1040", L"Совмещенный санузел", L"Совм. с/у №1");
+		ZoneData a3 = Z (L"1070", L"Лоджия", L"Лоджия");
+		ZoneData a4 = Z (L"2020", L"МОП_Коридор", L"Коридор");
+		CHECK (ApplyColumnRules (a1, r) == 0 && a1.pieces[0].column == 3);
+		CHECK (ApplyColumnRules (a2, r) == 1 && a2.pieces[0].column == 2 && a2.pieces[0].col3Moved);
+		CHECK (ApplyColumnRules (a3, r) == 1 && a3.pieces[0].column == 2);
+		CHECK (ApplyColumnRules (a4, r) == 1 && a4.pieces[0].column == 2);
+		std::vector<std::wstring> w3;
+		const Rules r3 = ParseRules (L"[Столбец 3]\nПодкатегория = Квартиры\nКроме = кладов\nИначе = 1\n", &w3);
+		CHECK (w3.empty () && r3.col3Else == 1 && r3.col3Except.size () == 1);
+	}
+
 	// --- площади
 	NEAR (OpeningOverlap (0, 2.1, 0.08, 2.9), 2.02);
 	NEAR (OpeningOverlap (0.9, 1.5, 0.08, 2.9), 1.5);

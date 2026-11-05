@@ -130,7 +130,7 @@ std::wstring DefaultRulesText ()
 		L"# Правила ведомости отделки помещений (надстройка «Ведомость отделки», Archicad 27).\n"
 		L"# Строки, начинающиеся с #, — комментарии. Файл можно править в Блокноте;\n"
 		L"# изменения применяются при следующем расчёте. Чтобы вернуть правила по умолчанию — удалите файл.\n"
-		L"# Версия правил: 6 (более старый файл заменяется новым, старый сохраняется рядом с пометкой «старые»)\n"
+		L"# Версия правил: 7 (более старый файл заменяется новым, старый сохраняется рядом с пометкой «старые»)\n"
 		L"\n"
 		L"[Заголовок]\n"
 		L"# {секция} заменяется номером секции из окна расчёта\n"
@@ -148,12 +148,13 @@ std::wstring DefaultRulesText ()
 		L"# строительного материала. Правила проверяются сверху вниз: столбец даёт первое правило,\n"
 		L"# чей код есть в названии. Стена только из штукатурки (отделочная стенка на ж/б стене) — монолит.\n"
 		L"# 0 — слой не определяет столбец (утеплитель, воздух). Колонны = столбец для колонн и пилонов.\n"
+		L"# «Ж/Б» в названии читается как «ЖБ». ЖБ стоит первым: есть ж/б слой — стена монолитная.\n"
+		L"ЖБ = 1\n"
+		L"Железобетон = 1\n"
+		L"Бетон = 1\n"
 		L"ГКЛ = 3\n"
 		L"ГКЛв = 3\n"
 		L"ГВЛ = 3\n"
-		L"ЖБ = 1\n"
-		L"Бетон = 1\n"
-		L"Железобетон = 1\n"
 		L"КБ = 2\n"
 		L"ПГП = 2\n"
 		L"Кирп = 2\n"
@@ -190,6 +191,13 @@ std::wstring DefaultRulesText ()
 		L"7 = Чердак\n"
 		L"8 = -\n"
 		L"9 = -\n"
+		L"\n"
+		L"[Столбец 3]\n"
+		L"# Межкомнатные перегородки (столбец 3) — только в зонах этой подкатегории, кроме зон, в имени или категории\n"
+		L"# которых есть одно из слов «Кроме»; у остальных зон такие стены идут в столбец «Иначе».\n"
+		L"Подкатегория = Квартиры\n"
+		L"Кроме = санузел; с/у; с/у; совмещ; ванн; душ; туалет; уборн; балкон; лоджи; террас\n"
+		L"Иначе = 2\n"
 		L"\n"
 		L"[Отделка]\n"
 		L"# Как записано в зоне (номер «00» в начале отбрасывается) = как писать в ведомости\n"
@@ -235,7 +243,7 @@ static bool ToInt (const std::wstring& s, int& v)
 Rules ParseRules (const std::wstring& text, std::vector<std::wstring>* warnings)
 {
 	Rules r;
-	enum Sec { None, Title, Cols, Mats, Groups, Rows, Finish } sec = None;
+	enum Sec { None, Title, Cols, Mats, Groups, Rows, Finish, Col3 } sec = None;
 	auto warn = [&] (int line, const std::wstring& msg) {
 		if (warnings != nullptr)
 			warnings->push_back (L"Правила, строка " + std::to_wstring (line) + L": " + msg);
@@ -260,6 +268,7 @@ Rules ParseRules (const std::wstring& text, std::vector<std::wstring>* warnings)
 			else if (name == L"группы") sec = Groups;
 			else if (name == L"строки") sec = Rows;
 			else if (name == L"отделка") sec = Finish;
+			else if (name == L"столбец 3") sec = Col3;
 			else { sec = None; warn (lineNo, L"неизвестный раздел " + line); }
 			continue;
 		}
@@ -312,6 +321,18 @@ Rules ParseRules (const std::wstring& text, std::vector<std::wstring>* warnings)
 			case Finish:
 				if (!key.empty ()) r.finishNames.push_back ({ key, val });
 				break;
+			case Col3:
+				if (SameText (key, L"Подкатегория")) r.col3Group = val;
+				else if (SameText (key, L"Кроме")) {
+					r.col3Except.clear ();
+					for (const auto& w : SplitBy (val, L';')) if (!Trim (w).empty ()) r.col3Except.push_back (Lower (Trim (w)));
+				}
+				else if (SameText (key, L"Иначе")) {
+					if (!ToInt (val, n) || n < 0 || n > kWallColumns) warn (lineNo, L"«Иначе» — номер столбца от 0 до 3");
+					else r.col3Else = n;
+				}
+				else warn (lineNo, L"ожидается Подкатегория, Кроме или Иначе");
+				break;
 			default:
 				warn (lineNo, L"строка вне раздела");
 				break;
@@ -332,8 +353,20 @@ static bool IsLetter (wchar_t c)
 }
 
 
-std::vector<std::wstring> MaterialCodes (const std::wstring& name)
+static std::wstring NormalizeRC (const std::wstring& name)
 {
+	// «Ж/Б», «ж/б» -> «ЖБ»
+	std::wstring s = name;
+	for (size_t i = 0; i + 2 < s.size (); ++i)
+		if ((s[i] == L'Ж' || s[i] == L'ж') && s[i + 1] == L'/' && (s[i + 2] == L'Б' || s[i + 2] == L'б'))
+			s.replace (i, 3, L"ЖБ");
+	return s;
+}
+
+
+std::vector<std::wstring> MaterialCodes (const std::wstring& nameIn)
+{
+	const std::wstring name = NormalizeRC (nameIn);
 	// «| Ст_В| Ш 15_КБ 190_Ш 15», «Ст_П_О | ГКЛв С623_ПС50 | <10м»: части между «|»;
 	// часть с типом конструкции («Ст_В», «Ст_П_О», «Ст_Ут_Вш») пропускается
 	std::vector<std::wstring> res;
@@ -830,6 +863,32 @@ std::vector<double> ContourGaps (const Polys& zone, const std::vector<Box>& boxe
 		}
 	}
 	return res;
+}
+
+// ============================================================================= столбец 3 — только квартиры
+
+bool Col3Allowed (const ZoneData& z, const Rules& r)
+{
+	if (r.col3Group.empty ())
+		return true;
+	if (!SameText (GroupOf (z, r), r.col3Group))
+		return false;
+	const std::wstring a = Lower (ZoneTitle (z)), b = Lower (z.name);
+	for (const auto& w : r.col3Except)
+		if (a.find (w) != std::wstring::npos || b.find (w) != std::wstring::npos)
+			return false;
+	return true;
+}
+
+
+int ApplyColumnRules (ZoneData& z, const Rules& r)
+{
+	if (Col3Allowed (z, r))
+		return 0;
+	int n = 0;
+	for (WallPiece& p : z.pieces)
+		if (p.column == 3) { p.column = r.col3Else; p.col3Moved = true; ++n; }
+	return n;
 }
 
 }	// namespace otd

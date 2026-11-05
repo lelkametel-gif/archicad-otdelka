@@ -535,6 +535,7 @@ struct RunStats {
 	std::map<std::wstring, int> usedCats;		// взяты в расчёт: «код категория» -> шт
 	int fromHotlink = 0;						// взяты в расчёт из модулей (hotlink)
 	int secFromProp = 0;						// секция взята из свойства
+	int col3Moved = 0;							// ГКЛ вне квартир -> другой столбец
 	int byContour = 0;							// участков стен найдено по контуру зоны
 	int zonesWithGaps = 0;						// зон с участками контура без стен
 };
@@ -1005,6 +1006,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 		// ---- участки контура без стен и колонн (проходы)
 		if (!excludedZone)
 			z.gaps = otd::ContourGaps (polys, boxes);
+		rs.col3Moved += otd::ApplyColumnRules (z, rules);
 		if (!z.gaps.empty ()) ++rs.zonesWithGaps;
 		res.push_back (z);
 	}
@@ -1340,6 +1342,9 @@ void DoOtdelka (bool checkOnly)
 	if (rs.byContour > 0)
 		lines.push_back (L"Добавлено по плану (элементы ограничивают зону, но не связаны с ней): " + std::to_wstring (rs.byContour) +
 						 L" — проверьте: в таблице проверки — столбец «Примечание», на листе «Расчёт» — «по контуру».");
+	if (rs.col3Moved > 0)
+		lines.push_back (L"Межкомнатные перегородки (столбец 3) вне квартир и в санузлах/лоджиях перенесены в столбец " +
+						 std::to_wstring (rules.col3Else) + L": " + std::to_wstring (rs.col3Moved) + L" участков (раздел [Столбец 3] правил).");
 	if (rs.zonesWithGaps > 0)
 		lines.push_back (L"Зон с участками контура без стен: " + std::to_wstring (rs.zonesWithGaps) + L" — см. лист «Расчёт» (проходы, проёмы без стены или элементы не-стены).");
 	if (!rs.hiddenLayers.empty ())

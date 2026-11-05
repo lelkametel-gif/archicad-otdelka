@@ -44,9 +44,12 @@ struct Rules {
 	std::wstring					otherGroup = L"Прочие помещения";
 	std::vector<RowRule>			rows;
 	std::vector<std::pair<std::wstring, std::wstring>>	finishNames;	// как в зоне -> как в ведомости
+	std::wstring					col3Group = L"Квартиры";	// столбец 3 только в этой подкатегории (пусто — везде)
+	std::vector<std::wstring>		col3Except = { L"санузел", L"с/у", L"совмещ", L"ванн", L"душ", L"туалет", L"уборн", L"балкон", L"лоджи", L"террас" };
+	int								col3Else = 2;
 };
 
-const int		kRulesVersion = 6;
+const int		kRulesVersion = 7;
 extern const wchar_t* const kExcludedGroup;		// «-»: зона не входит в ведомость
 std::wstring	DefaultRulesText ();
 int				RulesVersion (const std::wstring& text);	// «# Версия правил: N»; нет строки — 1
@@ -113,6 +116,7 @@ struct WallPiece {
 	double			finishHeight = 0;	// высота отделки = высота стены − пол − потолок
 	double			openings = 0;	// м², вычтенные проёмы
 	int				nOpenings = 0;
+	bool			col3Moved = false;	// ГКЛ не в квартире -> столбец «Иначе»
 	bool			byContour = false;	// найдена по контуру зоны (Archicad не связал стену с зоной)
 	double			Area () const;
 };
@@ -169,6 +173,10 @@ std::wstring	ZoneTitle (const ZoneData& z);
 // {«Электрощитовая», «Лестничная клетка», «С/У»} -> «Электрощитовая, лестничная клетка, С/У»
 std::wstring	JoinNames (const std::vector<std::wstring>& names);
 std::wstring	RowTitleOf (const ZoneData& z, const std::wstring& group, const Rules& r);	// = ZoneTitle
+// Столбец 3 (межкомнатные перегородки) разрешён в зоне?
+bool			Col3Allowed (const ZoneData& z, const Rules& r);
+// Стены столбца 3 в зонах, где он не разрешён, -> столбец «Иначе»; число перенесённых участков
+int				ApplyColumnRules (ZoneData& z, const Rules& r);
 Sheet			BuildSheet (const std::vector<ZoneData>& zones, const Rules& r, const std::wstring& section);
 
 }	// namespace otd

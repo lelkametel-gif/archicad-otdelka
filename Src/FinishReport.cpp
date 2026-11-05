@@ -135,7 +135,8 @@ xlsx::Sheet MakeDetailsSheet (const std::vector<ZoneData>& zones, const Rules& r
 			first = false;
 			x.Set (r, 10, w.elemId + (w.byContour ? L" (по контуру)" : L""), xlsx::Plain);
 			x.Set (r, 11, (w.isColumn ? L"Колонна: " : L"") + w.construction, xlsx::Plain);
-			if (w.column >= 1) x.SetNum (r, 12, w.column, xlsx::Default);
+			if (w.col3Moved) x.Set (r, 12, std::to_wstring (w.column) + L" (ГКЛ не в квартире)", xlsx::Plain);
+			else if (w.column >= 1) x.SetNum (r, 12, w.column, xlsx::Default);
 			else x.Set (r, 12, L"не определён", xlsx::Plain);
 			x.SetNum (r, 13, w.length, xlsx::Num2);
 			x.SetNum (r, 14, w.elemHeight, xlsx::Num2);
