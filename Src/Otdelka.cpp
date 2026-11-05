@@ -903,6 +903,7 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 		// ---- стены и колонны: грани, обращённые в зону (по плану, без учёта связей зоны)
 		const double zBot = (storyLevel.count (el.header.floorInd) ? storyLevel[el.header.floorInd] : 0.0) + el.zone.roomBaseLev;
 		const double zTop = zBot + (el.zone.roomHeight > 0.1 ? el.zone.roomHeight : 3.0);
+		z.finishH = std::max (0.0, (zTop - ceil) - (zBot + z.floorThick));
 		double zx1 = 1e30, zy1 = 1e30, zx2 = -1e30, zy2 = -1e30;
 		for (const auto& poly : polys)
 			for (const auto& pt : poly) {
@@ -921,7 +922,11 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 				continue;
 			nearElems.push_back (&e);
 			boxes.push_back (e.shape);
-			prio.push_back (e.isColumn ? 1 : 0);
+			// приоритет на общей грани, как при пересечении в Archicad: колонна > ж/б стена > кладка, ГКЛ, штукатурка
+			int pr = 0;
+			if (e.isColumn) pr = 2;
+			else if (otd::IsReinforcedConcrete (ReadWall (e.guid, rules, wallCache).construction)) pr = 1;
+			prio.push_back (pr);
 		}
 		// Основное — связи зоны: стены зоны считаются ниже по связям. По плану добавляются только
 		// элементы, которые ограничивают зону, но не связаны с ней (о них — заметка в таблице проверки),
@@ -965,6 +970,13 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 				if (len2 >= 0.05)
 					z.skipped.push_back (L"не взят по плану: " + elemLabel (e) + L", " + otd::FormatNum (len2, 2) +
 										 L" м — закрыт элементом скрытого слоя");
+				else {		// сам по себе выходит в зону, но грань отдана соседнему элементу
+					const std::vector<otd::Shape> alone = { e.shape };
+					const double len3 = runsLen (otd::ExposedFaces (polys, alone, 0, 0.01));
+					if (len3 >= 0.3)
+						z.skipped.push_back (L"не взят по плану: " + elemLabel (e) + L", " + otd::FormatNum (len3, 2) +
+											 L" м у контура — грань отдана соседнему элементу (облицовка, стена с бо́льшим приоритетом)");
+				}
 				continue;
 			}
 			otd::WallPiece p;

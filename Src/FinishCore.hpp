@@ -59,6 +59,8 @@ Rules			ParseRules (const std::wstring& text, std::vector<std::wstring>* warning
 std::vector<std::wstring>	MaterialCodes (const std::wstring& name);
 // Столбец по названию конструкции / строительного материала; 0 — не определён
 int				ClassifyWall (const std::wstring& name, const Rules& r);
+// Есть ли в конструкции ж/б слой (ЖБ, Ж/Б, Железобетон, Бетон) — ж/б вырезает кладку на общей грани
+bool			IsReinforcedConcrete (const std::wstring& name);
 
 // Название отделки: «00 Покраска» -> «Покраска» -> замена из правил
 std::wstring	CleanFinish (const std::wstring& raw, const Rules& r);
@@ -145,7 +147,8 @@ struct ZoneData {
 	std::vector<WallPiece>	pieces;
 	std::vector<std::wstring>	notes;			// что добавлено по плану — проверить
 	std::vector<std::wstring>	skipped;		// элементы у контура, не взятые по плану, и почему
-	double					perimeter = 0;		// периметр контура зоны, м (для сверки с длиной стен)
+	double					perimeter = 0;
+	double					finishH = 0;			// высота отделки зоны = высота зоны − пол − потолок, м		// периметр контура зоны, м (для сверки с длиной стен)
 	std::vector<double>		gaps;				// участки контура без стен, м (проходы, проёмы без стены, несвязанные элементы)
 };
 

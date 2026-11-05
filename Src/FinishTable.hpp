@@ -48,6 +48,8 @@ struct CheckRow {
 	std::wstring	floorName, number, zoneName, category, code, group, row, guid, note;
 	double			area = 0;
 	double			wall[kWallColumns + 1] = { 0, 0, 0, 0 };	// площадь стен по столбцам, м² ([0] — не определён)
+	double			wallLen = 0, openings = 0;	// суммарная длина граней стен и колонн, м; вычтенные проёмы, м²
+	double			height = 0, minH = 0;		// высота отделки зоны; наименьшая у элементов (ниже зоны), м
 	bool			excluded = false;
 };
 std::vector<CheckRow>	CheckRows (const std::vector<ZoneData>& zones, const Rules& r);

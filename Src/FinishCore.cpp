@@ -390,6 +390,15 @@ std::vector<std::wstring> MaterialCodes (const std::wstring& nameIn)
 }
 
 
+bool IsReinforcedConcrete (const std::wstring& name)
+{
+	for (const auto& c : MaterialCodes (name))
+		if (SameText (c, L"ЖБ") || SameText (c, L"Железобетон") || SameText (c, L"Бетон"))
+			return true;
+	return false;
+}
+
+
 int ClassifyWall (const std::wstring& name, const Rules& r)
 {
 	const std::vector<std::wstring> codes = MaterialCodes (name);

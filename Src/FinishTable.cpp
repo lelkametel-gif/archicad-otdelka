@@ -253,9 +253,15 @@ std::vector<CheckRow> CheckRows (const std::vector<ZoneData>& zones, const Rules
 		c.guid = z.guid;
 		std::wstring plan, low;
 		for (const auto& n : z.notes) plan += (plan.empty () ? L"" : L"; ") + n;
+		c.height = z.finishH;
+		c.minH = z.finishH > 0.01 ? z.finishH : 1e9;
 		for (const WallPiece& w : z.pieces) {
 			const int col = (w.column >= 1 && w.column <= kWallColumns) ? w.column : 0;
 			c.wall[col] += w.Area ();
+			c.wallLen += w.length;
+			c.openings += w.openings;
+			if (z.finishH < 0.01) c.height = std::max (c.height, w.finishHeight);		// высота зоны неизвестна — по элементам
+			if (w.finishHeight < c.minH - 0.005) c.minH = w.finishHeight;
 			if (w.lowBy > 0.02)
 				low += (low.empty () ? L"" : L"; ") + (w.elemId.empty () ? std::wstring (L"без ID") : w.elemId) +
 					   L" на " + FormatNum (w.lowBy, 2) + L" м";
@@ -297,8 +303,10 @@ std::vector<CheckRow> CheckRows (const std::vector<ZoneData>& zones, const Rules
 
 TableLayout LayoutCheck (const std::vector<ZoneData>& zones, const Rules& r, const std::wstring& title, const TableStyle& st)
 {
-	// Этаж | № | Имя | Категория | Код | Потолок, м² | Монолит, м² | Кладка/КБ, м² | ГКЛ, м² | Подкатегория | Отделка | Примечание
-	const std::vector<double> colW = { 12, 14, 40, 40, 12, 17, 17, 17, 17, 30, 54, 80 };
+	// Этаж | № | Имя | Категория | Код | Потолок | Длина стен | Высота отделки | Проёмы | Монолит | Кладка/КБ | ГКЛ
+	//   | Подкатегория | Отделка | Примечание
+	const std::vector<double> colW = { 12, 14, 40, 40, 12, 17, 16, 18, 15, 17, 17, 17, 30, 54, 80 };
+	const int cW = 9, cGr = 12, cFin = 13;		// первый столбец площадей стен, подкатегория, отделка
 	const int last = (int) colW.size () - 1;
 	std::vector<GCell> cells;
 	auto add = [&cells] (int r1, int c1, int r2, int c2, const std::wstring& t, bool vert = false, bool bold = false) {
@@ -307,6 +315,7 @@ TableLayout LayoutCheck (const std::vector<ZoneData>& zones, const Rules& r, con
 	};
 	auto num = [] (double v) { return v >= 0.05 ? FormatNum (v, 1) : std::wstring (L"-"); };
 	const wchar_t* head[] = { L"Этаж", L"№ зоны", L"Имя зоны", L"Категория зоны", L"Код", L"Потолок, м²",
+							  L"Длина стен, м", L"Высота отделки, м", L"Проёмы, м²",
 							  L"Стены: монолит, м²", L"Стены: кладка/КБ, м²", L"Стены: ГКЛ, м²",
 							  L"Подкатегория ведомости", L"Отделка: потолок / стены", L"Примечание (проверить)" };
 	for (int c = 0; c <= last; ++c)
@@ -326,11 +335,15 @@ TableLayout LayoutCheck (const std::vector<ZoneData>& zones, const Rules& r, con
 			add (row, 3, row, 3, c.category);
 			add (row, 4, row, 4, c.code.empty () ? L"-" : c.code);
 			add (row, 5, row, 5, FormatNum (c.area, 1));
+			add (row, 6, row, 6, num (c.wallLen));
+			add (row, 7, row, 7, c.height < 0.01 ? std::wstring (L"-") :
+				 FormatNum (c.height, 2) + (c.minH < c.height - 0.005 ? L" (до " + FormatNum (c.minH, 2) + L")" : L""));
+			add (row, 8, row, 8, num (c.openings));
 			for (int k = 1; k <= kWallColumns; ++k)
-				add (row, 5 + k, row, 5 + k, num (c.wall[k]));
-			add (row, 9, row, 9, c.group);
-			add (row, 10, row, 10, c.row);
-			add (row, 11, row, 11, c.note, false, !c.note.empty ());
+				add (row, cW - 1 + k, row, cW - 1 + k, num (c.wall[k]));
+			add (row, cGr, row, cGr, c.group);
+			add (row, cFin, row, cFin, c.row);
+			add (row, last, row, last, c.note, false, !c.note.empty ());
 			for (size_t k = firstCell; k < cells.size (); ++k)
 				cells[k].tag = c.guid;		// любой текст строки -> зона на плане
 			++row; ++i;
@@ -339,7 +352,7 @@ TableLayout LayoutCheck (const std::vector<ZoneData>& zones, const Rules& r, con
 	}
 
 	// итоги по подкатегориям — сверка с основной таблицей (потолок и стены по столбцам)
-	struct Sum { std::wstring group; int n = 0; double ceil = 0; double wall[kWallColumns + 1] = { 0, 0, 0, 0 }; };
+	struct Sum { std::wstring group; int n = 0; double ceil = 0, len = 0, open = 0; double wall[kWallColumns + 1] = { 0, 0, 0, 0 }; };
 	std::vector<Sum> sums;
 	for (const CheckRow& c : rows) {
 		if (c.excluded) continue;
@@ -347,6 +360,8 @@ TableLayout LayoutCheck (const std::vector<ZoneData>& zones, const Rules& r, con
 		if (it == sums.end ()) { Sum s; s.group = c.group; sums.push_back (s); it = sums.end () - 1; }
 		it->n += 1;
 		it->ceil += c.area;
+		it->len += c.wallLen;
+		it->open += c.openings;
 		for (int k = 0; k <= kWallColumns; ++k) it->wall[k] += c.wall[k];
 	}
 	std::stable_sort (sums.begin (), sums.end (), [&r] (const Sum& a, const Sum& b) {
@@ -364,17 +379,23 @@ TableLayout LayoutCheck (const std::vector<ZoneData>& zones, const Rules& r, con
 		for (const auto& s : sums) {
 			add (row, 0, row, 4, s.group);
 			add (row, 5, row, 5, num (s.ceil));
-			for (int k = 1; k <= kWallColumns; ++k) add (row, 5 + k, row, 5 + k, num (s.wall[k]));
-			add (row, 9, row, last, L"зон: " + std::to_wstring (s.n) + (s.wall[0] >= 0.05 ? L"; стены без столбца: " + FormatNum (s.wall[0], 1) + L" м²" : L""));
-			all.n += s.n; all.ceil += s.ceil;
+			add (row, 6, row, 6, num (s.len));
+			add (row, 7, row, 7, L"");
+			add (row, 8, row, 8, num (s.open));
+			for (int k = 1; k <= kWallColumns; ++k) add (row, cW - 1 + k, row, cW - 1 + k, num (s.wall[k]));
+			add (row, cGr, row, last, L"зон: " + std::to_wstring (s.n) + (s.wall[0] >= 0.05 ? L"; стены без столбца: " + FormatNum (s.wall[0], 1) + L" м²" : L""));
+			all.n += s.n; all.ceil += s.ceil; all.len += s.len; all.open += s.open;
 			for (int k = 0; k <= kWallColumns; ++k) all.wall[k] += s.wall[k];
 			++row;
 		}
 		for (const CheckRow& c : rows) if (c.excluded) ++nOut;
 		add (row, 0, row, 4, L"Всего в ведомости", false, true);
 		add (row, 5, row, 5, num (all.ceil), false, true);
-		for (int k = 1; k <= kWallColumns; ++k) add (row, 5 + k, row, 5 + k, num (all.wall[k]), false, true);
-		add (row, 9, row, last, L"зон: " + std::to_wstring (all.n) + (nOut > 0 ? L", не входит: " + std::to_wstring (nOut) : L""), false, true);
+		add (row, 6, row, 6, num (all.len), false, true);
+		add (row, 7, row, 7, L"");
+		add (row, 8, row, 8, num (all.open), false, true);
+		for (int k = 1; k <= kWallColumns; ++k) add (row, cW - 1 + k, row, cW - 1 + k, num (all.wall[k]), false, true);
+		add (row, cGr, row, last, L"зон: " + std::to_wstring (all.n) + (nOut > 0 ? L", не входит: " + std::to_wstring (nOut) : L""), false, true);
 		++row;
 	}
 	TableStyle s2 = st;

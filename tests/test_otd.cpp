@@ -368,6 +368,10 @@ int main (int argc, char** argv)
 		const std::vector<CheckRow> cr2 = CheckRows (zones, r);
 		double w2 = 0; for (const auto& c : cr2) if (c.guid == L"G-electro") w2 = c.wall[2];
 		NEAR (w2, 4.0 * 2.5);
+		CHECK (all.find (L"Длина стен") != std::wstring::npos);
+		double l2 = 0; for (const auto& c : cr2) if (c.guid == L"G-electro") l2 = c.wallLen;
+		NEAR (l2, 5.0);
+		CHECK (IsReinforcedConcrete (L"| Ст_В| Ш 15_ЖБ 250") && IsReinforcedConcrete (L"Ж/Б | монолит-V") && !IsReinforcedConcrete (L"| Ст_В| Ш 15_КБ 190"));
 		size_t tagged = 0;
 		for (const auto& tx : ct.texts) if (tx.tag == L"G-electro") ++tagged;
 		CHECK (tagged >= 6);		// все тексты строки зоны помечены её GUID
