@@ -844,6 +844,12 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 		z.ceilFinishRaw = au::ToW (P.Str ("stUpMat"));
 		z.wallFinishRaw = au::ToW (P.Str ("stWallMat"));
 		const otd::Polys polys = ZonePolys (memo);
+		for (const auto& poly : polys)
+			for (size_t pi = 0; pi < poly.size (); ++pi) {
+				const auto& a = poly[pi];
+				const auto& b = poly[(pi + 1) % poly.size ()];
+				z.perimeter += std::hypot (b.first - a.first, b.second - a.second);
+			}
 		ACAPI_DisposeElemMemoHdls (&memo);
 
 		// площадь потолка = чистая площадь зоны

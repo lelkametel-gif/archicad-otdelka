@@ -155,6 +155,15 @@ xlsx::Sheet MakeDetailsSheet (const std::vector<ZoneData>& zones, const Rules& r
 			x.SetNum (r, 13, g, xlsx::Num2);
 			++r;
 		}
+		if (z.perimeter > 0) {		// сверка: периметр контура и длина посчитанных граней
+			double len = 0, gap = 0;
+			for (const WallPiece& w : z.pieces) len += w.length;
+			for (double g : z.gaps) gap += g;
+			zoneCols (r);
+			x.Set (r, 11, L"Сверка: периметр зоны " + FormatNum (z.perimeter, 2) + L" м; стены и колонны " + FormatNum (len, 2) +
+						  L" м; проходы " + FormatNum (gap, 2) + L" м (колонны внутри зоны дают длину сверх периметра)", xlsx::Bold);
+			++r;
+		}
 	}
 	++r;
 	x.Set (r, 6, L"Итого потолки:", xlsx::Bold);
