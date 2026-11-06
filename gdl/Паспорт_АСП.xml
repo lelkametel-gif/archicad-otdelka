@@ -278,14 +278,14 @@ next i
 			<Flags>
 				<ParFlg_Child/>
 			</Flags>
-			<Value>2.8</Value>
+			<Value>2.5</Value>
 		</RealNum>
 		<RealNum Name="tSizeT">
 			<Description><![CDATA["Высота шрифта типа, мм"]]></Description>
 			<Flags>
 				<ParFlg_Child/>
 			</Flags>
-			<Value>2.8</Value>
+			<Value>2.5</Value>
 		</RealNum>
 		<Boolean Name="bTypeBold">
 			<Description><![CDATA["Тип жирным"]]></Description>

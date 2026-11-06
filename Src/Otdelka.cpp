@@ -1576,6 +1576,8 @@ bool FillPassport (au::Params& P, const tep::Apartment& a, const tep::Config& c)
 	setS ("stSection", a.section);
 	setS ("stKey", a.Key ());
 	setS ("sFont", L"Arial Narrow Кириллический");
+	setR ("tSizeA", 2.5);		// как у паспортов ZoneSum
+	setR ("tSizeT", 2.5);
 	return changed;
 }
 
