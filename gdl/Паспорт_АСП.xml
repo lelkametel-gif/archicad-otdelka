@@ -26,6 +26,10 @@ k = GLOB_SCALE / 1000
 ! iKind = 1 — встроенное помещение: слева «АП», справа номер, площадь, высота
 _w1 = wCol1 * k
 _w2 = wCol2 * k
+if iKind = 1 then		! встроенное помещение: «66,2 м²», «h=3,07м» длиннее площадей квартиры
+	_w1 = wCol1AP * k
+	_w2 = wCol2AP * k
+endif
 _hr = hRow2 * k
 _nRows = 4
 if iKind = 1 then _nRows = 3
@@ -258,6 +262,20 @@ next i
 				<ParFlg_Child/>
 			</Flags>
 			<Value>9.5</Value>
+		</RealNum>
+		<RealNum Name="wCol1AP">
+			<Description><![CDATA["АП: ширина ячейки «АП», мм листа"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>6.5</Value>
+		</RealNum>
+		<RealNum Name="wCol2AP">
+			<Description><![CDATA["АП: ширина ячейки номера и площади, мм листа"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>13</Value>
 		</RealNum>
 		<RealNum Name="hRow2">
 			<Description><![CDATA["Высота строки, мм листа"]]></Description>
