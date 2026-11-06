@@ -60,9 +60,11 @@ static std::vector<std::wstring> Split (const std::wstring& s, wchar_t sep)
 std::wstring Write (const std::vector<ZoneRec>& zones, const std::wstring& header)
 {
 	std::wstring out = L"# Параметры зон — надстройка «Ведомость отделки». " + Esc (header) + L"\n"
-					   L"# Z: GUID, индекс этажа, номер, имя; затем параметры: S — строка, N — число, A — массив чисел (размеры, значения через ;)\n";
+					   L"# Z: GUID, индекс этажа, номер, имя; C — категория (код, имя); затем параметры: S — строка, N — число, A — массив чисел (размеры, значения через ;)\n";
 	for (const auto& z : zones) {
 		out += L"Z\t" + z.guid + L"\t" + std::to_wstring (z.story) + L"\t" + Esc (z.number) + L"\t" + Esc (z.name) + L"\n";
+		if (!z.catCode.empty () || !z.catName.empty ())
+			out += L"C\t" + Esc (z.catCode) + L"\t" + Esc (z.catName) + L"\n";
 		for (const auto& p : z.pars) {
 			if (p.kind == 's') out += L"S\t" + p.name + L"\t" + Esc (p.str) + L"\n";
 			else if (p.kind == 'n') out += L"N\t" + p.name + L"\t" + Num (p.num) + L"\n";
@@ -95,6 +97,9 @@ std::vector<ZoneRec> Read (const std::wstring& text, std::vector<std::wstring>* 
 			z.number = Unesc (f[3]);
 			z.name = Unesc (f[4]);
 			res.push_back (z);
+		} else if (!res.empty () && f[0] == L"C" && f.size () >= 3) {
+			res.back ().catCode = Unesc (f[1]);
+			res.back ().catName = Unesc (f[2]);
 		} else if (!res.empty () && f[0] == L"S" && f.size () >= 3) {
 			Par p; p.kind = 's'; p.name = f[1]; p.str = Unesc (f[2]);
 			res.back ().pars.push_back (p);
@@ -134,6 +139,44 @@ int FindRec (const std::vector<ZoneRec>& recs, const std::wstring& guid, int sto
 		}
 	}
 	return found;
+}
+
+static std::wstring Low (const std::wstring& s)
+{
+	std::wstring r;
+	size_t b = 0, e = s.size ();
+	while (b < e && (s[b] == L' ' || s[b] == L'\t')) ++b;
+	while (e > b && (s[e - 1] == L' ' || s[e - 1] == L'\t')) --e;
+	for (size_t i = b; i < e; ++i) {
+		wchar_t c = s[i];
+		if (c >= L'A' && c <= L'Z') c = (wchar_t) (c - L'A' + L'a');
+		else if (c >= 0x410 && c <= 0x42F) c = (wchar_t) (c + 0x20);
+		else if (c == 0x401) c = 0x451;
+		r += c;
+	}
+	return r;
+}
+
+int FindCat (const std::vector<Cat>& cats, const std::wstring& code, const std::wstring& name)
+{
+	auto unique = [&cats] (auto same) {
+		int found = -1;
+		for (size_t i = 0; i < cats.size (); ++i)
+			if (same (cats[i])) {
+				if (found >= 0) return -2;
+				found = (int) i;
+			}
+		return found;
+	};
+	if (!Low (name).empty ()) {
+		const int i = unique ([&] (const Cat& c) { return Low (c.name) == Low (name); });
+		if (i >= 0) return i;
+	}
+	if (!Low (code).empty ()) {
+		const int i = unique ([&] (const Cat& c) { return Low (c.code) == Low (code); });
+		if (i >= 0) return i;
+	}
+	return -1;
 }
 
 }	// namespace zp

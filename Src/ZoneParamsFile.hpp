@@ -20,6 +20,7 @@ struct Par {
 struct ZoneRec {
 	std::wstring		guid, number, name;
 	int					story = 0;
+	std::wstring		catCode, catName;		// категория зоны (строка C); пусто — в файле нет
 	std::vector<Par>	pars;
 };
 
@@ -32,6 +33,12 @@ bool					Skip (const std::wstring& parName);
 // Поиск записи для зоны: по GUID, иначе единственная запись с тем же этажом, номером и именем (-1 — нет)
 int						FindRec (const std::vector<ZoneRec>& recs, const std::wstring& guid, int story,
 								 const std::wstring& number, const std::wstring& name, bool* byGuid = nullptr);
+
+struct Cat {
+	std::wstring		code, name;
+};
+// Категория проекта для записи из файла: сначала единственная с тем же именем, иначе единственная с тем же кодом (-1 — нет)
+int						FindCat (const std::vector<Cat>& cats, const std::wstring& code, const std::wstring& name);
 
 }	// namespace zp
 

@@ -2514,6 +2514,28 @@ int ApplyPars (API_AddParType** h, const zp::ZoneRec& rec)
 	return changed;
 }
 
+std::wstring ZoneCatCode (const API_AttributeIndex& idx)
+{
+	API_Attribute a = {};
+	a.header.typeID = API_ZoneCatID;
+	a.header.index = idx;
+	if (ACAPI_Attribute_Get (&a) != NoError)
+		return std::wstring ();
+	return otd::Trim (au::ToW (GS::UniString (a.zoneCat.catCode)));
+}
+
+// Категории зон проекта: код, имя и индекс
+void LoadZoneCats (std::vector<zp::Cat>& cats, std::vector<API_AttributeIndex>& idx)
+{
+	ACAPI_Attribute_EnumerateAttributesByType (API_ZoneCatID, [&] (API_Attribute& a) {
+		zp::Cat c;
+		c.code = otd::Trim (au::ToW (GS::UniString (a.zoneCat.catCode)));
+		c.name = AttrName (API_ZoneCatID, a.header.index);
+		cats.push_back (c);
+		idx.push_back (a.header.index);
+	});
+}
+
 // Строковый параметр зоны по имени: записать, если отличается (true — изменён)
 bool SetStrPar (API_AddParType** h, const wchar_t* parName, const std::wstring& value)
 {
@@ -2555,6 +2577,8 @@ void DoSaveZoneParams ()
 		z.story = el.header.floorInd;
 		z.number = otd::Trim (au::ToW (GS::UniString (el.zone.roomNoStr)));
 		z.name = otd::Trim (au::ToW (GS::UniString (el.zone.roomName)));
+		z.catCode = ZoneCatCode (el.zone.catInd);
+		z.catName = AttrName (API_ZoneCatID, el.zone.catInd);
 		z.pars = ReadPars (memo.params);
 		ACAPI_DisposeElemMemoHdls (&memo);
 		for (const auto& p : z.pars) {
@@ -2583,7 +2607,8 @@ void DoSaveZoneParams ()
 	if (!old.empty ())
 		lines.push_back (L"Прежний файл сохранён как «Параметры зон (предыдущие).txt».");
 	lines.push_back (L"");
-	lines.push_back (L"Теперь можно перезаписать категории зон; затем — «Восстановить параметры зон из файла».");
+	lines.push_back (L"Сохранены и категории зон (код и имя).");
+	lines.push_back (L"Теперь можно перезаписать категории зон — в Менеджере реквизитов кнопкой «<< По Имени» (не «По Индексу»!); затем — «Восстановить параметры зон из файла».");
 	ShowReport (lines);
 }
 
@@ -2607,6 +2632,12 @@ void DoRestoreZoneParams ()
 	std::wstring secPropName;
 	const API_Guid secProp = FindPropertyDef ({ L"Секция №", L"Секция", L"Номер секции" }, secPropName);
 	int secSet = 0, secFromProp = 0;
+	std::vector<zp::Cat> cats;
+	std::vector<API_AttributeIndex> catIdx;
+	LoadZoneCats (cats, catIdx);
+	int catSet = 0, catMissing = 0, catErrs = 0, recsWithCat = 0;
+	std::map<std::wstring, int> catLost;		// категории из файла, которых нет в проекте
+	for (const auto& r : recs) if (!r.catName.empty () || !r.catCode.empty ()) ++recsWithCat;
 	int zones = 0, byGuid = 0, byNum = 0, notFound = 0, changedZones = 0, changedPars = 0, hot = 0, errs = 0;
 	GSErrCode firstErr = NoError;
 	std::vector<std::wstring> missing;
@@ -2634,6 +2665,26 @@ void DoRestoreZoneParams ()
 				if (sec.empty ()) continue;
 			} else
 				(g1 ? byGuid : byNum) += 1;
+			// категория — по имени, иначе по коду (до замены категорий «По Индексу» зоны могли «переехать»)
+			if (ri >= 0 && (!recs[(size_t) ri].catName.empty () || !recs[(size_t) ri].catCode.empty ())) {
+				const zp::ZoneRec& rr = recs[(size_t) ri];
+				const int ci = zp::FindCat (cats, rr.catCode, rr.catName);
+				if (ci < 0) {
+					++catMissing;
+					catLost[rr.catCode + L" " + rr.catName] += 1;
+				} else if (!(catIdx[(size_t) ci] == el.zone.catInd)) {
+					API_Element ce = el;
+					API_Element mask;
+					ACAPI_ELEMENT_MASK_CLEAR (mask);
+					ce.zone.catInd = catIdx[(size_t) ci];
+					ACAPI_ELEMENT_MASK_SET (mask, API_ZoneType, catInd);
+					if (ACAPI_Element_Change (&ce, &mask, nullptr, 0, true) == NoError) {
+						++catSet;
+						ACAPI_Element_Get (&el);
+					} else
+						++catErrs;
+				}
+			}
 			API_ElementMemo memo = {};
 			if (ACAPI_Element_GetMemo (g, &memo, APIMemoMask_AddPars) != NoError) continue;
 			int ch = ri >= 0 ? ApplyPars (memo.params, recs[(size_t) ri]) : 0;
@@ -2657,6 +2708,18 @@ void DoRestoreZoneParams ()
 	lines.push_back (L"Зон в проекте: " + std::to_wstring (zones) + L", в файле: " + std::to_wstring (recs.size ()) +
 					 L"; найдено по GUID: " + std::to_wstring (byGuid) + L", по этажу и номеру: " + std::to_wstring (byNum) + L".");
 	lines.push_back (L"Изменено зон: " + std::to_wstring (changedZones) + L" (параметров: " + std::to_wstring (changedPars) + L"), остальные уже совпадали.");
+	if (recsWithCat == 0)
+		lines.push_back (L"Категорий зон в файле нет (файл сохранён старой версией) — категории не восстанавливались.");
+	else {
+		lines.push_back (L"Категория зоны восстановлена (по имени, иначе по коду) у " + std::to_wstring (catSet) + L" зон.");
+		if (catMissing > 0) {
+			std::wstring s;
+			for (const auto& kv : catLost) s += (s.empty () ? L"" : L", ") + otd::Trim (kv.first) + L" — " + std::to_wstring (kv.second);
+			lines.push_back (L"   Нет в проекте категорий: " + s + L".");
+		}
+		if (catErrs > 0)
+			lines.push_back (L"   Не удалось сменить категорию у " + std::to_wstring (catErrs) + L" зон.");
+	}
 	if (secProp != APINULLGuid)
 		lines.push_back (L"Параметр «Секция» — из свойства «" + secPropName + L"» (заполнено у " + std::to_wstring (secFromProp) +
 						 L" зон); изменён у " + std::to_wstring (secSet) + L" зон.");

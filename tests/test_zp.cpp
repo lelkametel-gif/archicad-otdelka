@@ -1,4 +1,4 @@
-// g++ -std=c++17 -ISrc -o /tmp/tz tests/test_zp.cpp Src/ZoneParamsFile.cpp && /tmp/tz
+﻿// g++ -std=c++17 -ISrc -o /tmp/tz tests/test_zp.cpp Src/ZoneParamsFile.cpp && /tmp/tz
 #include "ZoneParamsFile.hpp"
 #include <cstdio>
 #include <cmath>
@@ -12,6 +12,7 @@ int main ()
 	Par n; n.kind = 'n'; n.name = L"TextSize"; n.num = 2.5; a.pars.push_back (n);
 	Par ar; ar.kind = 'a'; ar.name = L"compOffX"; ar.dim1 = 2; ar.dim2 = 3; ar.arr = { 0, 1.25, -3e-5, 4, 5, 6 }; a.pars.push_back (ar);
 	ZoneRec b; b.guid = L"BBBB-2"; b.story = 2; b.number = L"201"; b.name = L"Комната";
+	b.catCode = L"1010"; b.catName = L"Комната";
 	ZoneRec c = b; c.guid = L"CCCC-3";
 	const std::wstring t = Write ({ a, b, c }, L"проект Х");
 	std::vector<std::wstring> w;
@@ -26,6 +27,12 @@ int main ()
 	CHECK (FindRec (r, L"new", -1, L"001", a.name, &g) == 0 && !g);
 	CHECK (FindRec (r, L"new", 2, L"201", L"Комната") == -1);		// два одинаковых — не угадываем
 	CHECK (Skip (L"A") && Skip (L"ROOM_NAME") && Skip (L"asAddOn_CalcArea") && !Skip (L"asAddOn_stApartmentCode") && !Skip (L"AC_TextFont_1"));
+	CHECK (r[1].catCode == L"1010" && r[1].catName == L"Комната" && r[0].catCode.empty ());
+	const std::vector<Cat> cats = { { L"1060", L"Балкон" }, { L"1010", L"Комната" }, { L"3110", L"ТП_Венткамера" }, { L"2020", L"X" }, { L"2020", L"Y" } };
+	CHECK (FindCat (cats, L"1060", L" комната ") == 1);		// имя важнее кода
+	CHECK (FindCat (cats, L"4010", L"ТП_Венткамера") == 2);	// код перекодирован — по имени
+	CHECK (FindCat (cats, L"1010", L"Старое имя") == 1);		// имени нет — по коду
+	CHECK (FindCat (cats, L"2020", L"Z") == -1);				// два с кодом — не угадываем
 	std::printf ("%d проверок, ошибок: %d\n", checks, fails);
 	return fails ? 1 : 0;
 }
