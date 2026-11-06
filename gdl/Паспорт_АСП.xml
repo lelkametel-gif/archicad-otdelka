@@ -271,7 +271,7 @@ next i
 			<Flags>
 				<ParFlg_Child/>
 			</Flags>
-			<Value><![CDATA["Arial"]]></Value>
+			<Value><![CDATA["Arial Narrow Кириллический"]]></Value>
 		</String>
 		<RealNum Name="tSizeA">
 			<Description><![CDATA["Высота шрифта площадей, мм"]]></Description>

@@ -422,7 +422,7 @@ values "WallDownHighWindow" RANGE [0,ROOM_HEIGHT]
 			<Flags>
 				<ParFlg_Hidden/>
 			</Flags>
-			<Value><![CDATA["ISOCPEUR Cyrillic"]]></Value>
+			<Value><![CDATA["Arial Narrow Кириллический"]]></Value>
 		</String>
 		<RealNum Name="AC_TextSize_1">
 			<Description><![CDATA["Размер Текста Маркера 1 (по умолчанию)"]]></Description>
@@ -900,7 +900,7 @@ values "WallDownHighWindow" RANGE [0,ROOM_HEIGHT]
 			<Flags>
 				<ParFlg_Child/>
 			</Flags>
-			<Value><![CDATA["ISOCPEUR Cyrillic"]]></Value>
+			<Value><![CDATA["Arial Narrow Кириллический"]]></Value>
 		</String>
 		<RealNum Name="TextSize">
 			<Description><![CDATA["Высота шрифта"]]></Description>

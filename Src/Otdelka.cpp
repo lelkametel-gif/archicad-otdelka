@@ -1214,6 +1214,20 @@ struct DrawResult {
 	bool			layerHidden = false;
 };
 
+// Шрифт таблиц: Arial Narrow Кириллический (иначе Arial Narrow; нет — шрифт текста по умолчанию)
+short TableFont ()
+{
+	for (const wchar_t* name : { L"Arial Narrow Кириллический", L"Arial Narrow" }) {
+		API_FontType f = {};
+		GS::UniString n = au::FromW (name);
+		f.head.index = 0;
+		f.head.uniStringNamePtr = &n;
+		if (ACAPI_Font_SearchFont (f) == NoError && f.head.index > 0)
+			return (short) f.head.index;
+	}
+	return 0;
+}
+
 GSErrCode DrawTable (const otd::TableLayout& t, DrawResult& dr)
 {
 	dr = DrawResult ();
@@ -1234,6 +1248,11 @@ GSErrCode DrawTable (const otd::TableLayout& t, DrawResult& dr)
 	GSErrCode err = ACAPI_Element_GetDefaults (&textDef, nullptr);
 	if (err != NoError)
 		return err;
+	{
+		const short fnt = TableFont ();
+		if (fnt > 0)
+			textDef.text.font = fnt;
+	}
 	API_Element lineDef = {};
 	lineDef.header.type = API_LineID;
 	err = ACAPI_Element_GetDefaults (&lineDef, nullptr);
@@ -1556,6 +1575,7 @@ bool FillPassport (au::Params& P, const tep::Apartment& a, const tep::Config& c)
 	setS ("stApt", a.code);
 	setS ("stSection", a.section);
 	setS ("stKey", a.Key ());
+	setS ("sFont", L"Arial Narrow Кириллический");
 	return changed;
 }
 

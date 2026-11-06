@@ -18,7 +18,7 @@
 			<Flags>
 				<ParFlg_Hidden/>
 			</Flags>
-			<Value><![CDATA["ISOCPEUR Cyrillic"]]></Value>
+			<Value><![CDATA["Arial Narrow Кириллический"]]></Value>
 		</String>
 		<RealNum Name="AC_TextSize_1">
 			<Description><![CDATA[""]]></Description>

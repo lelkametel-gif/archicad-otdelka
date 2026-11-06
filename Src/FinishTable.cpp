@@ -414,7 +414,7 @@ std::string LayoutSvg (const TableLayout& t)
 		for (char ch : ToUtf8 (tx.text)) {
 			if (ch == '<') esc += "&lt;"; else if (ch == '&') esc += "&amp;"; else esc += ch;
 		}
-		snprintf (buf, sizeof (buf), "<text x=\"%.1f\" y=\"%.1f\" font-family=\"Arial\" font-size=\"%.1f\" text-anchor=\"%s\" "
+		snprintf (buf, sizeof (buf), "<text x=\"%.1f\" y=\"%.1f\" font-family=\"Arial Narrow\" font-size=\"%.1f\" text-anchor=\"%s\" "
 				  "dominant-baseline=\"middle\"%s%s>", X (tx.x), Y (tx.y), tx.size * s * 1.35, tx.left ? "start" : "middle",
 				  tx.bold ? " font-weight=\"bold\"" : "", "");
 		x += buf;
