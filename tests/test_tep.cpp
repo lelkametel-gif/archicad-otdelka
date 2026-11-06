@@ -43,6 +43,18 @@ int main (int argc, char** argv)
 	NEAR (RoundTo (2.45, 1), 2.5);
 	NEAR (RoundTo (1.2, 1), 1.2);
 
+	{	// файл данных версии 1 -> 2
+		std::wstring old = L"# Версия: 1\r\n[Категории]\r\nТехпомещения подвала = 4\r\nОбщедомовые помещения = 2, 6\r\n";
+		CHECK (MigrateConfigText (old));
+		CHECK (old.find (L"# Версия: 2") != std::wstring::npos && old.find (L"= 4\r") == std::wstring::npos);
+		const Config m = ParseConfig (old);
+		CHECK (m.tech.Has (L"3010") && !m.tech.Has (L"3030") && !m.tech.Has (L"4050") && m.basementRest.Has (L"3070"));
+		std::wstring cur = DefaultConfigText ();
+		CHECK (!MigrateConfigText (cur));
+		std::wstring own = L"# Версия: 1\n[Категории]\nТехпомещения подвала = 4, 3040\n";		// своё значение — не трогаем
+		MigrateConfigText (own);
+		CHECK (own.find (L"= 4, 3040") != std::wstring::npos);
+	}
 	{	// свой файл: значения вручную и изменённые категории
 		std::vector<std::wstring> w2;
 		const Config m = ParseConfig (L"[Площади]\nЗнаков после запятой = 2\n[Категории]\nЖилые комнаты = 1010\n"
@@ -204,9 +216,12 @@ int main (int argc, char** argv)
 		return nullptr;
 	};
 	const TepRow* r5 = find (L"5");
-	CHECK (r5 && r5->cells[1] == L"51,3" && r5->cells[0] == L"-");
+	// подвал — зоны 3xxx (электрощитовая 4050 не входит); тех. — 3xxx кроме 3030, 3070; подвальное помещение и ЛК — 3030, 3070
+	CHECK (r5 && r5->cells[1] == L"26,2" && r5->cells[0] == L"-");
 	const TepRow* tech = find (L"", L"в т.ч. площадь тех. помещений:");
-	CHECK (tech && tech->cells[1] == L"25,1");
+	CHECK (tech && tech->cells[1] == L"5,0");
+	const TepRow* rest = find (L"", L"в т.ч. площадь подвального помещения и ЛК:");
+	CHECK (rest && rest->cells[1] == L"21,2");
 	const TepRow* r6 = find (L"6");
 	CHECK (r6 && r6->cells[1] == L"120,3");
 	const TepRow* r11 = find (L"11");
@@ -247,7 +262,7 @@ int main (int argc, char** argv)
 		const auto& ch = t.check;
 		CHECK (ch.count (L"5") && ch.at (L"5").count (L"2"));
 		bool tech = false;
-		for (const auto& l : ch.at (L"5/в т.ч. площадь тех. помещений:").at (L"2")) if (l == L"4050 Электрощитовая — 1 шт., 25,1 м²") tech = true;
+		for (const auto& l : ch.at (L"5/в т.ч. площадь тех. помещений:").at (L"2")) if (l == L"3060 Кладовая — 2 шт., 5,0 м²") tech = true;
 		CHECK (tech);
 		bool lg = false;
 		for (const auto& l : ch.at (L"10").at (L"2")) if (l == L"1070 Лоджия × 0,5 — 1 шт., 1,2 м²") lg = true;

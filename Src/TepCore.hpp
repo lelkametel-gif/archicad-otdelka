@@ -33,14 +33,16 @@ struct Config {
 	std::wstring	officeSep = L",";			// разделитель дробной части в паспортах помещений
 
 	CodeSet	apartment, living, kitchenDining, kitchen, balcony, loggia;
-	CodeSet	building, volume, houseArea, tech, builtIn, storage, nonResidential, common, excluded;
+	CodeSet	building, volume, houseArea, basement, tech, basementRest, builtIn, storage, nonResidential, common, excluded;
 
 	// [Вручную]: номер строки ТЭП -> секция -> текст («всего» — столбец ВСЕГО)
 	std::map<std::wstring, std::map<std::wstring, std::wstring>>	manual;
 };
 
-const int			kConfigVersion = 1;
+const int			kConfigVersion = 2;
 std::wstring		DefaultConfigText ();
+// Обновить файл данных прежней версии (значения по умолчанию прежней версии -> новые); true — текст изменён
+bool				MigrateConfigText (std::wstring& text);
 Config				ParseConfig (const std::wstring& text, std::vector<std::wstring>* warnings = nullptr);
 
 // ----------------------------------------------------------------------------- помещения и квартиры

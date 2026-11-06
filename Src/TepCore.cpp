@@ -71,7 +71,7 @@ std::wstring DefaultConfigText ()
 {
 	return
 		L"# ТЭП и паспорта квартир — данные проекта (надстройка «Ведомость отделки»)\n"
-		L"# Версия: 1\n"
+		L"# Версия: 2\n"
 		L"# Коды категорий зон: «1010, 1011» — точно; «5» — все категории 5xxx; «-5020» — кроме 5020.\n"
 		L"# Подземные этажи — этажи с отрицательным индексом (подвал = -1).\n"
 		L"\n"
@@ -96,7 +96,9 @@ std::wstring DefaultConfigText ()
 		L"Площадь застройки = 8020\n"
 		L"Строительный объём = 8010\n"
 		L"Площадь жилого здания = 8030\n"
-		L"Техпомещения подвала = 4\n"
+		L"Подвальные помещения = 3\n"
+		L"Техпомещения подвала = 3, -3030, -3070\n"
+		L"Подвальное помещение и ЛК = 3030, 3070\n"
 		L"Встроенные помещения = 5, -5020\n"
 		L"Индивидуальные кладовые = 5020\n"
 		L"Нежилые помещения = 3060, 3061\n"
@@ -109,6 +111,27 @@ std::wstring DefaultConfigText ()
 		L"#   18 = 1: 22; 2: 22; 3: 13; 4: 22; 5: 28\n"
 		L"#   2 = 1: 15; 2: 10; всего: перем.\n"
 		L"18 =\n";
+}
+
+bool MigrateConfigText (std::wstring& text)
+{
+	const size_t v = text.find (L"# Версия: 1");
+	if (v == std::wstring::npos) return false;
+	text.replace (v, 11, L"# Версия: 2");
+	// версия 1: подвал — все зоны подземных этажей, техпомещения — 4xxx; версия 2: подвал — 3xxx
+	const std::wstring oldLine = L"Техпомещения подвала = 4";
+	const size_t p = text.find (oldLine);
+	if (p != std::wstring::npos) {
+		size_t e = p + oldLine.size ();
+		while (e < text.size () && (text[e] == L' ' || text[e] == L'\t')) ++e;
+		if (e >= text.size () || text[e] == L'\r' || text[e] == L'\n') {
+			const bool crlf = e < text.size () && text[e] == L'\r';
+			const std::wstring nl = crlf ? L"\r\n" : L"\n";
+			text.replace (p, e - p, L"Подвальные помещения = 3" + nl + L"Техпомещения подвала = 3, -3030, -3070" + nl +
+									L"Подвальное помещение и ЛК = 3030, 3070");
+		}
+	}
+	return true;
 }
 
 static double ToNum (const std::wstring& s, double def)
@@ -159,7 +182,8 @@ Config ParseConfig (const std::wstring& text, std::vector<std::wstring>* warning
 				{ L"Помещения квартир", &c.apartment }, { L"Жилые комнаты", &c.living }, { L"Кухня-столовая", &c.kitchenDining },
 				{ L"Кухня", &c.kitchen }, { L"Балконы и террасы", &c.balcony }, { L"Лоджии", &c.loggia },
 				{ L"Площадь застройки", &c.building }, { L"Строительный объём", &c.volume }, { L"Строительный объем", &c.volume },
-				{ L"Площадь жилого здания", &c.houseArea }, { L"Техпомещения подвала", &c.tech }, { L"Встроенные помещения", &c.builtIn },
+				{ L"Площадь жилого здания", &c.houseArea }, { L"Подвальные помещения", &c.basement },
+				{ L"Техпомещения подвала", &c.tech }, { L"Подвальное помещение и ЛК", &c.basementRest }, { L"Встроенные помещения", &c.builtIn },
 				{ L"Индивидуальные кладовые", &c.storage }, { L"Нежилые помещения", &c.nonResidential },
 				{ L"Общедомовые помещения", &c.common }, { L"Не входят в площади", &c.excluded } };
 			bool found = false;
@@ -535,7 +559,7 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 	// Этажность — надземные этажи с первого до последнего этажа с квартирами; количество этажей = этажность + подземные.
 	std::map<std::wstring, std::set<int>> storiesAbove, storiesUnder, storiesLiving;
 	std::map<int, std::wstring> names;
-	Acc build, vol, volUnder, house, houseUnder, base, baseTech, builtIn, living, aptArea, aptTotal, aptReduced, storage, nonRes, nonResN, common;
+	Acc build, vol, volUnder, house, houseUnder, base, baseTech, baseRest, builtIn, living, aptArea, aptTotal, aptReduced, storage, nonRes, nonResN, common;
 	// для таблицы проверки: строка -> секция -> «код имя» -> (кол-во, сумма)
 	std::map<std::wstring, std::map<std::wstring, std::map<std::wstring, std::pair<int, double>>>> contrib;
 	std::map<std::wstring, std::map<std::wstring, std::vector<std::wstring>>> notes;
@@ -565,10 +589,10 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 		else storiesAbove[s].insert (r.story);
 		if (c.apartment.Has (k) && !r.underground) storiesLiving[s].insert (r.story);
 		const double a = RoundTo (r.area, c.dec);
-		if (r.underground) {
+		if (c.basement.Has (k)) {		// подвал — зоны подвальных помещений (3xxx)
 			base.v[s] += a; add (L"5", r, a);
-			if (c.tech.Has (k)) { baseTech.v[s] += a; add (kTech, r, a); }
-			else add (kBaseRest, r, a);
+			if (c.basementRest.Has (k)) { baseRest.v[s] += a; add (kBaseRest, r, a); }
+			else if (c.tech.Has (k)) { baseTech.v[s] += a; add (kTech, r, a); }
 		}
 		if (c.builtIn.Has (k)) { builtIn.v[s] += a; add (L"6", r, a); }
 		if (c.storage.Has (k)) { storage.v[s] += a; add (L"11", r, a); }
@@ -675,13 +699,9 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 	}
 	areaRow (L"4", L"Площадь жилого здания", house);
 	areaRow (L"", L"в т.ч. подземная часть:", houseUnder, true, false, L"");
-	{
-		Acc rest;
-		for (const auto& kv : base.v) rest.v[kv.first] = kv.second - (baseTech.v.count (kv.first) ? baseTech.v[kv.first] : 0);
-		areaRow (L"5", L"Площадь подвала,", base);
-		areaRow (L"", L"в т.ч. площадь тех. помещений:", baseTech, true);
-		areaRow (L"", L"в т.ч. площадь подвального помещения и ЛК:", rest, true);
-	}
+	areaRow (L"5", L"Площадь подвала,", base);
+	areaRow (L"", L"в т.ч. площадь тех. помещений:", baseTech, true);
+	areaRow (L"", L"в т.ч. площадь подвального помещения и ЛК:", baseRest, true);
 	areaRow (L"6", L"Общая площадь встроенных помещений (админ. помещ.)", builtIn);
 	areaRow (L"7", L"Жилая площадь квартир", living);
 	areaRow (L"8", L"Площадь квартир (без балконов и лоджий)", aptArea);

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <Symbol IsArchivable="false" IsPlaceable="true" MainGUID="74D2561B-1B23-4787-AE10-4A78AA88340E" MigrationValue="Normal" Owner="0" Signature="1381194061" Version="45">
 <SubKind SectVersion="1" SectionFlags="0" SubIdent="0" length_in_bytes="256" platform="Win">
 	<![CDATA[
@@ -2837,6 +2837,11 @@ if catcode<>"" then		!!! категории зон проекта (Менедж�
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "Блок кладовых", CUSTOM
+	endif
+	if catcode="3070" then
+		_catKnown=1
+		_subRegul=4
+		values "ROOM_NAME", "Подвальное помещение", CUSTOM
 	endif
 	if catcode="4010" then
 		_catKnown=1

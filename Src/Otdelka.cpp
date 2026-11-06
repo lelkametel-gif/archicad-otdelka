@@ -1327,7 +1327,14 @@ tep::Config LoadTepConfig (std::vector<std::wstring>& warnings, std::wstring& pa
 		created = true;
 		return tep::ParseConfig (tep::DefaultConfigText (), &warnings);
 	}
-	return tep::ParseConfig (otd::FromUtf8 (bytes), &warnings);
+	std::wstring text = otd::FromUtf8 (bytes);
+	if (!text.empty () && text[0] == 0xFEFF) text.erase (0, 1);
+	if (tep::MigrateConfigText (text)) {
+		WriteBytes (loc, "\xEF\xBB\xBF" + otd::ToUtf8 (text));
+		warnings.push_back (L"Файл данных ТЭП обновлён до версии " + std::to_wstring (tep::kConfigVersion) +
+							L": подвал — зоны 3xxx, тех. помещения — 3xxx кроме 3030, 3070; подвальное помещение и ЛК — 3030, 3070.");
+	}
+	return tep::ParseConfig (text, &warnings);
 }
 
 
