@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+﻿<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <AttributeFile Mv="1" Sv="2">
 	<PlatformSign>22359</PlatformSign>
 	<RegisteredAttributes>
@@ -1194,7 +1194,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>4</Code>
+				<Code>3100</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1222,7 +1222,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>4010</Code>
+				<Code>3110</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1250,7 +1250,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>4011</Code>
+				<Code>3111</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1278,7 +1278,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>4020</Code>
+				<Code>3120</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1306,7 +1306,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>4012</Code>
+				<Code>3112</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1334,7 +1334,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>4021</Code>
+				<Code>3121</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1362,7 +1362,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>4022</Code>
+				<Code>3122</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1390,7 +1390,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>4023</Code>
+				<Code>3123</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1418,7 +1418,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>4040</Code>
+				<Code>3140</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1446,7 +1446,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>4030</Code>
+				<Code>3130</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1474,7 +1474,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>4050</Code>
+				<Code>3150</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1502,7 +1502,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>4060</Code>
+				<Code>3160</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1698,7 +1698,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>6</Code>
+				<Code>2100</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1726,7 +1726,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>6011</Code>
+				<Code>2111</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1754,7 +1754,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>6010</Code>
+				<Code>2110</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1782,7 +1782,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>6012</Code>
+				<Code>2112</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1810,7 +1810,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>6013</Code>
+				<Code>2113</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1838,7 +1838,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>6014</Code>
+				<Code>2114</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1866,7 +1866,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>6020</Code>
+				<Code>2120</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1894,7 +1894,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>6030</Code>
+				<Code>2130</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1922,7 +1922,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>6040</Code>
+				<Code>2140</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -1950,7 +1950,7 @@
 				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
-				<Code>6050</Code>
+				<Code>2150</Code>
 				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
 				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
 				<RGBColor>
@@ -2268,6 +2268,118 @@
 				</RGBColor>
 				<AddParData>
 					<Location>AddPars\Zone - Подвал_Подвальное помещение - HimeraZone_АСП.xml</Location>
+				</AddParData>
+				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
+				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
+			</RoomCategory>
+			<RoomCategory Idx="81" Name="1 этаж">
+				<OdbObj Mv="4" Sv="0">
+					<OdbRef>
+						<guid>F630EEB2-E0D1-490C-BAEA-817C63895C5F</guid>
+					</OdbRef>
+					<CreaTime>35440</CreaTime>
+					<ModiTime>35442</ModiTime>
+				</OdbObj>
+				<Name>1 этаж</Name>
+				<Index>81</Index>
+				<Flags/>
+				<ModiTime>1793346381</ModiTime>
+				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
+				<ReadOnly>false</ReadOnly>
+				<Code>4</Code>
+				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
+				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
+				<RGBColor>
+					<Red>52000</Red>
+					<Green>52000</Green>
+					<Blue>52000</Blue>
+				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - 1 этаж - HimeraZone_АСП.xml</Location>
+				</AddParData>
+				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
+				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
+			</RoomCategory>
+			<RoomCategory Idx="82" Name="Индивидуальные кладовые">
+				<OdbObj Mv="4" Sv="0">
+					<OdbRef>
+						<guid>66235CE3-E208-401C-869C-3A9BC121B9A8</guid>
+					</OdbRef>
+					<CreaTime>35450</CreaTime>
+					<ModiTime>35452</ModiTime>
+				</OdbObj>
+				<Name>Индивидуальные кладовые</Name>
+				<Index>82</Index>
+				<Flags/>
+				<ModiTime>1793346381</ModiTime>
+				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
+				<ReadOnly>false</ReadOnly>
+				<Code>4010</Code>
+				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
+				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
+				<RGBColor>
+					<Red>60000</Red>
+					<Green>52000</Green>
+					<Blue>40000</Blue>
+				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Индивидуальные кладовые - HimeraZone_АСП.xml</Location>
+				</AddParData>
+				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
+				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
+			</RoomCategory>
+			<RoomCategory Idx="83" Name="Типовой этаж">
+				<OdbObj Mv="4" Sv="0">
+					<OdbRef>
+						<guid>428C8C4E-DEBB-4F04-B223-3C9272306D70</guid>
+					</OdbRef>
+					<CreaTime>35440</CreaTime>
+					<ModiTime>35442</ModiTime>
+				</OdbObj>
+				<Name>Типовой этаж</Name>
+				<Index>83</Index>
+				<Flags/>
+				<ModiTime>1793346381</ModiTime>
+				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
+				<ReadOnly>false</ReadOnly>
+				<Code>6</Code>
+				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
+				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
+				<RGBColor>
+					<Red>52000</Red>
+					<Green>52000</Green>
+					<Blue>52000</Blue>
+				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Типовой этаж - HimeraZone_АСП.xml</Location>
+				</AddParData>
+				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
+				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
+			</RoomCategory>
+			<RoomCategory Idx="84" Name="Нежилое помещение">
+				<OdbObj Mv="4" Sv="0">
+					<OdbRef>
+						<guid>86C42802-33FB-4C25-BCAA-C0F72CD77802</guid>
+					</OdbRef>
+					<CreaTime>35495</CreaTime>
+					<ModiTime>35497</ModiTime>
+				</OdbObj>
+				<Name>Нежилое помещение</Name>
+				<Index>84</Index>
+				<Flags/>
+				<ModiTime>1793346381</ModiTime>
+				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
+				<ReadOnly>false</ReadOnly>
+				<Code>6010</Code>
+				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
+				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
+				<RGBColor>
+					<Red>56000</Red>
+					<Green>48000</Green>
+					<Blue>62000</Blue>
+				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Нежилое помещение - HimeraZone_АСП.xml</Location>
 				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>

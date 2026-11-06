@@ -33,9 +33,10 @@ int main (int argc, char** argv)
 	CHECK (warn.empty ());
 	CHECK (c.dec == 1);
 	CHECK (c.living.Has (L"1010") && c.living.Has (L"1011") && !c.living.Has (L"1022"));
-	CHECK (c.builtIn.Has (L"5010") && !c.builtIn.Has (L"5020") && c.storage.Has (L"5020"));
+	CHECK (c.builtIn.Has (L"5010") && c.builtIn.Has (L"5020") && c.storage.Has (L"4010") && c.nonResidential.Has (L"6010"));
 	CHECK (c.apartment.Has (L"1070") && !c.apartment.Has (L"2010"));
-	CHECK (c.common.Has (L"2050") && c.common.Has (L"6020") && !c.common.Has (L"3030"));
+	CHECK (c.common.Has (L"2050") && c.common.Has (L"2120") && !c.common.Has (L"3030") && !c.common.Has (L"6010"));
+	CHECK (c.tech.Has (L"3150") && c.basement.Has (L"3150"));		// бывшая 4050 электрощитовая
 	NEAR (c.coefBalcony, 0.3); NEAR (c.coefLoggia, 0.5);
 	CHECK (c.manual.empty ());
 	CHECK (CodeOf (L"", L"1022 Кухня-столовая") == L"1022");
@@ -46,7 +47,11 @@ int main (int argc, char** argv)
 	{	// файл данных версии 1 -> 2
 		std::wstring old = L"# Версия: 1\r\n[Категории]\r\nТехпомещения подвала = 4\r\nОбщедомовые помещения = 2, 6\r\n";
 		CHECK (MigrateConfigText (old));
-		CHECK (old.find (L"# Версия: 3") != std::wstring::npos && old.find (L"= 4\r") == std::wstring::npos);
+		CHECK (old.find (L"# Версия: 4") != std::wstring::npos && old.find (L"= 4\r") == std::wstring::npos);
+		std::wstring v3 = L"# Версия: 3\n[Категории]\nИндивидуальные кладовые = 5020\nНежилые помещения = 3060, 3061\nОбщедомовые помещения = 2, 6\n";
+		CHECK (MigrateConfigText (v3));
+		const Config m3 = ParseConfig (v3);
+		CHECK (m3.storage.Has (L"4010") && m3.nonResidential.Has (L"6010") && !m3.nonResidential.Has (L"3060") && !m3.common.Has (L"6010"));
 		std::wstring v2 = L"# Версия: 2\n[Площади]\nРазделитель в паспортах = .\n";
 		CHECK (MigrateConfigText (v2) && ParseConfig (v2).passportSep == L",");
 		const Config m = ParseConfig (old);
@@ -89,12 +94,14 @@ int main (int argc, char** argv)
 		R (L"2", 2, L"", L"1010", L"Комната", 9.0),				// без номера квартиры
 		R (L"2", 2, L"", L"2050", L"Лифтовой холл", 37.0),
 		R (L"2", 2, L"9", L"2040", L"Коридор", 5.5),			// номер квартиры у МОП
-		R (L"2", -1, L"", L"4050", L"Электрощитовая", 25.1),
+		R (L"2", -1, L"", L"3150", L"Электрощитовая", 25.1),
 		R (L"2", -1, L"", L"3030", L"Коридор", 21.2),
 		R (L"2", -1, L"", L"3060", L"Кладовая", 2.5),
 		R (L"2", -1, L"", L"3060", L"Кладовая", 2.5),
 		R (L"2", 1, L"", L"5010", L"Офис", 120.25),
-		R (L"2", 1, L"", L"5020", L"Кладовая №1", 6.1),
+		R (L"2", 1, L"", L"4010", L"Индивидуальная кладовая", 6.1),
+		R (L"2", 2, L"", L"6010", L"Нежилое помещение", 2.5),
+		R (L"2", 2, L"", L"6010", L"Нежилое помещение", 2.5),
 		R (L"2", 1, L"", L"8020", L"Площадь застройки", 594.3),
 		R (L"2", 1, L"", L"8010", L"Строительный объем", 0),
 		R (L"1", 3, L"5", L"1010", L"Комната", 12.0),
@@ -102,7 +109,7 @@ int main (int argc, char** argv)
 		R (L"1", 3, L"5", L"1020", L"Кухня", 9.0),
 		R (L"1", 4, L"5", L"1010", L"Комната", 12.0),			// та же «5» на другом этаже — другая квартира (студия)
 	};
-	rooms[25].volume = 1000; rooms[25].underground = false;
+	rooms[27].volume = 1000; rooms[27].underground = false;
 	{
 		Room v = R (L"2", -1, L"", L"8010", L"Строительный объем", 0); v.volume = 461.6;
 		rooms.push_back (v);
@@ -219,9 +226,9 @@ int main (int argc, char** argv)
 	};
 	const TepRow* r5 = find (L"5");
 	// подвал — зоны 3xxx (электрощитовая 4050 не входит); тех. — 3xxx кроме 3030, 3070; подвальное помещение и ЛК — 3030, 3070
-	CHECK (r5 && r5->cells[1] == L"26,2" && r5->cells[0] == L"-");
+	CHECK (r5 && r5->cells[1] == L"51,3" && r5->cells[0] == L"-");
 	const TepRow* tech = find (L"", L"в т.ч. площадь тех. помещений:");
-	CHECK (tech && tech->cells[1] == L"5,0");
+	CHECK (tech && tech->cells[1] == L"30,1");
 	const TepRow* rest = find (L"", L"в т.ч. площадь подвального помещения и ЛК:");
 	CHECK (rest && rest->cells[1] == L"21,2");
 	const TepRow* r6 = find (L"6");
@@ -229,7 +236,7 @@ int main (int argc, char** argv)
 	const TepRow* r11 = find (L"11");
 	CHECK (r11 && r11->cells[1] == L"6,1");
 	const TepRow* r12 = find (L"12"); const TepRow* r13 = find (L"13");
-	CHECK (r12 && r12->cells[1] == L"5,0" && r13 && r13->cells[1] == L"2");
+	CHECK (r12 && r12->cells[1] == L"5,0" && r13 && r13->cells[1] == L"2");		// 6010 × 2 по 2,5
 	const TepRow* r14 = find (L"14");
 	CHECK (r14 && r14->cells[1] == L"42,5");		// 37,0 + 5,5 (МОП); подвал не входит
 	const TepRow* r3 = find (L"3");
@@ -264,13 +271,13 @@ int main (int argc, char** argv)
 		const auto& ch = t.check;
 		CHECK (ch.count (L"5") && ch.at (L"5").count (L"2"));
 		bool tech = false;
-		for (const auto& l : ch.at (L"5/в т.ч. площадь тех. помещений:").at (L"2")) if (l == L"3060 Кладовая — 2 шт., 5,0 м²") tech = true;
+		for (const auto& l : ch.at (L"5/в т.ч. площадь тех. помещений:").at (L"2")) if (l == L"3150 Электрощитовая — 1 шт., 25,1 м²") tech = true;
 		CHECK (tech);
 		bool lg = false;
 		for (const auto& l : ch.at (L"10").at (L"2")) if (l == L"1070 Лоджия × 0,5 — 1 шт., 1,2 м²") lg = true;
 		CHECK (lg);
 		CHECK (ch.at (L"16/1-комнатных (студий)").at (L"2").front () == L"кв. 3");
-		CHECK (ch.at (L"13").at (L"2").front () == L"3060 Кладовая — 2 шт.");
+		CHECK (ch.at (L"13").at (L"2").front () == L"6010 Нежилое помещение — 2 шт.");
 		CHECK (ch.count (L"2") && ch.at (L"2").at (L"2").front ().find (L"Этаж 1, Этаж 2") != std::wstring::npos);
 		for (const auto& r : t.rows) if (t.check.count (r.key)) for (const auto& kv : t.check.at (r.key)) for (const auto& l : kv.second)
 			std::printf ("    [%s | %s] %s\n", U (r.key).c_str (), U (kv.first).c_str (), U (l).c_str ());

@@ -39,7 +39,7 @@ struct Config {
 	std::map<std::wstring, std::map<std::wstring, std::wstring>>	manual;
 };
 
-const int			kConfigVersion = 3;
+const int			kConfigVersion = 4;
 std::wstring		DefaultConfigText ();
 // Обновить файл данных прежней версии (значения по умолчанию прежней версии -> новые); true — текст изменён
 bool				MigrateConfigText (std::wstring& text);

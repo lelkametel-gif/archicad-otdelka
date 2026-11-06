@@ -1333,7 +1333,7 @@ tep::Config LoadTepConfig (std::vector<std::wstring>& warnings, std::wstring& pa
 	if (tep::MigrateConfigText (text)) {
 		WriteBytes (loc, "\xEF\xBB\xBF" + otd::ToUtf8 (text));
 		warnings.push_back (L"Файл данных ТЭП обновлён до версии " + std::to_wstring (tep::kConfigVersion) +
-							L" (подвал — зоны 3xxx; в паспортах квартир — запятая), если эти строки не меняли вручную.");
+							L" (подвал — 3xxx; кладовые — 4xxx, нежилые — 6xxx, общедомовые — 2xxx; в паспортах — запятая), если эти строки не меняли вручную.");
 	}
 	return tep::ParseConfig (text, &warnings);
 }

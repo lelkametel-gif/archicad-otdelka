@@ -2860,60 +2860,70 @@ if catcode<>"" then		!!! категории зон проекта (Менедж�
 		_subRegul=4
 		values "ROOM_NAME", "Подвальное помещение", CUSTOM
 	endif
-	if catcode="4010" then
+	if catcode="3110" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "Венткамера", CUSTOM
 	endif
-	if catcode="4011" then
+	if catcode="3111" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "Венткамера приточная", CUSTOM
 	endif
-	if catcode="4012" then
+	if catcode="3112" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "Венткамера вытяжная", CUSTOM
 	endif
-	if catcode="4020" then
+	if catcode="3120" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "Водомерный узел", CUSTOM
 	endif
-	if catcode="4021" then
+	if catcode="3121" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "Насосная", CUSTOM
 	endif
-	if catcode="4022" then
+	if catcode="3122" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "АУПТ-насосная пожаротушения", CUSTOM
 	endif
-	if catcode="4023" then
+	if catcode="3123" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "Помещение водоочистки", CUSTOM
 	endif
-	if catcode="4030" then
+	if catcode="3130" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "ГРЩ", CUSTOM
 	endif
-	if catcode="4040" then
+	if catcode="3140" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "ИТП", CUSTOM
 	endif
-	if catcode="4050" then
+	if catcode="3150" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "Электрощитовая", CUSTOM
 	endif
-	if catcode="4060" then
+	if catcode="3160" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "Пространство для прокладки коммуникаций", CUSTOM
+	endif
+	if catcode="4010" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Индивидуальная кладовая", "Кладовая", CUSTOM
+	endif
+	if catcode="6010" then
+		_catKnown=1
+		_subRegul=2
+		values "ROOM_NAME", "Нежилое помещение", CUSTOM
 	endif
 	if catcode="5010" then
 		_catKnown=1
@@ -2940,47 +2950,47 @@ if catcode<>"" then		!!! категории зон проекта (Менедж�
 		_subRegul=5
 		values "ROOM_NAME", "ПУИ", CUSTOM
 	endif
-	if catcode="6010" then
+	if catcode="2110" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "Помещение консьержа", CUSTOM
 	endif
-	if catcode="6011" then
+	if catcode="2111" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "Диспетчерская", CUSTOM
 	endif
-	if catcode="6012" then
+	if catcode="2112" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "Помещение охраны", CUSTOM
 	endif
-	if catcode="6013" then
+	if catcode="2113" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "Рабочее помещение", CUSTOM
 	endif
-	if catcode="6014" then
+	if catcode="2114" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "Подсобное помещение", CUSTOM
 	endif
-	if catcode="6020" then
+	if catcode="2120" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "ПУИ", "ПУИ с с/у", CUSTOM
 	endif
-	if catcode="6030" then
+	if catcode="2130" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "Мусоросборная камера", CUSTOM
 	endif
-	if catcode="6040" then
+	if catcode="2140" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "УК", CUSTOM
 	endif
-	if catcode="6050" then
+	if catcode="2150" then
 		_catKnown=1
 		_subRegul=4
 		values "ROOM_NAME", "С/у", CUSTOM
