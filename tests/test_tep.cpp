@@ -180,6 +180,16 @@ int main (int argc, char** argv)
 			R (L"2", 2, L"115", L"1070", L"Лоджия", 2.4, 3.6, -1.2, 6, 0) };
 		const auto aa = BuildApartments (rr, c);
 		CHECK (aa.size () == 1);
+		{	// кв. 182: лоджия 2,86 м² — в штампе «1,4 (2,9)»; приведённая = 56,1 + 1,4 = 57,5 (не 1,5 от округлённых 2,9)
+			std::vector<Room> q = {
+				R (L"2", 9, L"182", L"1010", L"Комната", 14.1), R (L"2", 9, L"182", L"1010", L"Комната", 11.1),
+				R (L"2", 9, L"182", L"1022", L"Кухня-столовая", 16.7), R (L"2", 9, L"182", L"1050", L"Совм. с/у", 3.5),
+				R (L"2", 9, L"182", L"1050", L"Совм. с/у", 3.8), R (L"2", 9, L"182", L"1030", L"Прихожая", 3.8),
+				R (L"2", 9, L"182", L"1040", L"Коридор", 3.1), R (L"2", 9, L"182", L"1070", L"Лоджия", 2.86) };
+			const auto qa = BuildApartments (q, c);
+			CHECK (qa.size () == 1 && std::fabs (qa[0].area - 56.1) < 1e-9 && std::fabs (qa[0].total - 59.0) < 1e-9 &&
+				   std::fabs (qa[0].reduced - 57.5) < 1e-9);
+		}
 		if (!aa.empty ()) {
 			FreeSpace fs;
 			for (const auto& r : rr) fs.AddShape ({ { r.x1, r.y1 }, { r.x2, r.y1 }, { r.x2, r.y2 }, { r.x1, r.y2 } });

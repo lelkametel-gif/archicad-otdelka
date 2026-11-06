@@ -304,7 +304,7 @@ std::vector<Apartment> BuildApartments (const std::vector<Room>& rooms, const Co
 		else if (c.loggia.Has (r.catCode)) k = c.coefLoggia;
 		if (k < 1) {
 			a.total += ar;
-			a.reduced += RoundTo (ar * k, c.dec);
+			a.reduced += RoundTo (r.area * k, c.dec);	// как в штампе зоны: «1,4 (2,9)» — от точной площади, не от 2,9
 		} else {
 			a.area += ar;
 			a.total += ar;
