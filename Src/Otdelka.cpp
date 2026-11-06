@@ -2149,9 +2149,9 @@ void DoTep ()
 		WriteBytes (loc, xlsx::BuildXlsx ({ tep::TepSheet (t, title), tep::TepCheckSheet (t), tep::ApartmentsSheet (d.rooms, [&d] () { auto v = d.apts; v.insert (v.end (), d.premises.begin (), d.premises.end ()); return v; } (), d.cfg) })) : APIERR_GENERAL;
 	if (xlErr == NoError)
 		lines.push_back (L"Excel: " + PathOf (loc) + L" (листы «Проверка ТЭП» — что учтено в каждой строке по секциям, «Квартиры» — каждая квартира с помещениями).");
-	lines.push_back (L"Справа от ТЭП на листе — таблица проверки: по каждой строке и секции какие зоны (код, имя, количество, сумма), этажи и квартиры учтены.");
 	else
 		lines.push_back (L"Не удалось записать «" + fname + L"» в папку «Документы». Если файл открыт в Excel — закройте и запустите ещё раз.");
+	lines.push_back (L"Справа от ТЭП на листе — таблица проверки: по каждой строке и секции какие зоны (код, имя, количество, сумма), этажи и квартиры учтены.");
 
 	for (const auto& fi : t.floorsInfo)
 		lines.push_back (L"   " + fi);
