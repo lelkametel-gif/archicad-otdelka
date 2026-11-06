@@ -31,6 +31,7 @@
 #include "XlsxWriter.hpp"
 #include "FinishTable.hpp"
 #include "TepCore.hpp"
+#include "ZoneParamsFile.hpp"
 #include "ApiUtils.hpp"
 
 #include <algorithm>
@@ -2184,4 +2185,217 @@ void DoTepData ()
 	OpenInShell (path, true);
 	if (!warn.empty ())
 		ShowReport (warn);
+}
+
+// ============================================================================= параметры зон: сохранить / восстановить
+// Перед сменой штампа категорий (Менеджер реквизитов) — сохранить; после — восстановить: Archicad при смене штампа
+// сбрасывает параметры зон на значения категории («Квартира», «Секция» и т. п. пропадают).
+
+namespace {
+
+const wchar_t*	kZoneParamsFile = L"Параметры зон.txt";
+
+std::vector<zp::Par> ReadPars (API_AddParType** h)
+{
+	std::vector<zp::Par> res;
+	if (h == nullptr) return res;
+	const Int32 n = (Int32) ((size_t) BMGetHandleSize ((GSConstHandle) h) / sizeof (API_AddParType));
+	for (Int32 i = 0; i < n; ++i) {
+		const API_AddParType& p = (*h)[i];
+		if (p.typeID == APIParT_Separator || p.typeID == APIParT_Title || p.typeID == APIParT_Dictionary || p.typeID == API_ZombieParT)
+			continue;
+		zp::Par q;
+		q.name = au::ToW (GS::UniString (p.name));
+		if (zp::Skip (q.name)) continue;
+		if (p.typeMod == API_ParArray) {
+			if (p.typeID == APIParT_CString || p.value.array == nullptr) continue;		// массивы строк не сохраняем
+			q.kind = 'a';
+			q.dim1 = p.dim1;
+			q.dim2 = p.dim2;
+			const Int32 cnt = p.dim1 * (p.dim2 > 0 ? p.dim2 : 1);
+			const double* arr = *reinterpret_cast<double**> (p.value.array);
+			for (Int32 k = 0; k < cnt; ++k) q.arr.push_back (arr[k]);
+		} else if (p.typeID == APIParT_CString) {
+			q.kind = 's';
+			q.str = au::ToW (GS::UniString (p.value.uStr));
+		} else {
+			q.kind = 'n';
+			q.num = p.value.real;
+		}
+		res.push_back (q);
+	}
+	return res;
+}
+
+// Записать значения из rec в параметры; возвращает число изменённых параметров
+int ApplyPars (API_AddParType** h, const zp::ZoneRec& rec)
+{
+	if (h == nullptr) return 0;
+	std::map<std::wstring, const zp::Par*> byName;
+	for (const auto& p : rec.pars) byName[au::Lower (p.name)] = &p;
+	int changed = 0;
+	const Int32 n = (Int32) ((size_t) BMGetHandleSize ((GSConstHandle) h) / sizeof (API_AddParType));
+	for (Int32 i = 0; i < n; ++i) {
+		API_AddParType& p = (*h)[i];
+		const std::wstring name = au::ToW (GS::UniString (p.name));
+		if (zp::Skip (name)) continue;
+		const auto it = byName.find (au::Lower (name));
+		if (it == byName.end ()) continue;
+		const zp::Par& q = *it->second;
+		if (p.typeMod == API_ParArray) {
+			if (q.kind != 'a' || p.typeID == APIParT_CString) continue;
+			const Int32 cnt = q.dim1 * (q.dim2 > 0 ? q.dim2 : 1);
+			if (cnt <= 0 || (Int32) q.arr.size () < cnt) continue;
+			bool same = p.value.array != nullptr && p.dim1 == q.dim1 && p.dim2 == q.dim2;
+			if (same) {
+				const double* arr = *reinterpret_cast<double**> (p.value.array);
+				for (Int32 k = 0; k < cnt && same; ++k) same = std::fabs (arr[k] - q.arr[(size_t) k]) < 1e-12;
+			}
+			if (same) continue;
+			if (p.value.array != nullptr) BMKillHandle (&p.value.array);
+			p.dim1 = q.dim1;
+			p.dim2 = q.dim2;
+			p.value.array = BMAllocateHandle ((GSSize) ((size_t) cnt * sizeof (double)), ALLOCATE_CLEAR, 0);
+			double* arr = *reinterpret_cast<double**> (p.value.array);
+			for (Int32 k = 0; k < cnt; ++k) arr[k] = q.arr[(size_t) k];
+			++changed;
+		} else if (p.typeID == APIParT_CString) {
+			if (q.kind != 's') continue;
+			if (au::ToW (GS::UniString (p.value.uStr)) == q.str) continue;
+			GS::ucsncpy (p.value.uStr, au::FromW (q.str).ToUStr (), API_UAddParStrLen - 1);
+			p.value.uStr[API_UAddParStrLen - 1] = 0;
+			++changed;
+		} else {
+			if (q.kind != 'n') continue;
+			if (std::fabs (p.value.real - q.num) < 1e-12) continue;
+			p.value.real = q.num;
+			++changed;
+		}
+	}
+	return changed;
+}
+
+}	// namespace
+
+void DoSaveZoneParams ()
+{
+	{
+		API_DatabaseInfo fp = {};
+		fp.typeID = APIWind_FloorPlanID;
+		ACAPI_Database_ChangeCurrentDatabase (&fp);
+	}
+	GS::Array<API_Guid> list;
+	ACAPI_Element_GetElemList (API_ElemType (API_ZoneID), &list);
+	std::vector<zp::ZoneRec> recs;
+	int withApt = 0, withSec = 0;
+	for (const API_Guid& g : list) {
+		API_Element el = {};
+		el.header.guid = g;
+		if (ACAPI_Element_Get (&el) != NoError) continue;
+		API_ElementMemo memo = {};
+		if (ACAPI_Element_GetMemo (g, &memo, APIMemoMask_AddPars) != NoError) continue;
+		zp::ZoneRec z;
+		z.guid = au::ToW (APIGuidToString (g));
+		z.story = el.header.floorInd;
+		z.number = otd::Trim (au::ToW (GS::UniString (el.zone.roomNoStr)));
+		z.name = otd::Trim (au::ToW (GS::UniString (el.zone.roomName)));
+		z.pars = ReadPars (memo.params);
+		ACAPI_DisposeElemMemoHdls (&memo);
+		for (const auto& p : z.pars) {
+			if (p.kind != 's' || otd::Trim (p.str).empty ()) continue;
+			if (otd::SameText (p.name, L"asAddOn_stApartmentCode")) ++withApt;
+			if (otd::SameText (p.name, L"asAddOn_stStaircaseCode")) ++withSec;
+		}
+		recs.push_back (z);
+	}
+	std::vector<std::wstring> lines;
+	IO::Location loc, prev;
+	if (!DocumentsFile (kZoneParamsFile, loc)) {
+		ShowReport ({ L"Не удалось найти папку «Документы»." });
+		return;
+	}
+	std::string old;
+	if (ReadBytes (loc, old) && DocumentsFile (L"Параметры зон (предыдущие).txt", prev))
+		WriteBytes (prev, old);
+	const std::wstring header = L"Проект: " + TepFileBase () + L", зон: " + std::to_wstring (recs.size ());
+	if (WriteBytes (loc, "\xEF\xBB\xBF" + otd::ToUtf8 (zp::Write (recs, header))) != NoError) {
+		ShowReport ({ L"Не удалось записать «" + std::wstring (kZoneParamsFile) + L"» в «Документы»." });
+		return;
+	}
+	lines.push_back (L"Параметры зон сохранены: " + std::to_wstring (recs.size ()) + L" зон, " + PathOf (loc) + L".");
+	lines.push_back (L"   с заполненным параметром «Квартира»: " + std::to_wstring (withApt) + L", «Секция»: " + std::to_wstring (withSec) + L".");
+	if (!old.empty ())
+		lines.push_back (L"Прежний файл сохранён как «Параметры зон (предыдущие).txt».");
+	lines.push_back (L"");
+	lines.push_back (L"Теперь можно перезаписать категории зон; затем — «Восстановить параметры зон из файла».");
+	ShowReport (lines);
+}
+
+void DoRestoreZoneParams ()
+{
+	IO::Location loc;
+	std::string bytes;
+	if (!DocumentsFile (kZoneParamsFile, loc) || !ReadBytes (loc, bytes)) {
+		ShowReport ({ L"Нет файла «" + std::wstring (kZoneParamsFile) + L"» в «Документах». Сначала — «Сохранить параметры зон в файл»." });
+		return;
+	}
+	std::vector<std::wstring> warn;
+	const std::vector<zp::ZoneRec> recs = zp::Read (otd::FromUtf8 (bytes), &warn);
+	{
+		API_DatabaseInfo fp = {};
+		fp.typeID = APIWind_FloorPlanID;
+		ACAPI_Database_ChangeCurrentDatabase (&fp);
+	}
+	GS::Array<API_Guid> list;
+	ACAPI_Element_GetElemList (API_ElemType (API_ZoneID), &list);
+	int zones = 0, byGuid = 0, byNum = 0, notFound = 0, changedZones = 0, changedPars = 0, hot = 0, errs = 0;
+	GSErrCode firstErr = NoError;
+	std::vector<std::wstring> missing;
+	ACAPI_CallUndoableCommand (au::FromW (L"Восстановить параметры зон"), [&] () -> GSErrCode {
+		for (const API_Guid& g : list) {
+			API_Element el = {};
+			el.header.guid = g;
+			if (ACAPI_Element_Get (&el) != NoError) continue;
+			++zones;
+			if (el.header.hotlinkGuid != APINULLGuid) { ++hot; continue; }
+			const std::wstring number = otd::Trim (au::ToW (GS::UniString (el.zone.roomNoStr)));
+			const std::wstring name = otd::Trim (au::ToW (GS::UniString (el.zone.roomName)));
+			bool g1 = false;
+			const int ri = zp::FindRec (recs, au::ToW (APIGuidToString (g)), el.header.floorInd, number, name, &g1);
+			if (ri < 0) {
+				++notFound;
+				if (missing.size () < 15) missing.push_back (number + L" " + name);
+				continue;
+			}
+			(g1 ? byGuid : byNum) += 1;
+			API_ElementMemo memo = {};
+			if (ACAPI_Element_GetMemo (g, &memo, APIMemoMask_AddPars) != NoError) continue;
+			const int ch = ApplyPars (memo.params, recs[(size_t) ri]);
+			if (ch > 0) {
+				API_Element mask;
+				ACAPI_ELEMENT_MASK_CLEAR (mask);
+				const GSErrCode e = ACAPI_Element_Change (&el, &mask, &memo, APIMemoMask_AddPars, true);
+				if (e != NoError) { if (errs++ == 0) firstErr = e; }
+				else { ++changedZones; changedPars += ch; }
+			}
+			ACAPI_DisposeElemMemoHdls (&memo);
+		}
+		return NoError;
+	});
+	std::vector<std::wstring> lines;
+	lines.push_back (L"Восстановление параметров зон из " + PathOf (loc) + L".");
+	lines.push_back (L"Зон в проекте: " + std::to_wstring (zones) + L", в файле: " + std::to_wstring (recs.size ()) +
+					 L"; найдено по GUID: " + std::to_wstring (byGuid) + L", по этажу и номеру: " + std::to_wstring (byNum) + L".");
+	lines.push_back (L"Изменено зон: " + std::to_wstring (changedZones) + L" (параметров: " + std::to_wstring (changedPars) + L"), остальные уже совпадали.");
+	if (notFound > 0) {
+		std::wstring s;
+		for (const auto& m : missing) s += (s.empty () ? L"" : L", ") + m;
+		lines.push_back (L"Нет в файле: " + std::to_wstring (notFound) + L" зон (" + s + (notFound > (int) missing.size () ? L"…" : L"") + L").");
+	}
+	if (hot > 0) lines.push_back (L"Зоны из модулей (hotlink) не меняются: " + std::to_wstring (hot) + L" — восстановите в файлах модулей.");
+	if (errs > 0) lines.push_back (L"Не удалось изменить: " + std::to_wstring (errs) + L" зон (код " + std::to_wstring (firstErr) + L").");
+	lines.push_back (L"Не восстанавливаются: A, B, ROOM_*, GLOB_*, вычисленные площади (asAddOn_CalcArea / FloorArea / FillArea) и массивы строк.");
+	lines.push_back (L"Отменить — Ctrl+Z.");
+	for (const auto& w : warn) lines.push_back (w);
+	ShowReport (lines);
 }

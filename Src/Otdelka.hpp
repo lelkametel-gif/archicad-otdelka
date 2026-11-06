@@ -12,5 +12,8 @@ void DoPassports ();
 void DoTep ();
 // Открыть файл данных ТЭП и паспортов
 void DoTepData ();
+// Параметры всех зон: сохранить в файл «Документы\\Параметры зон.txt» / восстановить из него (перед и после смены штампа категорий)
+void DoSaveZoneParams ();
+void DoRestoreZoneParams ();
 
 #endif

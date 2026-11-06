@@ -25,6 +25,8 @@ static GSErrCode MenuCommandHandler (const API_MenuParams* menuParams)
 		else if (menuParams->menuItemRef.itemIndex == 4) DoPassports ();
 		else if (menuParams->menuItemRef.itemIndex == 5) DoTep ();
 		else if (menuParams->menuItemRef.itemIndex == 6) DoTepData ();
+		else if (menuParams->menuItemRef.itemIndex == 7) DoSaveZoneParams ();
+		else if (menuParams->menuItemRef.itemIndex == 8) DoRestoreZoneParams ();
 	}
 	return NoError;
 }
