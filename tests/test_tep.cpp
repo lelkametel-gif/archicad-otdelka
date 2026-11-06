@@ -239,6 +239,25 @@ int main (int argc, char** argv)
 	CHECK (r16 && r16->cells[1] == L"3" && r16->total == L"5 (100%)");
 	const TepRow* st = find (L"", L"1-комнатных (студий)");
 	CHECK (st && st->total == L"2 (40%)");
+	CHECK (find (L"", L"1-комнатных") && find (L"", L"2-х комнатных") && find (L"", L"1-комнатных с кухней-столовой") &&
+		   find (L"", L"2-х комнатных с кухней-столовой"));		// всегда, как в томе АР
+	{
+		const TepRow* one = find (L"", L"1-комнатных");
+		CHECK (one && one->total == L"0 (0%)");
+		const auto& ch = t.check;
+		CHECK (ch.count (L"5") && ch.at (L"5").count (L"2"));
+		bool tech = false;
+		for (const auto& l : ch.at (L"5/в т.ч. площадь тех. помещений:").at (L"2")) if (l == L"4050 Электрощитовая — 1 шт., 25,1 м²") tech = true;
+		CHECK (tech);
+		bool lg = false;
+		for (const auto& l : ch.at (L"10").at (L"2")) if (l == L"1070 Лоджия × 0,5 — 1 шт., 1,2 м²") lg = true;
+		CHECK (lg);
+		CHECK (ch.at (L"16/1-комнатных (студий)").at (L"2").front () == L"кв. 3");
+		CHECK (ch.at (L"13").at (L"2").front () == L"3060 Кладовая — 2 шт.");
+		CHECK (ch.count (L"2") && ch.at (L"2").at (L"2").front ().find (L"Этаж 1, Этаж 2") != std::wstring::npos);
+		for (const auto& r : t.rows) if (t.check.count (r.key)) for (const auto& kv : t.check.at (r.key)) for (const auto& l : kv.second)
+			std::printf ("    [%s | %s] %s\n", U (r.key).c_str (), U (kv.first).c_str (), U (l).c_str ());
+	}
 	CHECK (t.rows.size () > 20);
 	const TepRow* r1 = find (L"1");
 	CHECK (r1 && r1->cells[1] == L"594,3" && r1->total == L"594,3");
@@ -257,12 +276,13 @@ int main (int argc, char** argv)
 		}
 	}
 
-	const otd::TableLayout lay = LayoutTep (t, L"Технико-экономические показатели");
+	otd::TableLayout lay = LayoutTep (t, L"Технико-экономические показатели");
+	otd::AppendLayout (lay, LayoutTepCheck (t, L"Проверка ТЭП: какие зоны учтены"), 20);
 	CHECK (!lay.segs.empty () && lay.width > 150);
 	if (argc > 1) { std::ofstream f (argv[1], std::ios::binary); f << otd::LayoutSvg (lay); }
 	if (argc > 2) {
 		std::ofstream f (argv[2], std::ios::binary);
-		f << xlsx::BuildXlsx ({ TepSheet (t, L"Технико-экономические показатели"), ApartmentsSheet (rooms, apts, c) });
+		f << xlsx::BuildXlsx ({ TepSheet (t, L"Технико-экономические показатели"), TepCheckSheet (t), ApartmentsSheet (rooms, apts, c) });
 	}
 	for (const auto& r : t.rows) {
 		std::string s = U (r.num) + " | " + U (r.name).substr (0, 60) + " | " + U (r.unit) + " | " + U (r.total);

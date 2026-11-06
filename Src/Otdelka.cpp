@@ -2138,15 +2138,18 @@ void DoTep ()
 	DrawResult dr;
 	std::wstring step;
 	const std::wstring wsName = L"ТЭП";
-	const GSErrCode wsErr = DrawOnWorksheet (wsName, L"ТЭП", tep::LayoutTep (t, title), L"ТЭП: таблица", existed, dr, step);
+	otd::TableLayout layout = tep::LayoutTep (t, title);
+	otd::AppendLayout (layout, tep::LayoutTepCheck (t, L"Проверка ТЭП: какие зоны учтены"), 20);
+	const GSErrCode wsErr = DrawOnWorksheet (wsName, L"ТЭП", layout, L"ТЭП: таблица", existed, dr, step);
 	DrawReport (wsName, wsErr, existed, dr, step, lines);
 
 	IO::Location loc;
 	const std::wstring fname = TepFileBase () + L".xlsx";
 	const GSErrCode xlErr = DocumentsFile (fname, loc) ?
-		WriteBytes (loc, xlsx::BuildXlsx ({ tep::TepSheet (t, title), tep::ApartmentsSheet (d.rooms, [&d] () { auto v = d.apts; v.insert (v.end (), d.premises.begin (), d.premises.end ()); return v; } (), d.cfg) })) : APIERR_GENERAL;
+		WriteBytes (loc, xlsx::BuildXlsx ({ tep::TepSheet (t, title), tep::TepCheckSheet (t), tep::ApartmentsSheet (d.rooms, [&d] () { auto v = d.apts; v.insert (v.end (), d.premises.begin (), d.premises.end ()); return v; } (), d.cfg) })) : APIERR_GENERAL;
 	if (xlErr == NoError)
-		lines.push_back (L"Excel: " + PathOf (loc) + L" (лист «Квартиры» — каждая квартира с помещениями, для проверки).");
+		lines.push_back (L"Excel: " + PathOf (loc) + L" (листы «Проверка ТЭП» — что учтено в каждой строке по секциям, «Квартиры» — каждая квартира с помещениями).");
+	lines.push_back (L"Справа от ТЭП на листе — таблица проверки: по каждой строке и секции какие зоны (код, имя, количество, сумма), этажи и квартиры учтены.");
 	else
 		lines.push_back (L"Не удалось записать «" + fname + L"» в папку «Документы». Если файл открыт в Excel — закройте и запустите ещё раз.");
 

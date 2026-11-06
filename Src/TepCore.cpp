@@ -536,12 +536,29 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 	std::map<std::wstring, std::set<int>> storiesAbove, storiesUnder, storiesLiving;
 	std::map<int, std::wstring> names;
 	Acc build, vol, volUnder, house, houseUnder, base, baseTech, builtIn, living, aptArea, aptTotal, aptReduced, storage, nonRes, nonResN, common;
+	// для таблицы проверки: строка -> секция -> «код имя» -> (кол-во, сумма)
+	std::map<std::wstring, std::map<std::wstring, std::map<std::wstring, std::pair<int, double>>>> contrib;
+	std::map<std::wstring, std::map<std::wstring, std::vector<std::wstring>>> notes;
+	auto add = [&contrib] (const std::wstring& key, const Room& r, double v, const std::wstring& suffix = std::wstring ()) {
+		auto& e = contrib[key][r.section][r.catCode + L" " + r.name + suffix];
+		e.first += 1;
+		e.second += v;
+	};
+	const std::wstring kVolU = L"3/в т.ч. подземная часть:", kVolA = L"3/в т.ч. надземная часть:", kHouseU = L"4/в т.ч. подземная часть:";
+	const std::wstring kTech = L"5/в т.ч. площадь тех. помещений:", kBaseRest = L"5/в т.ч. площадь подвального помещения и ЛК:";
 	for (const Room& r : rooms) {
 		const std::wstring& s = r.section;
 		const std::wstring& k = r.catCode;
-		if (c.building.Has (k)) build.v[s] += r.area;
-		if (c.volume.Has (k)) { vol.v[s] += r.volume; if (r.underground) volUnder.v[s] += r.volume; }
-		if (c.houseArea.Has (k)) { house.v[s] += r.area; if (r.underground) houseUnder.v[s] += r.area; }
+		if (c.building.Has (k)) { build.v[s] += r.area; add (L"1", r, r.area); }
+		if (c.volume.Has (k)) {
+			vol.v[s] += r.volume; add (L"3", r, r.volume);
+			if (r.underground) { volUnder.v[s] += r.volume; add (kVolU, r, r.volume); }
+			else add (kVolA, r, r.volume);
+		}
+		if (c.houseArea.Has (k)) {
+			house.v[s] += r.area; add (L"4", r, r.area);
+			if (r.underground) { houseUnder.v[s] += r.area; add (kHouseU, r, r.area); }
+		}
 		if (c.excluded.Has (k)) continue;
 		names[r.story] = r.storyName;
 		if (r.underground) storiesUnder[s].insert (r.story);
@@ -549,18 +566,39 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 		if (c.apartment.Has (k) && !r.underground) storiesLiving[s].insert (r.story);
 		const double a = RoundTo (r.area, c.dec);
 		if (r.underground) {
-			base.v[s] += a;
-			if (c.tech.Has (k)) baseTech.v[s] += a;
+			base.v[s] += a; add (L"5", r, a);
+			if (c.tech.Has (k)) { baseTech.v[s] += a; add (kTech, r, a); }
+			else add (kBaseRest, r, a);
 		}
-		if (c.builtIn.Has (k)) builtIn.v[s] += a;
-		if (c.storage.Has (k)) storage.v[s] += a;
-		if (c.nonResidential.Has (k)) { nonRes.v[s] += a; nonResN.v[s] += 1; }
-		if (c.common.Has (k) && !r.underground) common.v[s] += a;
+		if (c.builtIn.Has (k)) { builtIn.v[s] += a; add (L"6", r, a); }
+		if (c.storage.Has (k)) { storage.v[s] += a; add (L"11", r, a); }
+		if (c.nonResidential.Has (k)) { nonRes.v[s] += a; nonResN.v[s] += 1; add (L"12", r, a); add (L"13", r, 1); }
+		if (c.common.Has (k) && !r.underground) { common.v[s] += a; add (L"14", r, a); }
 	}
 	std::map<std::wstring, std::map<int, int>> types;		// секция -> порядок типа -> количество
 	std::map<int, std::wstring> typeNames;
+	// как в томе АР: 1- и 2-комнатные — всегда отдельно с кухней и с кухней-столовой, студии — отдельно
+	for (int o : { 0, 11, 12, 21, 22 })
+		typeNames[o] = o == 0 ? TypeName (1, false, true) : TypeName (o / 10, o % 10 == 2, false);
+	std::map<std::wstring, std::map<int, std::vector<std::wstring>>> typeApts;	// секция -> тип -> номера квартир
 	Acc aptN;
 	for (const Apartment& a : apts) {
+		typeApts[a.section][a.typeOrder].push_back (a.code);
+		for (size_t i : a.rooms) {
+			if (i >= rooms.size ()) continue;
+			const Room& r = rooms[i];
+			const double ar = RoundTo (r.area, c.dec);
+			double kf = 1;
+			if (c.balcony.Has (r.catCode)) kf = c.coefBalcony;
+			else if (c.loggia.Has (r.catCode)) kf = c.coefLoggia;
+			if (c.living.Has (r.catCode)) add (L"7", r, ar);
+			if (kf < 1) {
+				add (L"9", r, ar);
+				add (L"10", r, RoundTo (ar * kf, c.dec), L" × " + FormatNum (kf, 1));
+			} else {
+				add (L"8", r, ar); add (L"9", r, ar); add (L"10", r, ar);
+			}
+		}
 		living.v[a.section] += a.living;
 		aptArea.v[a.section] += a.area;
 		aptTotal.v[a.section] += a.total;
@@ -571,8 +609,11 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 	}
 
 	const int d = c.dec;
+	std::wstring lastNum;
 	auto row = [&] (const std::wstring& num, const std::wstring& name, const std::wstring& unit, bool sub = false, bool bold = false) -> TepRow& {
 		TepRow r; r.num = num; r.name = name; r.unit = unit; r.sub = sub; r.bold = bold;
+		if (!num.empty ()) lastNum = num;
+		r.key = num.empty () ? lastNum + L"/" + name : num;
 		t.rows.push_back (r);
 		return t.rows.back ();
 	};
@@ -614,6 +655,11 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 						   std::to_wstring (under.size ()) + L" (" + list (under) + L")";
 		if (!over.empty ()) txt += L", выше последнего жилого — не считаются: " + list (over);
 		t.floorsInfo.push_back (txt + L".");
+		auto full = [&names] (const std::vector<int>& v) { std::wstring r; for (int st : v) r += (r.empty () ? L"" : L", ") + names[st]; return r; };
+		if (!above.empty ()) notes[L"2"][s].push_back (L"этажи: " + full (above) + (top > -100000 ? L" (последний жилой — " + names[top] + L")" : L""));
+		if (!above.empty () || !under.empty ()) notes[L"2.1"][s].push_back (L"этажность + подземные");
+		if (!under.empty ()) notes[L"2.1/в т.ч. подземных:"][s].push_back (L"этажи: " + full (under));
+		if (!over.empty ()) notes[L"2"][s].push_back (L"не считаются (выше последнего жилого): " + full (over));
 	}
 
 	areaRow (L"1", L"Площадь застройки", build);
@@ -655,6 +701,8 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 		for (const auto& s : t.sections) {
 			auto g = [&s] (const Acc& a) { return a.v.count (s) ? a.v.at (s) : 0.0; };
 			sum.v[s] = g (aptReduced) + g (builtIn) + g (nonRes) + g (storage) + g (common);
+			notes[L"15"][s].push_back (L"п.10 " + Area (g (aptReduced), d) + L" + п.6 " + Area (g (builtIn), d) + L" + п.12 " + Area (g (nonRes), d) +
+									   L" + п.11 " + Area (g (storage), d) + L" + п.14 " + Area (g (common), d));
 		}
 		areaRow (L"15", L"Общая площадь помещений жилого дома: общая площадь квартир (приведенная) + общая площадь офисов + "
 						L"площадь нежилых помещений + площадь индивидуальных кладовых + площадь общедомовых помещений", sum);
@@ -669,6 +717,16 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 			int sum = 0;
 			for (const auto& s : t.sections) {
 				const int n = types.count (s) && types.at (s).count (tn.first) ? types.at (s).at (tn.first) : 0;
+				if (n > 0) {
+					std::vector<std::wstring> codes = typeApts[s][tn.first];
+					std::sort (codes.begin (), codes.end (), [] (const std::wstring& x, const std::wstring& y) {
+						const double a = ToNum (x, 1e18), b = ToNum (y, 1e18);
+						return a != b ? a < b : x < y;
+					});
+					std::wstring list;
+					for (const auto& cd : codes) list += (list.empty () ? L"" : L", ") + cd;
+					notes[q.key][s].push_back (L"кв. " + list);
+				}
 				sum += n;
 				q.cells.push_back (n == 0 ? std::wstring (L"-") : std::to_wstring (n));
 			}
@@ -679,8 +737,10 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 		TepRow& r = row (L"17", L"Количество жителей (" + FormatNum (c.perResident, 0) + L" м²/чел.), по СП 42.13330.2016 (табл. 5.1)", L"чел.");
 		long sum = 0;
 		for (const auto& s : t.sections) {
-			const long n = std::lround (std::floor ((aptReduced.v.count (s) ? aptReduced.v.at (s) : 0) / c.perResident + 0.5));
+			const double red = aptReduced.v.count (s) ? aptReduced.v.at (s) : 0;
+			const long n = std::lround (std::floor (red / c.perResident + 0.5));
 			sum += n;
+			if (red > 0) notes[L"17"][s].push_back (L"п.10 " + Area (red, d) + L" / " + FormatNum (c.perResident, 0) + L" м²");
 			r.cells.push_back (Count ((double) n));
 		}
 		r.total = Count ((double) sum);
@@ -704,6 +764,7 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 			if (jt == it->second.end ()) continue;
 			r.cells[i] = jt->second;
 			anySec = true;
+			notes[r.key][t.sections[i]].push_back (L"задано вручную (файл данных, [Вручную])");
 		}
 		for (size_t i = 0; i < t.sections.size (); ++i) {
 			if (r.cells[i] == L"-") continue;
@@ -715,6 +776,24 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 		if (tt != it->second.end ()) r.total = tt->second;
 		else if (anySec && numeric)
 			r.total = r.unit == L"чел." || r.unit == L"шт." || r.unit == L"эт." ? Count (sum) : Area (sum, d);
+	}
+
+	// таблица проверки
+	for (const auto& r : t.rows) {
+		const bool cnt = r.key == L"13";
+		const bool vol3 = r.unit == L"м³";
+		for (const auto& sec : t.sections) {
+			std::vector<std::wstring> lines;
+			const auto ci = contrib.find (r.key);
+			if (ci != contrib.end () && ci->second.count (sec))
+				for (const auto& kv : ci->second.at (sec))
+					lines.push_back (kv.first + L" — " + std::to_wstring (kv.second.first) + L" шт." +
+									 (cnt ? std::wstring () : L", " + Area (kv.second.second, d) + (vol3 ? L" м³" : L" м²")));
+			const auto ni = notes.find (r.key);
+			if (ni != notes.end () && ni->second.count (sec))
+				for (const auto& n : ni->second.at (sec)) lines.push_back (n);
+			if (!lines.empty ()) t.check[r.key][sec] = lines;
+		}
 	}
 	return t;
 }
@@ -742,6 +821,66 @@ otd::TableLayout LayoutTep (const Tep& t, const std::wstring& title)
 	otd::TableStyle st;
 	st.minRow = 6;
 	return otd::RenderGrid (cells, r, 1, colW, st, title);
+}
+
+otd::TableLayout LayoutTepCheck (const Tep& t, const std::wstring& title)
+{
+	const std::vector<double> colW = { 12, 72, 16, 150, 24 };
+	std::vector<otd::GridCell> cells;
+	auto add = [&cells] (int r1, int r2, int c, const std::wstring& s, bool bold = false, bool left = false, double indent = 0) {
+		otd::GridCell g; g.r1 = r1; g.r2 = r2; g.c1 = g.c2 = c; g.text = s; g.bold = bold; g.left = left; g.indent = indent;
+		cells.push_back (g);
+	};
+	add (0, 0, 0, L"№ п/п", true); add (0, 0, 1, L"Показатель", true); add (0, 0, 2, L"Секция", true);
+	add (0, 0, 3, L"Что учтено: код и имя зоны — количество, сумма; этажи; квартиры", true); add (0, 0, 4, L"Значение", true);
+	int r = 1;
+	for (const auto& row : t.rows) {
+		const auto it = t.check.find (row.key);
+		if (it == t.check.end ()) continue;
+		const int r0 = r;
+		for (size_t i = 0; i < t.sections.size (); ++i) {
+			const auto jt = it->second.find (t.sections[i]);
+			if (jt == it->second.end ()) continue;
+			std::wstring txt;
+			for (const auto& l : jt->second) txt += (txt.empty () ? L"" : L"\n") + l;
+			add (r, r, 2, t.sections[i]);
+			add (r, r, 3, txt, false, true);
+			add (r, r, 4, i < row.cells.size () ? row.cells[i] : std::wstring ());
+			++r;
+		}
+		add (r0, r - 1, 0, row.num);
+		add (r0, r - 1, 1, row.name, false, true, row.sub ? 4.0 : 0.0);
+	}
+	otd::TableStyle st;
+	st.minRow = 6;
+	return otd::RenderGrid (cells, r, 1, colW, st, title);
+}
+
+xlsx::Sheet TepCheckSheet (const Tep& t)
+{
+	xlsx::Sheet sh;
+	sh.name = L"Проверка ТЭП";
+	const wchar_t* head[] = { L"№ п/п", L"Показатель", L"Секция", L"Что учтено", L"Значение" };
+	const double w[] = { 7, 45, 9, 100, 12 };
+	for (int i = 0; i < 5; ++i) { sh.Set (0, i, head[i], xlsx::Head); sh.colWidth[i] = w[i]; }
+	int r = 1;
+	for (const auto& row : t.rows) {
+		const auto it = t.check.find (row.key);
+		if (it == t.check.end ()) continue;
+		for (size_t i = 0; i < t.sections.size (); ++i) {
+			const auto jt = it->second.find (t.sections[i]);
+			if (jt == it->second.end ()) continue;
+			for (const auto& l : jt->second) {
+				sh.Set (r, 0, row.num, xlsx::Text);
+				sh.Set (r, 1, (row.sub ? L"      " : L"") + row.name, xlsx::TextLeft);
+				sh.Set (r, 2, t.sections[i], xlsx::Text);
+				sh.Set (r, 3, l, xlsx::TextLeft);
+				sh.Set (r, 4, i < row.cells.size () ? row.cells[i] : std::wstring (), xlsx::Text);
+				++r;
+			}
+		}
+	}
+	return sh;
 }
 
 xlsx::Sheet TepSheet (const Tep& t, const std::wstring& title)

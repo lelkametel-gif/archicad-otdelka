@@ -117,6 +117,7 @@ bool					PlaceFree (const Apartment& a, double bx1, double by1, double bx2, doub
 
 // ----------------------------------------------------------------------------- ТЭП
 struct TepRow {
+	std::wstring				key;				// номер, у «в т.ч.» — «номер/название»
 	std::wstring				num, name, unit;
 	bool						sub = false;		// «в т.ч.» — с отступом
 	bool						bold = false;
@@ -128,6 +129,8 @@ struct Tep {
 	std::vector<std::wstring>	sections;
 	std::vector<TepRow>			rows;
 	std::vector<std::wstring>	floorsInfo;		// какие этажи вошли в этажность / подземные — для отчёта
+	// таблица проверки: строка ТЭП (key) -> секция -> что учтено (строки текста)
+	std::map<std::wstring, std::map<std::wstring, std::vector<std::wstring>>>	check;
 };
 
 // Подземный этаж: отметка ниже −0,5 м, отрицательный индекс или «подвал / подполье / подзем» в названии
@@ -137,6 +140,9 @@ std::vector<std::wstring>	SortSections (std::vector<std::wstring> s);
 Tep				BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts, const Config& c);
 otd::TableLayout	LayoutTep (const Tep& t, const std::wstring& title);
 xlsx::Sheet		TepSheet (const Tep& t, const std::wstring& title);
+// Таблица проверки ТЭП: по каждой строке и секции — какие зоны (категории, кол-во, сумма), этажи, квартиры учтены
+otd::TableLayout	LayoutTepCheck (const Tep& t, const std::wstring& title);
+xlsx::Sheet		TepCheckSheet (const Tep& t);
 xlsx::Sheet		ApartmentsSheet (const std::vector<Room>& rooms, const std::vector<Apartment>& apts, const Config& c);
 
 }	// namespace tep
