@@ -1559,7 +1559,15 @@ bool FillPassport (au::Params& P, const tep::Apartment& a, const tep::Config& c)
 		setS ("stArea", tep::OfficeArea (a.area, c));
 		setS ("stTotal", L"");
 		setS ("stReduced", L"");
-		setS ("stHeight", tep::OfficeHeight (a.height, c));
+		// высота, исправленная вручную, сохраняется: stHeightAuto — что надстройка поставила в прошлый раз
+		const std::wstring hAuto = tep::OfficeHeight (a.height, c);
+		const std::wstring hCur = otd::Trim (au::ToW (P.Str ("stHeight")));
+		const bool manual = P.Has ("stHeightAuto") && !hCur.empty () && hCur != hAuto &&
+							hCur != otd::Trim (au::ToW (P.Str ("stHeightAuto")));
+		if (!manual)
+			setS ("stHeight", hAuto);
+		if (P.Has ("stHeightAuto"))
+			setS ("stHeightAuto", hAuto);
 	} else {
 		setS ("stLiving", tep::PassportNum (a.living, c));
 		setS ("stArea", tep::PassportNum (a.area, c));

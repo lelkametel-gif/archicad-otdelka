@@ -141,6 +141,14 @@ next i
 			</Flags>
 			<Value><![CDATA[""]]></Value>
 		</String>
+		<String Name="stHeightAuto">
+			<Description><![CDATA["Высота, поставленная надстройкой (служебный)"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
 		<String Name="stType">
 			<Description><![CDATA["Тип квартиры"]]></Description>
 			<Flags>
