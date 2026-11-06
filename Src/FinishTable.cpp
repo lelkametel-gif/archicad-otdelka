@@ -440,8 +440,21 @@ const wchar_t* const kChkOk			= L"Верно";
 const wchar_t* const kChkNotes		= L"Замечания";
 const wchar_t* const kChkNoFinish	= L"Ошибка: нет отделки";
 const wchar_t* const kChkNoGroup	= L"Ошибка: нет подкатегории";
+const wchar_t* const kChkHeader		= L"Ошибка: категория-заголовок";
 const wchar_t* const kChkExcluded	= L"Не входит";
 const wchar_t* const kChkOtherLib	= L"Другой объект зоны";
+
+
+// Категории-разделители в списке («1 Квартиры», «2100 ---ЭКСПЛУАТАЦИОННЫЕ…», «7 ---ЧЕРДАК---»): зонам не назначаются
+bool IsHeaderCategory (const ZoneData& z)
+{
+	const std::wstring code = Trim (z.catCode);
+	if (z.name.find (L"---") != std::wstring::npos)
+		return true;
+	if (code.size () == 1 && code[0] >= L'0' && code[0] <= L'9')
+		return true;
+	return code.size () == 4 && code.compare (2, 2, L"00") == 0;
+}
 
 
 ZoneCheck CheckZone (const ZoneData& z, const Rules& r)
@@ -461,6 +474,9 @@ ZoneCheck CheckZone (const ZoneData& z, const Rules& r)
 		if (!pre.empty () && code.compare (0, pre.size (), pre) == 0) { matched = true; break; }
 	}
 	std::vector<std::wstring> errs, notes;
+	const bool header = IsHeaderCategory (z);
+	if (header)
+		errs.push_back (L"категория «" + z.name + L"» — заголовок раздела, назначьте зоне категорию с полным кодом");
 	bool noFinish = false;
 	if (CleanFinish (z.ceilFinishRaw, r).empty ()) { errs.push_back (L"не задана отделка потолка"); noFinish = true; }
 	if (CleanFinish (z.wallFinishRaw, r).empty ()) { errs.push_back (L"не задана отделка стен"); noFinish = true; }
@@ -484,7 +500,7 @@ ZoneCheck CheckZone (const ZoneData& z, const Rules& r)
 		}
 	}
 	if (!errs.empty ())
-		c.check = noFinish ? kChkNoFinish : kChkNoGroup;
+		c.check = header ? kChkHeader : noFinish ? kChkNoFinish : kChkNoGroup;
 	else
 		c.check = notes.empty () ? kChkOk : kChkNotes;
 	for (const auto& s : errs) c.note += (c.note.empty () ? L"" : L"; ") + s;
@@ -516,6 +532,7 @@ std::vector<OverrideRuleDef> OverrideRules (const Rules& r)
 		d.rgb[0] = cr; d.rgb[1] = cg; d.rgb[2] = cb;
 		res.push_back (d);
 	};
+	add (CheckRuleName (kChkHeader), kPropCheck, kChkHeader,		0.70, 0.10, 0.10);	// тёмно-красный
 	add (CheckRuleName (kChkNoFinish), kPropCheck, kChkNoFinish,	1.00, 0.25, 0.25);	// красный
 	add (CheckRuleName (kChkNoGroup), kPropCheck, kChkNoGroup,		0.90, 0.30, 0.85);	// малиновый
 	add (CheckRuleName (kChkOtherLib), kPropCheck, kChkOtherLib,	0.55, 0.55, 0.55);	// тёмно-серый
@@ -551,7 +568,7 @@ std::vector<OverrideComboDef> OverrideCombos (const Rules& r)
 	OverrideComboDef sub, chk;
 	sub.name = L"Отделка - подкатегории";
 	chk.name = L"Отделка - проверка зон";
-	for (const wchar_t* v : { kChkNoFinish, kChkNoGroup, kChkOtherLib, kChkExcluded }) {
+	for (const wchar_t* v : { kChkHeader, kChkNoFinish, kChkNoGroup, kChkOtherLib, kChkExcluded }) {
 		sub.rules.push_back (CheckRuleName (v));
 		chk.rules.push_back (CheckRuleName (v));
 	}

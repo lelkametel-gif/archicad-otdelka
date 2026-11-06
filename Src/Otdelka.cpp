@@ -1923,7 +1923,7 @@ void MarkReport (const MarkResult& mr, std::vector<std::wstring>& lines)
 		return;
 	}
 	std::wstring cnt;
-	for (const wchar_t* v : { otd::kChkOk, otd::kChkNotes, otd::kChkNoFinish, otd::kChkNoGroup, otd::kChkExcluded, otd::kChkOtherLib }) {
+	for (const wchar_t* v : { otd::kChkOk, otd::kChkNotes, otd::kChkHeader, otd::kChkNoFinish, otd::kChkNoGroup, otd::kChkExcluded, otd::kChkOtherLib }) {
 		const auto it = mr.byCheck.find (v);
 		if (it != mr.byCheck.end ())
 			cnt += (cnt.empty () ? L"" : L", ") + std::wstring (v) + L" — " + std::to_wstring (it->second);
@@ -2514,6 +2514,23 @@ int ApplyPars (API_AddParType** h, const zp::ZoneRec& rec)
 	return changed;
 }
 
+// Строковый параметр зоны по имени: записать, если отличается (true — изменён)
+bool SetStrPar (API_AddParType** h, const wchar_t* parName, const std::wstring& value)
+{
+	if (h == nullptr) return false;
+	const Int32 n = (Int32) ((size_t) BMGetHandleSize ((GSConstHandle) h) / sizeof (API_AddParType));
+	for (Int32 i = 0; i < n; ++i) {
+		API_AddParType& p = (*h)[i];
+		if (p.typeID != APIParT_CString || p.typeMod == API_ParArray) continue;
+		if (!otd::SameText (au::ToW (GS::UniString (p.name)), parName)) continue;
+		if (otd::Trim (au::ToW (GS::UniString (p.value.uStr))) == value) return false;
+		GS::ucsncpy (p.value.uStr, au::FromW (value).ToUStr (), API_UAddParStrLen - 1);
+		p.value.uStr[API_UAddParStrLen - 1] = 0;
+		return true;
+	}
+	return false;
+}
+
 }	// namespace
 
 void DoSaveZoneParams ()
@@ -2587,6 +2604,9 @@ void DoRestoreZoneParams ()
 	}
 	GS::Array<API_Guid> list;
 	ACAPI_Element_GetElemList (API_ElemType (API_ZoneID), &list);
+	std::wstring secPropName;
+	const API_Guid secProp = FindPropertyDef ({ L"Секция №", L"Секция", L"Номер секции" }, secPropName);
+	int secSet = 0, secFromProp = 0;
 	int zones = 0, byGuid = 0, byNum = 0, notFound = 0, changedZones = 0, changedPars = 0, hot = 0, errs = 0;
 	GSErrCode firstErr = NoError;
 	std::vector<std::wstring> missing;
@@ -2601,15 +2621,26 @@ void DoRestoreZoneParams ()
 			const std::wstring name = otd::Trim (au::ToW (GS::UniString (el.zone.roomName)));
 			bool g1 = false;
 			const int ri = zp::FindRec (recs, au::ToW (APIGuidToString (g)), el.header.floorInd, number, name, &g1);
+			// секция — из свойства «Секция №», если оно у зоны заполнено (важнее значения в файле)
+			std::wstring sec;
+			if (secProp != APINULLGuid && ReadPropertyText (g, secProp, sec) && !otd::Trim (sec).empty ()) {
+				sec = otd::Trim (sec);
+				++secFromProp;
+			} else
+				sec.clear ();
 			if (ri < 0) {
 				++notFound;
 				if (missing.size () < 15) missing.push_back (number + L" " + name);
-				continue;
-			}
-			(g1 ? byGuid : byNum) += 1;
+				if (sec.empty ()) continue;
+			} else
+				(g1 ? byGuid : byNum) += 1;
 			API_ElementMemo memo = {};
 			if (ACAPI_Element_GetMemo (g, &memo, APIMemoMask_AddPars) != NoError) continue;
-			const int ch = ApplyPars (memo.params, recs[(size_t) ri]);
+			int ch = ri >= 0 ? ApplyPars (memo.params, recs[(size_t) ri]) : 0;
+			if (!sec.empty () && SetStrPar (memo.params, L"asAddOn_stStaircaseCode", sec)) {
+				++ch;
+				++secSet;
+			}
 			if (ch > 0) {
 				API_Element mask;
 				ACAPI_ELEMENT_MASK_CLEAR (mask);
@@ -2626,6 +2657,11 @@ void DoRestoreZoneParams ()
 	lines.push_back (L"Зон в проекте: " + std::to_wstring (zones) + L", в файле: " + std::to_wstring (recs.size ()) +
 					 L"; найдено по GUID: " + std::to_wstring (byGuid) + L", по этажу и номеру: " + std::to_wstring (byNum) + L".");
 	lines.push_back (L"Изменено зон: " + std::to_wstring (changedZones) + L" (параметров: " + std::to_wstring (changedPars) + L"), остальные уже совпадали.");
+	if (secProp != APINULLGuid)
+		lines.push_back (L"Параметр «Секция» — из свойства «" + secPropName + L"» (заполнено у " + std::to_wstring (secFromProp) +
+						 L" зон); изменён у " + std::to_wstring (secSet) + L" зон.");
+	else
+		lines.push_back (L"Свойство «Секция №» в проекте не найдено — параметр «Секция» взят из файла.");
 	if (notFound > 0) {
 		std::wstring s;
 		for (const auto& m : missing) s += (s.empty () ? L"" : L", ") + m;

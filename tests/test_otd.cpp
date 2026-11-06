@@ -443,10 +443,14 @@ int main (int argc, char** argv)
 		c = CheckZone (w, r);
 		CHECK (c.check == kChkNoGroup && c.subcat == r.otherGroup);
 		CHECK (OtherLibCheck (L"Зона").check == kChkOtherLib);
+		ZoneData h = z; h.wallFinishRaw = L"Обои"; h.catCode = L"5"; h.name = L"5 Встроенные помещения";
+		CHECK (CheckZone (h, r).check == kChkHeader);
+		h.catCode = L"2100"; h.name = L"-------ЭКСПЛУАТАЦИОННЫЕ ПОМЕЩЕНИЯ------"; CHECK (CheckZone (h, r).check == kChkHeader);
+		h.catCode = L"2110"; h.name = L"ЭП_Помещение консьержа"; CHECK (CheckZone (h, r).check == kChkNotes);
 		const std::vector<OverrideRuleDef> rd = OverrideRules (r);
 		const std::vector<OverrideComboDef> cd = OverrideCombos (r);
-		CHECK (rd.size () == 6 + r.groupOrder.size ());
-		CHECK (cd.size () == 2 && cd[0].rules.size () == 4 + r.groupOrder.size () && cd[1].rules.size () == 6);
+		CHECK (rd.size () == 7 + r.groupOrder.size ());
+		CHECK (cd.size () == 2 && cd[0].rules.size () == 5 + r.groupOrder.size () && cd[1].rules.size () == 7);
 		std::set<std::wstring> names;
 		for (const auto& d : rd) names.insert (d.name);
 		CHECK (names.size () == rd.size ());

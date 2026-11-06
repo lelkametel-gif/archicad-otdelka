@@ -85,12 +85,14 @@ extern const wchar_t* const kChkOk;				// «Верно»
 extern const wchar_t* const kChkNotes;			// «Замечания» — в расчёте, но проверить
 extern const wchar_t* const kChkNoFinish;		// «Ошибка: нет отделки»
 extern const wchar_t* const kChkNoGroup;		// «Ошибка: нет подкатегории»
+extern const wchar_t* const kChkHeader;		// «Ошибка: категория-заголовок» (код 1…9, x100, имя с «---»)
 extern const wchar_t* const kChkExcluded;		// «Не входит» (8, 9)
 extern const wchar_t* const kChkOtherLib;		// «Другой объект зоны»
 
 struct ZoneCheck {
 	std::wstring	subcat, check, note;
 };
+bool			IsHeaderCategory (const ZoneData& z);
 ZoneCheck		CheckZone (const ZoneData& z, const Rules& r);
 ZoneCheck		OtherLibCheck (const std::wstring& libName);
 
