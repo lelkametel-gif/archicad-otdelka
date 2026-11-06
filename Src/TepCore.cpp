@@ -494,6 +494,13 @@ bool PlaceFree (const Apartment& a, double bx1, double by1, double bx2, double b
 }
 
 // ----------------------------------------------------------------------------- ТЭП
+bool IsUnderground (int index, double level, const std::wstring& name)
+{
+	if (index < 0 || level < -0.5) return true;
+	const std::wstring n = otd::Lower (name);
+	return n.find (L"подвал") != std::wstring::npos || n.find (L"подполь") != std::wstring::npos || n.find (L"подзем") != std::wstring::npos;
+}
+
 std::vector<std::wstring> SortSections (std::vector<std::wstring> s)
 {
 	std::sort (s.begin (), s.end (), [] (const std::wstring& a, const std::wstring& b) {
@@ -527,6 +534,7 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 	// этажи: Above — надземные с зонами; Under — подземные с зонами; Living — надземные с помещениями квартир.
 	// Этажность — надземные этажи с первого до последнего этажа с квартирами; количество этажей = этажность + подземные.
 	std::map<std::wstring, std::set<int>> storiesAbove, storiesUnder, storiesLiving;
+	std::map<int, std::wstring> names;
 	Acc build, vol, volUnder, house, houseUnder, base, baseTech, builtIn, living, aptArea, aptTotal, aptReduced, storage, nonRes, nonResN, common;
 	for (const Room& r : rooms) {
 		const std::wstring& s = r.section;
@@ -535,6 +543,7 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 		if (c.volume.Has (k)) { vol.v[s] += r.volume; if (r.underground) volUnder.v[s] += r.volume; }
 		if (c.houseArea.Has (k)) { house.v[s] += r.area; if (r.underground) houseUnder.v[s] += r.area; }
 		if (c.excluded.Has (k)) continue;
+		names[r.story] = r.storyName;
 		if (r.underground) storiesUnder[s].insert (r.story);
 		else storiesAbove[s].insert (r.story);
 		if (c.apartment.Has (k) && !r.underground) storiesLiving[s].insert (r.story);
@@ -589,6 +598,23 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 		}
 		r.total = vals.size () == 1 ? (*vals.begin () == 0 ? std::wstring (L"-") : std::to_wstring (*vals.begin ())) : std::wstring (L"перем.");
 	};
+
+	for (const auto& s : t.sections) {
+		auto list = [&names] (const std::vector<int>& v) {
+			std::wstring r;
+			if (v.empty ()) return std::wstring (L"нет");
+			if (v.size () <= 3) { for (int st : v) r += (r.empty () ? L"" : L", ") + names[st]; return r; }
+			return names[v.front ()] + L" … " + names[v.back ()];
+		};
+		std::vector<int> above, under, over;
+		const int top = storiesLiving.count (s) ? *storiesLiving.at (s).rbegin () : -100000;
+		if (storiesAbove.count (s)) for (int st : storiesAbove.at (s)) (st <= top ? above : over).push_back (st);
+		if (storiesUnder.count (s)) under.assign (storiesUnder.at (s).begin (), storiesUnder.at (s).end ());
+		std::wstring txt = L"Секция " + s + L": этажность " + std::to_wstring (above.size ()) + L" (" + list (above) + L"), подземные " +
+						   std::to_wstring (under.size ()) + L" (" + list (under) + L")";
+		if (!over.empty ()) txt += L", выше последнего жилого — не считаются: " + list (over);
+		t.floorsInfo.push_back (txt + L".");
+	}
 
 	areaRow (L"1", L"Площадь застройки", build);
 	floorsRow (row (L"2", L"Этажность здания", L"эт."), 0);

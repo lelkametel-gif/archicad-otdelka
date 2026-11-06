@@ -222,6 +222,10 @@ int main (int argc, char** argv)
 	// секция 1: 3 и 4 этажи с квартирами -> 2 и 2
 	CHECK (r2 && r2->cells[1] == L"2" && r2->cells[0] == L"2");
 	CHECK (r21 && r21->cells[1] == L"3" && r21->cells[0] == L"2" && r21->total == L"перем.");
+	CHECK (IsUnderground (0, -3.3, L"Этаж 0") && IsUnderground (0, 0, L"Подвал") && IsUnderground (-1, 0, L"x"));
+	CHECK (!IsUnderground (0, 0, L"Этаж 1") && !IsUnderground (3, 6.6, L"Этаж 4"));
+	CHECK (t.floorsInfo.size () == 2);
+	for (const auto& f : t.floorsInfo) std::printf ("  %s\n", U (f).c_str ());
 	{	// этаж только с ЛК выше последнего жилого не считается ни в этажность, ни в количество этажей
 		std::vector<Room> r2r = rooms;
 		r2r.push_back (R (L"2", 11, L"", L"2010", L"Лестничная клетка", 15.7));

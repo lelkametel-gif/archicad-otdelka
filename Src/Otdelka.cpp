@@ -1346,7 +1346,11 @@ std::vector<tep::Room> ReadRooms (const Settings& st, const std::vector<StoryRec
 	const std::wstring libPrefix = otd::Lower (st.zoneLib);
 	LayerCache layerCache;
 	std::map<int, std::wstring> storyName;
-	for (const auto& sr : stories) storyName[sr.index] = sr.name;
+	std::map<int, bool> storyUnder;
+	for (const auto& sr : stories) {
+		storyName[sr.index] = sr.name;
+		storyUnder[sr.index] = tep::IsUnderground (sr.index, sr.level, sr.name);
+	}
 	for (const API_Guid& g : list) {
 		++rs.all;
 		API_Element el = {};
@@ -1402,7 +1406,7 @@ std::vector<tep::Room> ReadRooms (const Settings& st, const std::vector<StoryRec
 		if (r.name.empty ()) r.name = catName;
 		r.story = el.header.floorInd;
 		r.storyName = storyName.count (r.story) ? storyName[r.story] : std::to_wstring (r.story);
-		r.underground = r.story < 0;
+		r.underground = storyUnder.count (r.story) ? storyUnder[r.story] : r.story < 0;
 		r.height = el.zone.roomHeight;
 		if (el.header.hotlinkGuid != APINULLGuid) ++rs.fromHotlink;
 		{
@@ -2146,10 +2150,12 @@ void DoTep ()
 	else
 		lines.push_back (L"Не удалось записать «" + fname + L"» в папку «Документы». Если файл открыт в Excel — закройте и запустите ещё раз.");
 
+	for (const auto& fi : t.floorsInfo)
+		lines.push_back (L"   " + fi);
 	for (const auto& r : t.rows)
 		if (r.num == L"9" || r.num == L"10" || r.num == L"16")
 			lines.push_back (L"   " + r.num + L". " + r.name.substr (0, 40) + (r.name.size () > 40 ? L"…" : L"") + L" — " + r.total + L" " + r.unit);
-	lines.push_back (L"Этажность — надземные этажи с первого до последнего этажа с квартирами; количество этажей = этажность + подземные (индекс этажа < 0); этаж выше последнего жилого (только ЛК) не считается. Строку 18 и любые другие можно задать вручную в файле данных, раздел [Вручную].");
+	lines.push_back (L"Этажность — надземные этажи с первого до последнего этажа с квартирами; количество этажей = этажность + подземные (подвал: отметка этажа ниже −0,5 м, отрицательный индекс или «подвал / подполье / подзем» в названии); этаж выше последнего жилого (только ЛК) не считается. Строку 18 и любые другие можно задать вручную в файле данных, раздел [Вручную].");
 	AptFooter (d, lines);
 	ShowReport (lines);
 }

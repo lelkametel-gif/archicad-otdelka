@@ -127,7 +127,11 @@ struct TepRow {
 struct Tep {
 	std::vector<std::wstring>	sections;
 	std::vector<TepRow>			rows;
+	std::vector<std::wstring>	floorsInfo;		// какие этажи вошли в этажность / подземные — для отчёта
 };
+
+// Подземный этаж: отметка ниже −0,5 м, отрицательный индекс или «подвал / подполье / подзем» в названии
+bool			IsUnderground (int index, double level, const std::wstring& name);
 
 std::vector<std::wstring>	SortSections (std::vector<std::wstring> s);
 Tep				BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts, const Config& c);
