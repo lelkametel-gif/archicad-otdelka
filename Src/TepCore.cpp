@@ -630,8 +630,9 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 	}
 	std::map<std::wstring, std::map<int, int>> types;		// секция -> порядок типа -> количество
 	std::map<int, std::wstring> typeNames;
-	// как в томе АР: 1- и 2-комнатные — всегда отдельно с кухней и с кухней-столовой, студии — отдельно
-	for (int o : { 0, 11, 12, 21, 22 })
+	// как в томе АР: студии, 1-комнатные с кухней-столовой, 2-комнатные с кухней и с кухней-столовой — всегда;
+	// 1-комнатные с отдельной кухней — только если такие квартиры есть
+	for (int o : { 0, 12, 21, 22 })
 		typeNames[o] = o == 0 ? TypeName (1, false, true) : TypeName (o / 10, o % 10 == 2, false);
 	std::map<std::wstring, std::map<int, std::vector<std::wstring>>> typeApts;	// секция -> тип -> номера квартир
 	Acc aptN;

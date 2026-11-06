@@ -273,11 +273,9 @@ int main (int argc, char** argv)
 	CHECK (r16 && r16->cells[1] == L"3" && r16->total == L"5 (100%)");
 	const TepRow* st = find (L"", L"1-комнатных (студий)");
 	CHECK (st && st->total == L"2 (40%)");
-	CHECK (find (L"", L"1-комнатных") && find (L"", L"2-х комнатных") && find (L"", L"1-комнатных с кухней-столовой") &&
-		   find (L"", L"2-х комнатных с кухней-столовой"));		// всегда, как в томе АР
+	CHECK (!find (L"", L"1-комнатных") && find (L"", L"2-х комнатных") && find (L"", L"1-комнатных с кухней-столовой") &&
+		   find (L"", L"2-х комнатных с кухней-столовой"));		// 1-комнатных с кухней нет — строки нет
 	{
-		const TepRow* one = find (L"", L"1-комнатных");
-		CHECK (one && one->total == L"0 (0%)");
 		const auto& ch = t.check;
 		CHECK (ch.count (L"5") && ch.at (L"5").count (L"2"));
 		bool tech = false;
