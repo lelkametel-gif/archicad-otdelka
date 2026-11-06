@@ -2032,7 +2032,9 @@ void DoOtdelka (bool checkOnly)
 			std::wstring s;
 			for (const auto& kv : rs.sections)
 				s += (s.empty () ? L"" : L", ") + (kv.first.empty () ? std::wstring (L"(пусто)") : kv.first) + L" — " + std::to_wstring (kv.second);
-			lines.push_back (L"На этажах " + st.floors + L" в параметре зоны «Секция» записано: " + s + L".");
+			lines.push_back (L"На этажах " + st.floors + L" у зон секции: " + s + L".");
+			lines.push_back (L"В окне указана секция «" + st.section + L"» — таких зон нет. Впишите в поле «Секция» одно из значений выше "
+							 L"(только номер, например 2) или оставьте поле пустым — все секции.");
 		} else {
 			lines.push_back (L"На этажах " + st.floors + L" зон «" + st.zoneLib + L"» нет. Номер этажа — как в навигаторе (1. Этаж 1 -> 1).");
 		}
