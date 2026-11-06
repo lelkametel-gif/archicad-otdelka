@@ -1,5 +1,6 @@
 ﻿// Проверки логики ведомости отделки:
 //   g++ -std=c++17 -ISrc -o /tmp/t tests/test_otd.cpp Src/FinishCore.cpp Src/FinishReport.cpp Src/XlsxWriter.cpp Src/FinishTable.cpp && /tmp/t [out.xlsx]
+#include <set>
 #include "FinishCore.hpp"
 #include "FinishReport.hpp"
 #include "XlsxWriter.hpp"
@@ -421,6 +422,37 @@ int main (int argc, char** argv)
 			const std::string s = LayoutSvg (t);
 			svg.write (s.data (), (std::streamsize) s.size ());
 		}
+	}
+
+	// ---- проверка зон на плане (свойства «Отделка - …» и графическая замена)
+	{
+		ZoneData z; z.catCode = L"1010"; z.name = L"1010 Комната"; z.floor = 3;
+		z.ceilFinishRaw = L"Окраска"; z.wallFinishRaw = L"Обои";
+		WallPiece p; p.length = 4; p.finishHeight = 2.7; p.column = 2; p.construction = L"КБ"; z.pieces.push_back (p);
+		ZoneCheck c = CheckZone (z, r);
+		CHECK (c.subcat == L"Квартиры" && c.check == kChkOk && c.note.empty ());
+		z.notes.push_back (L"кол. К-1 0,40");
+		c = CheckZone (z, r);
+		CHECK (c.check == kChkNotes && c.note.find (L"по плану") != std::wstring::npos && c.note.find (L'\n') == std::wstring::npos);
+		z.wallFinishRaw.clear ();
+		c = CheckZone (z, r);
+		CHECK (c.check == kChkNoFinish && c.note.find (L"стен") != std::wstring::npos);
+		ZoneData q = z; q.catCode = L"8010"; q.name = L"8010 Объём";
+		CHECK (CheckZone (q, r).check == kChkExcluded && CheckZone (q, r).subcat == kChkExcluded);
+		ZoneData w = z; w.catCode.clear (); w.name = L"Без кода"; w.wallFinishRaw = L"Обои";
+		c = CheckZone (w, r);
+		CHECK (c.check == kChkNoGroup && c.subcat == r.otherGroup);
+		CHECK (OtherLibCheck (L"Зона").check == kChkOtherLib);
+		const std::vector<OverrideRuleDef> rd = OverrideRules (r);
+		const std::vector<OverrideComboDef> cd = OverrideCombos (r);
+		CHECK (rd.size () == 6 + r.groupOrder.size ());
+		CHECK (cd.size () == 2 && cd[0].rules.size () == 4 + r.groupOrder.size () && cd[1].rules.size () == 6);
+		std::set<std::wstring> names;
+		for (const auto& d : rd) names.insert (d.name);
+		CHECK (names.size () == rd.size ());
+		for (const auto& cb : cd) for (const auto& n : cb.rules) CHECK (names.count (n) == 1);
+		const std::wstring x = CriterionXml (kPropSubcat, L"A&B");
+		CHECK (x.find (L"<Value>A&amp;B</Value>") != std::wstring::npos && x.find (L"<Name>ПСО и отделка</Name>") != std::wstring::npos);
 	}
 
 	std::printf ("%d проверок, ошибок: %d\n", checks, fails);

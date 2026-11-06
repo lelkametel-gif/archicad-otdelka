@@ -76,6 +76,37 @@ void			ShiftLayout (TableLayout& t, double dx, double dy);
 // Приставить таблицу справа через промежуток gap, мм
 void			AppendLayout (TableLayout& to, const TableLayout& from, double gap);
 
+// ---- Проверка зон на плане: свойства зоны (группа «ПСО и отделка») и графическая замена по ним
+extern const wchar_t* const kPropGroup;			// группа свойств и группа правил графической замены
+extern const wchar_t* const kPropSubcat;		// «Отделка - подкатегория»: подкатегория ведомости / «Не входит»
+extern const wchar_t* const kPropCheck;			// «Отделка - проверка»: одно из значений kChk*
+extern const wchar_t* const kPropNote;			// «Отделка - замечание»: что не так (текст)
+extern const wchar_t* const kChkOk;				// «Верно»
+extern const wchar_t* const kChkNotes;			// «Замечания» — в расчёте, но проверить
+extern const wchar_t* const kChkNoFinish;		// «Ошибка: нет отделки»
+extern const wchar_t* const kChkNoGroup;		// «Ошибка: нет подкатегории»
+extern const wchar_t* const kChkExcluded;		// «Не входит» (8, 9)
+extern const wchar_t* const kChkOtherLib;		// «Другой объект зоны»
+
+struct ZoneCheck {
+	std::wstring	subcat, check, note;
+};
+ZoneCheck		CheckZone (const ZoneData& z, const Rules& r);
+ZoneCheck		OtherLibCheck (const std::wstring& libName);
+
+struct OverrideRuleDef {
+	std::wstring	name, prop, value;
+	double			rgb[3] = { 1, 1, 1 };		// цвет фона штриховки зоны 0..1
+};
+struct OverrideComboDef {
+	std::wstring				name;
+	std::vector<std::wstring>	rules;			// имена правил по порядку (верхнее главнее)
+};
+std::vector<OverrideRuleDef>	OverrideRules (const Rules& r);
+std::vector<OverrideComboDef>	OverrideCombos (const Rules& r);
+// Критерий правила: «Тип элемента = Зона» И «свойство prop (группа kPropGroup) = value» (формат Archicad 27)
+std::wstring	CriterionXml (const std::wstring& prop, const std::wstring& value);
+
 // SVG для проверки на Linux
 std::string		LayoutSvg (const TableLayout& t);
 

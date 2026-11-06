@@ -430,4 +430,216 @@ std::string LayoutSvg (const TableLayout& t)
 	return x;
 }
 
+// ============================================================================= проверка зон на плане
+
+const wchar_t* const kPropGroup		= L"ПСО и отделка";
+const wchar_t* const kPropSubcat	= L"Отделка - подкатегория";
+const wchar_t* const kPropCheck		= L"Отделка - проверка";
+const wchar_t* const kPropNote		= L"Отделка - замечание";
+const wchar_t* const kChkOk			= L"Верно";
+const wchar_t* const kChkNotes		= L"Замечания";
+const wchar_t* const kChkNoFinish	= L"Ошибка: нет отделки";
+const wchar_t* const kChkNoGroup	= L"Ошибка: нет подкатегории";
+const wchar_t* const kChkExcluded	= L"Не входит";
+const wchar_t* const kChkOtherLib	= L"Другой объект зоны";
+
+
+ZoneCheck CheckZone (const ZoneData& z, const Rules& r)
+{
+	ZoneCheck c;
+	const std::wstring code = CatCodeOf (z);
+	if (IsExcluded (z, r)) {
+		c.subcat = kChkExcluded;
+		c.check = kChkExcluded;
+		c.note = L"код категории " + code + L" — в ведомость отделки не входит (раздел [Группы], «-»)";
+		return c;
+	}
+	c.subcat = GroupOf (z, r);
+	bool matched = false;
+	for (const auto& kv : r.groupByCode) {
+		const std::wstring pre = Trim (kv.first);
+		if (!pre.empty () && code.compare (0, pre.size (), pre) == 0) { matched = true; break; }
+	}
+	std::vector<std::wstring> errs, notes;
+	bool noFinish = false;
+	if (CleanFinish (z.ceilFinishRaw, r).empty ()) { errs.push_back (L"не задана отделка потолка"); noFinish = true; }
+	if (CleanFinish (z.wallFinishRaw, r).empty ()) { errs.push_back (L"не задана отделка стен"); noFinish = true; }
+	if (!matched) {
+		const std::wstring what = code.empty () ? std::wstring (L"у категории зоны нет кода")
+												: L"код категории " + code + L" не найден в разделе [Группы] правил";
+		if (z.floor <= 0 && !r.basementGroup.empty ())
+			notes.push_back (what + L" — взята подкатегория подвала");
+		else
+			errs.push_back (what + L" — зона попала в «" + c.subcat + L"»");
+	}
+	if (z.pieces.empty ())
+		notes.push_back (L"стены зоны не найдены");
+	{
+		const std::vector<CheckRow> cr = CheckRows ({ z }, r);
+		if (!cr.empty () && !cr[0].note.empty ()) {
+			std::wstring n = cr[0].note;
+			for (size_t p = n.find (L'\n'); p != std::wstring::npos; p = n.find (L'\n', p))
+				n.replace (p, 1, L"; ");
+			notes.push_back (n);
+		}
+	}
+	if (!errs.empty ())
+		c.check = noFinish ? kChkNoFinish : kChkNoGroup;
+	else
+		c.check = notes.empty () ? kChkOk : kChkNotes;
+	for (const auto& s : errs) c.note += (c.note.empty () ? L"" : L"; ") + s;
+	for (const auto& s : notes) c.note += (c.note.empty () ? L"" : L"; ") + s;
+	return c;
+}
+
+
+ZoneCheck OtherLibCheck (const std::wstring& libName)
+{
+	ZoneCheck c;
+	c.subcat = kChkExcluded;
+	c.check = kChkOtherLib;
+	c.note = L"объект зоны «" + (libName.empty () ? std::wstring (L"без объекта") : libName) + L"» — в расчёт не берётся";
+	return c;
+}
+
+
+static std::wstring SubcatRuleName (const std::wstring& g)	{ return L"Отделка подкатегория - " + g; }
+static std::wstring CheckRuleName (const std::wstring& v)	{ return L"Отделка проверка - " + v; }
+
+
+std::vector<OverrideRuleDef> OverrideRules (const Rules& r)
+{
+	std::vector<OverrideRuleDef> res;
+	auto add = [&res] (const std::wstring& name, const std::wstring& prop, const std::wstring& value, double cr, double cg, double cb) {
+		OverrideRuleDef d;
+		d.name = name; d.prop = prop; d.value = value;
+		d.rgb[0] = cr; d.rgb[1] = cg; d.rgb[2] = cb;
+		res.push_back (d);
+	};
+	add (CheckRuleName (kChkNoFinish), kPropCheck, kChkNoFinish,	1.00, 0.25, 0.25);	// красный
+	add (CheckRuleName (kChkNoGroup), kPropCheck, kChkNoGroup,		0.90, 0.30, 0.85);	// малиновый
+	add (CheckRuleName (kChkOtherLib), kPropCheck, kChkOtherLib,	0.55, 0.55, 0.55);	// тёмно-серый
+	add (CheckRuleName (kChkExcluded), kPropCheck, kChkExcluded,	0.85, 0.85, 0.85);	// светло-серый
+	add (CheckRuleName (kChkNotes), kPropCheck, kChkNotes,			1.00, 0.85, 0.20);	// жёлтый
+	add (CheckRuleName (kChkOk), kPropCheck, kChkOk,				0.55, 0.85, 0.45);	// зелёный
+	// подкатегории — светлые цвета по порядку групп в правилах
+	static const double pal[][3] = {
+		{ 0.70, 0.78, 0.92 },	// голубовато-серый
+		{ 1.00, 0.78, 0.55 },	// оранжевый
+		{ 0.72, 0.90, 0.66 },	// зелёный
+		{ 0.84, 0.74, 0.96 },	// сиреневый
+		{ 1.00, 0.95, 0.55 },	// жёлтый
+		{ 0.62, 0.84, 1.00 },	// голубой
+		{ 0.86, 0.76, 0.62 },	// бежево-коричневый
+		{ 1.00, 0.74, 0.84 },	// розовый
+		{ 0.66, 0.92, 0.88 },	// бирюзовый
+		{ 0.92, 0.88, 0.70 },	// песочный
+	};
+	const size_t nPal = sizeof (pal) / sizeof (pal[0]);
+	size_t i = 0;
+	for (const auto& g : r.groupOrder) {
+		if (g.empty () || g == kExcludedGroup) continue;
+		const double* c = pal[i++ % nPal];
+		add (SubcatRuleName (g), kPropSubcat, g, c[0], c[1], c[2]);
+	}
+	return res;
+}
+
+
+std::vector<OverrideComboDef> OverrideCombos (const Rules& r)
+{
+	OverrideComboDef sub, chk;
+	sub.name = L"Отделка - подкатегории";
+	chk.name = L"Отделка - проверка зон";
+	for (const wchar_t* v : { kChkNoFinish, kChkNoGroup, kChkOtherLib, kChkExcluded }) {
+		sub.rules.push_back (CheckRuleName (v));
+		chk.rules.push_back (CheckRuleName (v));
+	}
+	for (const auto& g : r.groupOrder)
+		if (!g.empty () && g != kExcludedGroup) sub.rules.push_back (SubcatRuleName (g));
+	chk.rules.push_back (CheckRuleName (kChkNotes));
+	chk.rules.push_back (CheckRuleName (kChkOk));
+	return { sub, chk };
+}
+
+
+static std::wstring XmlEsc (const std::wstring& s)
+{
+	std::wstring o;
+	for (wchar_t ch : s) {
+		switch (ch) {
+			case L'&': o += L"&amp;"; break;
+			case L'<': o += L"&lt;"; break;
+			case L'>': o += L"&gt;"; break;
+			case L'"': o += L"&quot;"; break;
+			default: o += ch;
+		}
+	}
+	return o;
+}
+
+
+std::wstring CriterionXml (const std::wstring& prop, const std::wstring& value)
+{
+	// как в файле графической замены, сохранённом из Archicad 27 (тип элемента «Зона» + свойство «равно»)
+	return
+		L"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>"
+		L"<CriterionExpression Mv=\"2\" Sv=\"1\">"
+			L"<TextMatchType>1</TextMatchType>"
+			L"<Size>1</Size>"
+			L"<ClassGuid>C6EBD1BD-7702-46FF-8ED9-9CC37648A7C7</ClassGuid>"
+			L"<CompositeCriterion Mv=\"2\" Sv=\"1\">"
+				L"<LogicalOperator>2</LogicalOperator>"
+				L"<CriteriaCount>2</CriteriaCount>"
+				L"<ClassGuid>C6EBD1BD-7702-46FF-8ED9-9CC37648A7C7</ClassGuid>"
+				L"<CompositeCriterion Mv=\"2\" Sv=\"1\">"
+					L"<LogicalOperator>1</LogicalOperator>"
+					L"<CriteriaCount>1</CriteriaCount>"
+					L"<ClassGuid>B4B7B134-EC56-4D40-8D4C-71D7C5A2493A</ClassGuid>"
+					L"<ElemTypeCriterion Mv=\"2\" Sv=\"3\">"
+						L"<VBEF::CritToolType Mv=\"1\" Sv=\"0\">"
+							L"<ElemRegistryRefId>1380929357</ElemRegistryRefId>"
+							L"<ElemCreatorToolUnID>"
+								L"<MainGuid>A73622DE-E40A-4E63-ADB7-52D13422BD06</MainGuid>"
+								L"<RevGuid>C2FE0BB3-ACF0-41F9-80ED-F98DDAEEA090</RevGuid>"
+							L"</ElemCreatorToolUnID>"
+						L"</VBEF::CritToolType>"
+						L"<LogicalOperator>1</LogicalOperator>"
+					L"</ElemTypeCriterion>"
+				L"</CompositeCriterion>"
+				L"<ClassGuid>C6EBD1BD-7702-46FF-8ED9-9CC37648A7C7</ClassGuid>"
+				L"<CompositeCriterion Mv=\"2\" Sv=\"1\">"
+					L"<LogicalOperator>1</LogicalOperator>"
+					L"<CriteriaCount>1</CriteriaCount>"
+					L"<ClassGuid>58E4905F-AD57-45F5-8D26-0100000F60BF</ClassGuid>"
+					L"<PropertyCriterion Mv=\"5\" Sv=\"0\">"
+						L"<VBEF::ConditionIO Mv=\"1\" Sv=\"0\">"
+							L"<PropertyDefinitionUserId Version=\"2\">"
+								L"<PrimaryId>1</PrimaryId>"
+								L"<HasGuidId>false</HasGuidId>"
+								L"<Guid>00000000-0000-0000-0000-000000000000</Guid>"
+								L"<HasNameId>true</HasNameId>"
+								L"<Name>" + XmlEsc (prop) + L"</Name>"
+								L"<PropertyDefinitionGroupUserId Version=\"2\">"
+									L"<PrimaryId>1</PrimaryId>"
+									L"<HasGuidId>false</HasGuidId>"
+									L"<Guid>00000000-0000-0000-0000-000000000000</Guid>"
+									L"<HasNameId>true</HasNameId>"
+									L"<Name>" + XmlEsc (kPropGroup) + L"</Name>"
+								L"</PropertyDefinitionGroupUserId>"
+							L"</PropertyDefinitionUserId>"
+							L"<CriteriaOperatorEnum>6</CriteriaOperatorEnum>"
+							L"<Value>"
+								L"<Variant Type=\"StringVariant\">"
+									L"<Status>Normal</Status>"
+									L"<Value>" + XmlEsc (value) + L"</Value>"
+								L"</Variant>"
+							L"</Value>"
+						L"</VBEF::ConditionIO>"
+					L"</PropertyCriterion>"
+				L"</CompositeCriterion>"
+			L"</CompositeCriterion>"
+		L"</CriterionExpression>";
+}
+
 }	// namespace otd

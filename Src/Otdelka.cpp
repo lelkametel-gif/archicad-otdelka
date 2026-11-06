@@ -531,6 +531,7 @@ struct RunStats {
 	std::map<std::wstring, int> sections;		// какие секции встречаются в зонах выбранных этажей
 	std::map<std::wstring, double> unknown;		// конструкции без столбца -> м²
 	std::map<std::wstring, int> otherLib;		// зоны выбранных этажей другого объекта: имя объекта -> шт
+	std::vector<std::pair<API_Guid, std::wstring>> otherLibZones;	// они же: GUID и имя объекта (для свойства «проверка»)
 	std::map<std::wstring, int> hiddenLayers;	// пропущены (скрытый слой): слой -> шт
 	std::map<std::wstring, int> usedLayers;		// взяты в расчёт: слой -> шт
 	std::map<int, int> usedFloors;				// взяты в расчёт: этаж -> шт
@@ -806,8 +807,11 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 		const std::wstring libName = otd::Trim (au::ToW (au::LibPartName (el.zone.libInd)));
 		const std::wstring lib = otd::Lower (libName);
 		if (lib.find (libPrefix) == std::wstring::npos) {		// имя объекта содержит «HimeraZone» (АСП_HimeraZone, HimeraZone22)
-			if (onFloors)
+			if (onFloors) {
 				rs.otherLib[libName.empty () ? std::wstring (L"(без объекта)") : libName] += 1;
+				if (el.header.hotlinkGuid == APINULLGuid)
+					rs.otherLibZones.push_back ({ g, libName });
+			}
 			continue;
 		}
 		++rs.zonesLib;
@@ -1718,6 +1722,233 @@ void DrawReport (const std::wstring& name, GSErrCode err, bool existed, const Dr
 
 }	// namespace
 
+// ============================================================================= проверка зон на плане
+// При каждом расчёте зонам пишутся свойства группы «ПСО и отделка»: «Отделка - подкатегория», «Отделка - проверка»,
+// «Отделка - замечание». По ним создаются правила графической замены (группа правил «ПСО и отделка») и две
+// комбинации: «Отделка - подкатегории» и «Отделка - проверка зон». Уже существующие правила не меняются
+// (цвета, поправленные вручную, сохраняются); удалённые — создаются заново.
+
+namespace {
+
+struct MarkResult {
+	int written = 0, failed = 0, noAvail = 0;
+	int rulesNew = 0, rulesFailed = 0, combosNew = 0, combosFixed = 0;
+	GSErrCode propErr = NoError, ruleErr = NoError, comboErr = NoError;
+	std::wstring propStep;
+	std::map<std::wstring, int> byCheck;		// значение «проверка» -> зон
+};
+
+
+GSErrCode EnsurePropGroup (API_Guid& out)
+{
+	GS::Array<API_PropertyGroup> groups;
+	if (ACAPI_Property_GetPropertyGroups (groups) == NoError)
+		for (const API_PropertyGroup& g : groups)
+			if (g.groupType == API_PropertyCustomGroupType && au::ToW (g.name) == otd::kPropGroup) { out = g.guid; return NoError; }
+	API_PropertyGroup g;
+	g.groupType = API_PropertyCustomGroupType;
+	g.name = au::FromW (otd::kPropGroup);
+	g.description = au::FromW (L"Пишет надстройка «ПСО и отделка» при расчёте ведомости отделки");
+	const GSErrCode err = ACAPI_Property_CreatePropertyGroup (g);
+	out = g.guid;
+	return err;
+}
+
+
+GSErrCode EnsureStringProp (const API_Guid& group, const std::wstring& name, const std::wstring& descr,
+							const std::set<API_Guid>& avail, API_PropertyDefinition& out)
+{
+	GS::Array<API_PropertyDefinition> defs;
+	if (ACAPI_Property_GetPropertyDefinitions (group, defs) == NoError)
+		for (const API_PropertyDefinition& d : defs)
+			if (au::ToW (d.name) == name) {
+				out = d;
+				bool changed = false;
+				for (const API_Guid& a : avail)
+					if (!out.availability.Contains (a)) { out.availability.Push (a); changed = true; }
+				return changed ? ACAPI_Property_ChangePropertyDefinition (out) : NoError;
+			}
+	out = API_PropertyDefinition ();
+	out.definitionType = API_PropertyCustomDefinitionType;
+	out.groupGuid = group;
+	out.name = au::FromW (name);
+	out.description = au::FromW (descr);
+	out.collectionType = API_PropertySingleCollectionType;
+	out.valueType = API_PropertyStringValueType;
+	out.measureType = API_PropertyDefaultMeasureType;
+	out.defaultValue.basicValue.singleVariant.variant.type = API_PropertyStringValueType;
+	out.canValueBeEditable = true;
+	for (const API_Guid& a : avail)
+		out.availability.Push (a);
+	return ACAPI_Property_CreatePropertyDefinition (out);
+}
+
+
+API_Property StringProp (const API_PropertyDefinition& d, const std::wstring& v)
+{
+	API_Property p;
+	p.definition = d;
+	p.isDefault = false;
+	p.status = API_Property_HasValue;
+	p.value.variantStatus = API_VariantStatusNormal;
+	p.value.singleVariant.variant.type = API_PropertyStringValueType;
+	p.value.singleVariant.variant.uniStringValue = au::FromW (v);
+	return p;
+}
+
+
+void EnsureOverrides (const otd::Rules& rules, MarkResult& mr)
+{
+	API_OverrideRuleGroup grp = { APINULLGuid, au::FromW (otd::kPropGroup) };
+	if (ACAPI_GraphicalOverride_GetOverrideRuleGroup (grp) != NoError) {
+		grp.guid = APINULLGuid;
+		mr.ruleErr = ACAPI_GraphicalOverride_CreateOverrideRuleGroup (grp);
+		if (mr.ruleErr != NoError)
+			return;
+	}
+	std::map<std::wstring, API_Guid> ruleGuid;
+	for (const otd::OverrideRuleDef& d : otd::OverrideRules (rules)) {
+		API_OverrideRule rule;
+		rule.guid = APINULLGuid;
+		rule.name = au::FromW (d.name);
+		if (ACAPI_GraphicalOverride_GetOverrideRuleByName (rule, grp.guid) == NoError && rule.guid != APINULLGuid) {
+			ruleGuid[d.name] = rule.guid;		// уже есть — не трогаем
+			continue;
+		}
+		rule = API_OverrideRule ();
+		rule.guid = APINULLGuid;
+		rule.name = au::FromW (d.name);
+		rule.style = API_OverrideRuleStyle ();
+		// цвет фона штриховки зоны (как в графзамене ZoneSum: перо фона покрывающей штриховки)
+		rule.style.fillBackgroundPenOverride = API_RGBColor { d.rgb[0], d.rgb[1], d.rgb[2] };
+		rule.style.fillTypeBackgroundPen.overrideCoverFill = true;
+		rule.style.fillTypeBackgroundPen.overrideCutFill = false;
+		rule.style.fillTypeBackgroundPen.overrideDraftingFill = false;
+		rule.criterionXML = au::FromW (otd::CriterionXml (d.prop, d.value));
+		const GSErrCode err = ACAPI_GraphicalOverride_CreateOverrideRule (rule, grp.guid);
+		if (err == NoError && rule.guid != APINULLGuid) {
+			ruleGuid[d.name] = rule.guid;
+			++mr.rulesNew;
+		} else {
+			++mr.rulesFailed;
+			mr.ruleErr = err;
+		}
+	}
+	for (const otd::OverrideComboDef& c : otd::OverrideCombos (rules)) {
+		GS::Array<API_Guid> list;
+		for (const auto& n : c.rules)
+			if (ruleGuid.count (n)) list.Push (ruleGuid[n]);
+		API_OverrideCombination cmb = { APINULLGuid, au::FromW (c.name) };
+		GS::Array<API_Guid> have;
+		if (ACAPI_GraphicalOverride_GetOverrideCombination (cmb, &have) == NoError && cmb.guid != APINULLGuid) {
+			bool missing = false;
+			for (const API_Guid& g : list)
+				if (!have.Contains (g)) { missing = true; break; }
+			if (!missing)
+				continue;
+			// наших правил не хватает (удалены и созданы заново) — наши по порядку, затем добавленные вручную
+			GS::Array<API_Guid> merged = list;
+			for (const API_Guid& g : have)
+				if (!merged.Contains (g)) merged.Push (g);
+			const GSErrCode err = ACAPI_GraphicalOverride_ChangeOverrideCombination (cmb, &merged);
+			if (err == NoError) ++mr.combosFixed; else mr.comboErr = err;
+			continue;
+		}
+		cmb.guid = APINULLGuid;
+		const GSErrCode err = ACAPI_GraphicalOverride_CreateOverrideCombination (cmb, list);
+		if (err == NoError) ++mr.combosNew; else mr.comboErr = err;
+	}
+}
+
+
+// Свойства зонам расчёта и зонам других объектов на выбранных этажах; затем правила графической замены
+MarkResult MarkZones (const std::vector<otd::ZoneData>& zones, const RunStats& rs, const otd::Rules& rules)
+{
+	MarkResult mr;
+	std::vector<std::pair<API_Guid, otd::ZoneCheck>> marks;
+	for (const otd::ZoneData& z : zones) {
+		const API_Guid g = APIGuidFromString (otd::ToUtf8 (z.guid).c_str ());
+		if (g != APINULLGuid)
+			marks.push_back ({ g, otd::CheckZone (z, rules) });
+	}
+	for (const auto& o : rs.otherLibZones)
+		marks.push_back ({ o.first, otd::OtherLibCheck (o.second) });
+
+	// свойства доступны по классификации: добавляем классификации этих зон
+	std::set<API_Guid> avail;
+	for (const auto& m : marks) {
+		GS::Array<GS::Pair<API_Guid, API_Guid>> items;
+		if (ACAPI_Element_GetClassificationItems (m.first, items) == NoError)
+			for (const auto& it : items) avail.insert (it.second);
+	}
+	API_Guid group = APINULLGuid;
+	API_PropertyDefinition dSub, dChk, dNote;
+	mr.propStep = L"группа свойств";
+	mr.propErr = EnsurePropGroup (group);
+	if (mr.propErr == NoError) {
+		mr.propStep = L"свойство «" + std::wstring (otd::kPropSubcat) + L"»";
+		mr.propErr = EnsureStringProp (group, otd::kPropSubcat, L"Подкатегория ведомости отделки; «Не входит» — не входит в ведомость", avail, dSub);
+	}
+	if (mr.propErr == NoError) {
+		mr.propStep = L"свойство «" + std::wstring (otd::kPropCheck) + L"»";
+		mr.propErr = EnsureStringProp (group, otd::kPropCheck, L"Верно / Замечания / Ошибка: нет отделки / Ошибка: нет подкатегории / Не входит / Другой объект зоны", avail, dChk);
+	}
+	if (mr.propErr == NoError) {
+		mr.propStep = L"свойство «" + std::wstring (otd::kPropNote) + L"»";
+		mr.propErr = EnsureStringProp (group, otd::kPropNote, L"Что проверить в зоне (как в таблице проверки)", avail, dNote);
+	}
+	if (mr.propErr != NoError)
+		return mr;
+	for (const auto& m : marks) {
+		if (!ACAPI_Element_IsPropertyDefinitionAvailable (m.first, dChk.guid)) { ++mr.noAvail; continue; }
+		GS::Array<API_Property> props;
+		props.Push (StringProp (dSub, m.second.subcat));
+		props.Push (StringProp (dChk, m.second.check));
+		props.Push (StringProp (dNote, m.second.note));
+		if (ACAPI_Element_SetProperties (m.first, props) == NoError) {
+			++mr.written;
+			mr.byCheck[m.second.check] += 1;
+		} else
+			++mr.failed;
+	}
+	EnsureOverrides (rules, mr);
+	return mr;
+}
+
+
+void MarkReport (const MarkResult& mr, std::vector<std::wstring>& lines)
+{
+	if (mr.propErr != NoError) {
+		lines.push_back (L"Проверка зон на плане: не удалось создать " + mr.propStep + L" (код " + std::to_wstring (mr.propErr) + L").");
+		return;
+	}
+	std::wstring cnt;
+	for (const wchar_t* v : { otd::kChkOk, otd::kChkNotes, otd::kChkNoFinish, otd::kChkNoGroup, otd::kChkExcluded, otd::kChkOtherLib }) {
+		const auto it = mr.byCheck.find (v);
+		if (it != mr.byCheck.end ())
+			cnt += (cnt.empty () ? L"" : L", ") + std::wstring (v) + L" — " + std::to_wstring (it->second);
+	}
+	lines.push_back (L"Проверка зон на плане: свойства «Отделка - …» (группа «" + std::wstring (otd::kPropGroup) + L"») записаны у " +
+					 std::to_wstring (mr.written) + L" зон" + (cnt.empty () ? L"" : L": " + cnt) + L".");
+	if (mr.noAvail > 0)
+		lines.push_back (L"   У " + std::to_wstring (mr.noAvail) + L" зон нет классификации — свойства не записаны (присвойте зонам классификацию).");
+	if (mr.failed > 0)
+		lines.push_back (L"   Не записано у " + std::to_wstring (mr.failed) + L" зон (зарезервированы другим пользователем или из модуля).");
+	if (mr.rulesNew > 0 || mr.combosNew > 0)
+		lines.push_back (L"   Созданы правила графической замены: " + std::to_wstring (mr.rulesNew) + L", комбинации: " + std::to_wstring (mr.combosNew) + L".");
+	if (mr.combosFixed > 0)
+		lines.push_back (L"   В комбинации добавлены созданные заново правила: " + std::to_wstring (mr.combosFixed) + L".");
+	if (mr.rulesFailed > 0 || mr.ruleErr != NoError)
+		lines.push_back (L"   Не удалось создать правил графической замены: " + std::to_wstring (mr.rulesFailed) + L" (код " + std::to_wstring (mr.ruleErr) + L").");
+	if (mr.comboErr != NoError)
+		lines.push_back (L"   Не удалось создать комбинацию графической замены (код " + std::to_wstring (mr.comboErr) + L").");
+	lines.push_back (L"   На плане: Графическая замена -> «Отделка - проверка зон» (зелёные — верно, жёлтые — замечания, красные — ошибки, "
+					 L"серые — не входят) или «Отделка - подкатегории» (свой цвет у каждой подкатегории).");
+}
+
+}	// namespace
+
+
 // ============================================================================= команда меню
 
 void DoOtdelka (bool checkOnly)
@@ -1784,6 +2015,13 @@ void DoOtdelka (bool checkOnly)
 
 	const std::wstring secName = st.section.empty () ? std::wstring (L"все") : st.section;
 	const otd::Sheet sheet = otd::BuildSheet (zones, rules, secName);
+
+	// ---- свойства зон и графическая замена «Отделка - проверка зон» / «Отделка - подкатегории»
+	MarkResult mark;
+	ACAPI_CallUndoableCommand (au::FromW (L"Ведомость отделки: проверка зон на плане"), [&] () -> GSErrCode {
+		mark = MarkZones (zones, rs, rules);
+		return NoError;
+	});
 
 	// ---- таблица на рабочем листе «Ведомость отделки - секция N»
 	const std::wstring wsName = L"Ведомость отделки - секция " + secName;
@@ -1875,6 +2113,7 @@ void DoOtdelka (bool checkOnly)
 						 std::to_wstring (rules.col3Else) + L": " + std::to_wstring (rs.col3Moved) + L" участков (раздел [Столбец 3] правил).");
 	if (rs.zonesWithGaps > 0)
 		lines.push_back (L"Зон с участками контура без стен: " + std::to_wstring (rs.zonesWithGaps) + L" — см. лист «Расчёт» (проходы, проёмы без стены или элементы не-стены).");
+	MarkReport (mark, lines);
 	if (!rs.hiddenLayers.empty ())
 		lines.push_back (L"Пропущены зоны на скрытых слоях: " + JoinCounts (rs.hiddenLayers) + L".");
 	{
