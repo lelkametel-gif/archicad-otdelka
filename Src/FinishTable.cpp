@@ -490,14 +490,23 @@ ZoneCheck CheckZone (const ZoneData& z, const Rules& r)
 	}
 	if (z.pieces.empty ())
 		notes.push_back (L"стены зоны не найдены");
-	{
-		const std::vector<CheckRow> cr = CheckRows ({ z }, r);
-		if (!cr.empty () && !cr[0].note.empty ()) {
-			std::wstring n = cr[0].note;
-			for (size_t p = n.find (L'\n'); p != std::wstring::npos; p = n.find (L'\n', p))
-				n.replace (p, 1, L"; ");
-			notes.push_back (n);
+	{	// замечания для раскраски: пилоны «по плану» — норма (Archicad не связывает колонны с зоной),
+		// стена ниже зоны меньше чем на 10 см — тоже не замечание; в таблице проверки они по-прежнему видны
+		std::wstring plan, low;
+		double noCol = 0;
+		// торцы стен и перегородок (до 15 см), примыкающие к зоне, тоже не замечание
+		for (const WallPiece& w : z.pieces)
+			if (w.byContour && !w.isColumn && w.length >= 0.15)
+				plan += (plan.empty () ? L"" : L", ") + (w.elemId.empty () ? std::wstring (L"без ID") : w.elemId) + L" " + FormatNum (w.length, 2);
+		for (const WallPiece& w : z.pieces) {
+			if (w.lowBy >= 0.10)
+				low += (low.empty () ? L"" : L", ") + (w.elemId.empty () ? std::wstring (L"без ID") : w.elemId) +
+					   L" на " + FormatNum (w.lowBy, 2) + L" м";
+			if (w.column < 1 || w.column > kWallColumns) noCol += w.Area ();
 		}
+		if (!plan.empty ()) notes.push_back (L"стены не связаны с зоной, взяты по плану (м): " + plan);
+		if (!low.empty ()) notes.push_back (L"ниже зоны, проверить высоту: " + low);
+		if (noCol >= 0.05) notes.push_back (L"стены без столбца: " + FormatNum (noCol, 1) + L" м²");
 	}
 	if (!errs.empty ())
 		c.check = header ? kChkHeader : noFinish ? kChkNoFinish : kChkNoGroup;

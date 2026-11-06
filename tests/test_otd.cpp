@@ -431,7 +431,15 @@ int main (int argc, char** argv)
 		WallPiece p; p.length = 4; p.finishHeight = 2.7; p.column = 2; p.construction = L"КБ"; z.pieces.push_back (p);
 		ZoneCheck c = CheckZone (z, r);
 		CHECK (c.subcat == L"Квартиры" && c.check == kChkOk && c.note.empty ());
-		z.notes.push_back (L"кол. К-1 0,40");
+		{ WallPiece k = p; k.isColumn = true; k.byContour = true; k.elemId = L"К-1"; k.length = 0.4; z.pieces.push_back (k); }
+		{ WallPiece e = p; e.byContour = true; e.elemId = L"СтВ-79"; e.length = 0.075; z.pieces.push_back (e); }
+		CHECK (CheckZone (z, r).check == kChkOk);		// пилон и торец перегородки по плану — не замечание
+		z.pieces[0].lowBy = 0.07;
+		CHECK (CheckZone (z, r).check == kChkOk);		// ниже зоны на 7 см — не замечание
+		z.pieces[0].lowBy = 0.30;
+		CHECK (CheckZone (z, r).check == kChkNotes && CheckZone (z, r).note.find (L"ниже зоны") != std::wstring::npos);
+		z.pieces[0].lowBy = 0;
+		{ WallPiece s = p; s.byContour = true; s.elemId = L"СтВ-12"; s.length = 1.5; z.pieces.push_back (s); }
 		c = CheckZone (z, r);
 		CHECK (c.check == kChkNotes && c.note.find (L"по плану") != std::wstring::npos && c.note.find (L'\n') == std::wstring::npos);
 		z.wallFinishRaw.clear ();
