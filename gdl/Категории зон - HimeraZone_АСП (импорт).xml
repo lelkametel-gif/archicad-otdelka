@@ -54,9 +54,6 @@
 					<Green>61680</Green>
 					<Blue>53970</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - МОП_ВхГ_Лифтовой холл - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -82,9 +79,6 @@
 					<Green>62451</Green>
 					<Blue>38036</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - МОП_Лестничная клетка незадымляемая - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -110,9 +104,6 @@
 					<Green>62965</Green>
 					<Blue>56026</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Комната - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -138,9 +129,6 @@
 					<Green>57054</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Балкон - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -166,9 +154,6 @@
 					<Green>62194</Green>
 					<Blue>38293</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - МОП_Лестничная клетка задымляемая - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -194,9 +179,6 @@
 					<Green>0</Green>
 					<Blue>0</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Общедомовые помещения - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -222,9 +204,6 @@
 					<Green>0</Green>
 					<Blue>0</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Квартиры - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -250,9 +229,6 @@
 					<Green>55512</Green>
 					<Blue>65278</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Подвал_Коридор - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -278,9 +254,6 @@
 					<Green>56540</Green>
 					<Blue>43690</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - МОП_Коридор - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -306,9 +279,6 @@
 					<Green>41120</Green>
 					<Blue>12850</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - МОП_ВхГ_Колясочная - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -334,9 +304,6 @@
 					<Green>61423</Green>
 					<Blue>41120</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Кухня - HimeraZone22X.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -362,9 +329,6 @@
 					<Green>48830</Green>
 					<Blue>64764</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Подвал_Техническое подполье - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -390,9 +354,6 @@
 					<Green>53713</Green>
 					<Blue>62708</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Подвал_Тамбур - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -418,9 +379,6 @@
 					<Green>0</Green>
 					<Blue>0</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Тех. помещения (подвал) - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -446,9 +404,6 @@
 					<Green>59110</Green>
 					<Blue>39578</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Кабинет - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -474,9 +429,6 @@
 					<Green>53970</Green>
 					<Blue>19789</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Холл - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -502,9 +454,6 @@
 					<Green>59110</Green>
 					<Blue>27242</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Зона кухни - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -530,9 +479,6 @@
 					<Green>56026</Green>
 					<Blue>9509</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Кухня-столовая - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -558,9 +504,6 @@
 					<Green>55512</Green>
 					<Blue>44461</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Прихожая - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -586,9 +529,6 @@
 					<Green>46517</Green>
 					<Blue>25957</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Тамбур - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -614,9 +554,6 @@
 					<Green>47545</Green>
 					<Blue>43176</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Коридор - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -642,9 +579,6 @@
 					<Green>65021</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Совмещенный санузел - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -670,9 +604,6 @@
 					<Green>64250</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Санузел - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -698,9 +629,6 @@
 					<Green>63479</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Ванная - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -726,9 +654,6 @@
 					<Green>62194</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Душевая - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -754,9 +679,6 @@
 					<Green>51143</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Терраса - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -782,9 +704,6 @@
 					<Green>54998</Green>
 					<Blue>65278</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Лоджия - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -810,9 +729,6 @@
 					<Green>54998</Green>
 					<Blue>55769</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Гардеробная - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -838,9 +754,6 @@
 					<Green>49858</Green>
 					<Blue>51143</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Кладовая - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -866,9 +779,6 @@
 					<Green>42405</Green>
 					<Blue>43947</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Постирочная - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -894,9 +804,6 @@
 					<Green>51657</Green>
 					<Blue>21074</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - МОП_ВхГ_Вестибюль - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -922,9 +829,6 @@
 					<Green>51657</Green>
 					<Blue>21074</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - МОП_ВхГ_Тамбур - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -950,9 +854,6 @@
 					<Green>64250</Green>
 					<Blue>42662</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - МОП_Пожаробезопасная зона - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -978,9 +879,6 @@
 					<Green>65535</Green>
 					<Blue>48573</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - МОП_Лифтовой холл - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1006,9 +904,6 @@
 					<Green>65535</Green>
 					<Blue>51914</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - МОП_Тамбур - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1034,9 +929,6 @@
 					<Green>65535</Green>
 					<Blue>34952</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - МОП_Тамбур-шлюз - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1062,9 +954,6 @@
 					<Green>62708</Green>
 					<Blue>47288</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - МОП_Переходной балкон - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1090,9 +979,6 @@
 					<Green>46003</Green>
 					<Blue>65021</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Подвал_Машинное помещение лифтов - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1118,9 +1004,6 @@
 					<Green>40349</Green>
 					<Blue>65021</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Подвал_Пожаробезопасная зона - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1146,9 +1029,6 @@
 					<Green>43433</Green>
 					<Blue>64507</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Подвал_Кладовая - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1174,9 +1054,6 @@
 					<Green>35723</Green>
 					<Blue>64250</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Подвал_Блок кладовых - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1227,9 +1104,6 @@
 					<Green>0</Green>
 					<Blue>0</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - -------ТЕХНИЧЕСКОЕ ПОМЕЩЕНИЕ------- - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1255,9 +1129,6 @@
 					<Green>57311</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ТП_Венткамера - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1283,9 +1154,6 @@
 					<Green>57311</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ТП_Венткамера приточная - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1311,9 +1179,6 @@
 					<Green>58082</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ТП_Водомерный узел - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1339,9 +1204,6 @@
 					<Green>57311</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ТП_Венткамера вытяжная - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1367,9 +1229,6 @@
 					<Green>56026</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ТП_Насосная - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1395,9 +1254,6 @@
 					<Green>54998</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ТП_АУПТ-насосная пожаротушения - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1423,9 +1279,6 @@
 					<Green>50629</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ТП_Помещение водоочистки - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1451,9 +1304,6 @@
 					<Green>52428</Green>
 					<Blue>63993</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ТП_ИТП - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1479,9 +1329,6 @@
 					<Green>48059</Green>
 					<Blue>63736</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ТП_ГРЩ - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1507,9 +1354,6 @@
 					<Green>53970</Green>
 					<Blue>64507</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ТП_Электрощитовая - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1535,9 +1379,6 @@
 					<Green>51914</Green>
 					<Blue>64507</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ТП_Пространство для прокладки коммуникаций - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1563,9 +1404,6 @@
 					<Green>0</Green>
 					<Blue>0</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Встроенные помещения - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1591,9 +1429,6 @@
 					<Green>54998</Green>
 					<Blue>51143</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ВПП_Административное помещение, Торговый зал, Торгово-выставочный зал, Подсобное помещение, Обеденный зал - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1619,9 +1454,6 @@
 					<Green>50629</Green>
 					<Blue>44975</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ВПП_Кладовая №хххх - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1647,9 +1479,6 @@
 					<Green>43947</Green>
 					<Blue>35723</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ВПП_С_у - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1675,9 +1504,6 @@
 					<Green>41891</Green>
 					<Blue>33153</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ВПП_ПУИ с с_у - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1703,9 +1529,6 @@
 					<Green>37265</Green>
 					<Blue>26471</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ВПП_ПУИ - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1731,9 +1554,6 @@
 					<Green>0</Green>
 					<Blue>0</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - -------ЭКСПЛУАТАЦИОННЫЕ ПОМЕЩЕНИЯ------  - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1759,9 +1579,6 @@
 					<Green>26985</Green>
 					<Blue>27756</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ЭП_Диспетчерская - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1787,9 +1604,6 @@
 					<Green>40606</Green>
 					<Blue>41120</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ЭП_Помещение консьержа - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1815,9 +1629,6 @@
 					<Green>40606</Green>
 					<Blue>41120</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ЭП_Помещение охраны - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1843,9 +1654,6 @@
 					<Green>40606</Green>
 					<Blue>41120</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ЭП_Рабочее помещение - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1871,9 +1679,6 @@
 					<Green>40606</Green>
 					<Blue>41120</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ЭП_Подсобное помещение - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1899,9 +1704,6 @@
 					<Green>50372</Green>
 					<Blue>50629</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ЭП_ПУИ, ПУИ с с_у - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1927,9 +1729,6 @@
 					<Green>30069</Green>
 					<Blue>30840</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ЭП_Мусоросборная камера - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1955,9 +1754,6 @@
 					<Green>34695</Green>
 					<Blue>35466</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ЭП_УК - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -1983,9 +1779,6 @@
 					<Green>44204</Green>
 					<Blue>44718</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ЭП_С_у - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -2011,9 +1804,6 @@
 					<Green>0</Green>
 					<Blue>0</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - -------ЧЕРДАК------  - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -2039,9 +1829,6 @@
 					<Green>62194</Green>
 					<Blue>49601</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Чердак_Технический чердак - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -2067,9 +1854,6 @@
 					<Green>60652</Green>
 					<Blue>40349</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Чердак_Машинной помещение лифтов - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -2095,9 +1879,6 @@
 					<Green>59367</Green>
 					<Blue>33924</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Чердак_Котельная - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -2123,9 +1904,6 @@
 					<Green>56797</Green>
 					<Blue>21845</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Чердак_Венткамера - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -2151,9 +1929,6 @@
 					<Green>57054</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Строительный объем - HimeraZone22X.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -2179,9 +1954,6 @@
 					<Green>57054</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - ------ТЭП------ - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -2207,9 +1979,6 @@
 					<Green>57054</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Площадь застройки - HimeraZone22X.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -2235,9 +2004,6 @@
 					<Green>57054</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Площадь жилого здания - HimeraZone22X.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
@@ -2263,9 +2029,6 @@
 					<Green>57054</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
-				<AddParData>
-					<Location>AddPars\Zone - Площадь лестницы - HimeraZone_АСП.xml</Location>
-				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
