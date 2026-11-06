@@ -35,7 +35,7 @@
 			<RoomCategory Idx="1" Name="МОП_ВхГ_Лифтовой холл">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>0E94EC57-94EA-46A0-AD59-163935E7E013</guid>
+						<guid>99858604-AFD0-4066-B899-83EEED2DE5BB</guid>
 					</OdbRef>
 					<CreaTime>35165</CreaTime>
 					<ModiTime>35167</ModiTime>
@@ -43,7 +43,7 @@
 				<Name>МОП_ВхГ_Лифтовой холл</Name>
 				<Index>1</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>2013</Code>
@@ -54,13 +54,16 @@
 					<Green>61680</Green>
 					<Blue>53970</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - МОП_ВхГ_Лифтовой холл - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="2" Name="МОП_Лестничная клетка незадымляемая">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>30CCB7D7-8612-43E5-8D4E-FA438741281A</guid>
+						<guid>DBFA6132-C091-4E18-A245-96DF4931C8B1</guid>
 					</OdbRef>
 					<CreaTime>35170</CreaTime>
 					<ModiTime>35172</ModiTime>
@@ -68,7 +71,7 @@
 				<Name>МОП_Лестничная клетка незадымляемая</Name>
 				<Index>2</Index>
 				<Flags/>
-				<ModiTime>1688993369</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>2031</Code>
@@ -79,13 +82,16 @@
 					<Green>62451</Green>
 					<Blue>38036</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - МОП_Лестничная клетка незадымляемая - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="3" Name="Комната">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>457E792D-4217-4BDF-8F42-DB9C9B5DBB4E</guid>
+						<guid>E167ADD6-DF37-4774-ADFF-B15628561C8B</guid>
 					</OdbRef>
 					<CreaTime>35180</CreaTime>
 					<ModiTime>35182</ModiTime>
@@ -93,7 +99,7 @@
 				<Name>Комната</Name>
 				<Index>3</Index>
 				<Flags/>
-				<ModiTime>1685342828</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1010</Code>
@@ -104,13 +110,16 @@
 					<Green>62965</Green>
 					<Blue>56026</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Комната - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="4" Name="Балкон">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>54D61461-BE38-41B7-B3AC-AB22264D7B8F</guid>
+						<guid>91E5C6F2-4B18-4592-A2AD-D3E38D9D6B4C</guid>
 					</OdbRef>
 					<CreaTime>35185</CreaTime>
 					<ModiTime>35187</ModiTime>
@@ -129,13 +138,16 @@
 					<Green>57054</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Балкон - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="5" Name="МОП_Лестничная клетка задымляемая">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>E9948943-56F1-44F2-8193-A801F49C39B3</guid>
+						<guid>2371D4C0-2420-4F9F-87BC-15B724D92B71</guid>
 					</OdbRef>
 					<CreaTime>35190</CreaTime>
 					<ModiTime>35192</ModiTime>
@@ -143,7 +155,7 @@
 				<Name>МОП_Лестничная клетка задымляемая</Name>
 				<Index>5</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>2030</Code>
@@ -154,13 +166,16 @@
 					<Green>62194</Green>
 					<Blue>38293</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - МОП_Лестничная клетка задымляемая - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="6" Name="Общедомовые помещения">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>C559EE82-3261-415D-BCFD-3794884B865F</guid>
+						<guid>575D5A0B-D092-4C18-8C1A-FCCB4E2DD793</guid>
 					</OdbRef>
 					<CreaTime>35195</CreaTime>
 					<ModiTime>35197</ModiTime>
@@ -179,13 +194,16 @@
 					<Green>0</Green>
 					<Blue>0</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Общедомовые помещения - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="7" Name="Квартиры">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>053EB90D-798A-4D0E-8E25-07546FB3B9A1</guid>
+						<guid>BD3BC33C-3923-4AED-9B54-56E5A1039B75</guid>
 					</OdbRef>
 					<CreaTime>35200</CreaTime>
 					<ModiTime>35202</ModiTime>
@@ -193,7 +211,7 @@
 				<Name>Квартиры</Name>
 				<Index>7</Index>
 				<Flags/>
-				<ModiTime>1793339015</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1</Code>
@@ -204,13 +222,16 @@
 					<Green>0</Green>
 					<Blue>0</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Квартиры - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="8" Name="Подвал_Коридор">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>00BE6B06-E453-4050-BB42-632DCFF5EABD</guid>
+						<guid>DFDDFC70-8A94-496B-B614-F1BFFE03B574</guid>
 					</OdbRef>
 					<CreaTime>35205</CreaTime>
 					<ModiTime>35207</ModiTime>
@@ -218,7 +239,7 @@
 				<Name>Подвал_Коридор</Name>
 				<Index>8</Index>
 				<Flags/>
-				<ModiTime>1679308464</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>3030</Code>
@@ -229,13 +250,16 @@
 					<Green>55512</Green>
 					<Blue>65278</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Подвал_Коридор - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="9" Name="МОП_Коридор">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>68C8D63B-B6E0-4945-8FA1-C7C18C265B56</guid>
+						<guid>8CC4A243-0156-49C9-BF70-C0810994F0B2</guid>
 					</OdbRef>
 					<CreaTime>35210</CreaTime>
 					<ModiTime>35212</ModiTime>
@@ -243,7 +267,7 @@
 				<Name>МОП_Коридор</Name>
 				<Index>9</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>2020</Code>
@@ -254,13 +278,16 @@
 					<Green>56540</Green>
 					<Blue>43690</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - МОП_Коридор - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="10" Name="МОП_ВхГ_Колясочная">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>A8EF684C-976F-49FB-8D73-DCB7A97BDF20</guid>
+						<guid>32CE051A-8FC7-473B-AD46-EE687BE83543</guid>
 					</OdbRef>
 					<CreaTime>35215</CreaTime>
 					<ModiTime>35217</ModiTime>
@@ -268,7 +295,7 @@
 				<Name>МОП_ВхГ_Колясочная</Name>
 				<Index>10</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>2010</Code>
@@ -279,13 +306,16 @@
 					<Green>41120</Green>
 					<Blue>12850</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - МОП_ВхГ_Колясочная - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="11" Name="Кухня">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>3DB12C8C-504F-4D41-B019-FD243FDB8486</guid>
+						<guid>F03C3231-6FE2-4869-AA03-17F04AA792CC</guid>
 					</OdbRef>
 					<CreaTime>35220</CreaTime>
 					<ModiTime>35222</ModiTime>
@@ -293,7 +323,7 @@
 				<Name>Кухня</Name>
 				<Index>11</Index>
 				<Flags/>
-				<ModiTime>1679295284</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1020</Code>
@@ -304,13 +334,16 @@
 					<Green>61423</Green>
 					<Blue>41120</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Кухня - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="12" Name="Подвал_Техническое подполье">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>51412EAB-B79E-4E47-A997-0FD0F2494EB2</guid>
+						<guid>5329AA73-29CF-41D2-AF79-C84B73C35D4B</guid>
 					</OdbRef>
 					<CreaTime>35225</CreaTime>
 					<ModiTime>35227</ModiTime>
@@ -318,7 +351,7 @@
 				<Name>Подвал_Техническое подполье</Name>
 				<Index>12</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>3010</Code>
@@ -329,13 +362,16 @@
 					<Green>48830</Green>
 					<Blue>64764</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Подвал_Техническое подполье - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="13" Name="Подвал_Тамбур">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>A1E1B978-BB03-4D2D-96D5-A15DEE6596A6</guid>
+						<guid>9682C526-75F0-42C3-886F-AC9E854D6966</guid>
 					</OdbRef>
 					<CreaTime>35230</CreaTime>
 					<ModiTime>35232</ModiTime>
@@ -343,7 +379,7 @@
 				<Name>Подвал_Тамбур</Name>
 				<Index>13</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>3020</Code>
@@ -354,13 +390,16 @@
 					<Green>53713</Green>
 					<Blue>62708</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Подвал_Тамбур - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="14" Name="Тех. помещения (подвал)">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>156F293C-4325-4C80-A265-B28E5FB3B390</guid>
+						<guid>FFB9F0FD-160E-44CE-B354-0EBB18F1B977</guid>
 					</OdbRef>
 					<CreaTime>35235</CreaTime>
 					<ModiTime>35237</ModiTime>
@@ -379,13 +418,16 @@
 					<Green>0</Green>
 					<Blue>0</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Тех. помещения (подвал) - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="15" Name="Кабинет">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>90AE883B-7213-44BF-B249-D8902F572414</guid>
+						<guid>319FA510-0E2E-4454-BA38-D94D72808DE5</guid>
 					</OdbRef>
 					<CreaTime>35240</CreaTime>
 					<ModiTime>35242</ModiTime>
@@ -393,7 +435,7 @@
 				<Name>Кабинет</Name>
 				<Index>15</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1011</Code>
@@ -404,13 +446,16 @@
 					<Green>59110</Green>
 					<Blue>39578</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Кабинет - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="16" Name="Холл">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>F77DA15E-45AF-4A1A-BB51-6D9CD16E5392</guid>
+						<guid>F588BEDB-D78B-4BD6-B778-E568175C7D2F</guid>
 					</OdbRef>
 					<CreaTime>35245</CreaTime>
 					<ModiTime>35247</ModiTime>
@@ -418,7 +463,7 @@
 				<Name>Холл</Name>
 				<Index>16</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1012</Code>
@@ -429,13 +474,16 @@
 					<Green>53970</Green>
 					<Blue>19789</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Холл - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="17" Name="Зона кухни">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>9EB1C14E-B121-4B3D-AFC9-C5478C44F9DC</guid>
+						<guid>8766CAD3-0B88-4422-A4F1-CC466F93C614</guid>
 					</OdbRef>
 					<CreaTime>35250</CreaTime>
 					<ModiTime>35252</ModiTime>
@@ -443,7 +491,7 @@
 				<Name>Зона кухни</Name>
 				<Index>17</Index>
 				<Flags/>
-				<ModiTime>1679294677</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1021</Code>
@@ -454,13 +502,16 @@
 					<Green>59110</Green>
 					<Blue>27242</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Зона кухни - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="18" Name="Кухня-столовая">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>02F70F5C-736E-488B-8A25-E49D0ADAADF5</guid>
+						<guid>4B7D1AC9-19FB-4523-94E5-DFEDCEB08B09</guid>
 					</OdbRef>
 					<CreaTime>35255</CreaTime>
 					<ModiTime>35257</ModiTime>
@@ -468,7 +519,7 @@
 				<Name>Кухня-столовая</Name>
 				<Index>18</Index>
 				<Flags/>
-				<ModiTime>1679294704</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1022</Code>
@@ -479,13 +530,16 @@
 					<Green>56026</Green>
 					<Blue>9509</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Кухня-столовая - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="19" Name="Прихожая">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>2A65E3A4-8A79-403F-A5F7-32942318681C</guid>
+						<guid>FC175F0F-0364-48D0-BA8E-DB9C5F162D81</guid>
 					</OdbRef>
 					<CreaTime>35260</CreaTime>
 					<ModiTime>35262</ModiTime>
@@ -493,7 +547,7 @@
 				<Name>Прихожая</Name>
 				<Index>19</Index>
 				<Flags/>
-				<ModiTime>1679294746</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1030</Code>
@@ -504,13 +558,16 @@
 					<Green>55512</Green>
 					<Blue>44461</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Прихожая - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="20" Name="Тамбур">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>A4E6A649-9646-4BE2-AC3A-5251D0DEA89D</guid>
+						<guid>51C7792F-5180-4BC9-B032-3EA6BE2506AA</guid>
 					</OdbRef>
 					<CreaTime>35265</CreaTime>
 					<ModiTime>35267</ModiTime>
@@ -518,7 +575,7 @@
 				<Name>Тамбур</Name>
 				<Index>20</Index>
 				<Flags/>
-				<ModiTime>1679294789</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1031</Code>
@@ -529,13 +586,16 @@
 					<Green>46517</Green>
 					<Blue>25957</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Тамбур - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="21" Name="Коридор">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>89249C66-59B8-4746-9CF8-37D2141D8EFA</guid>
+						<guid>5612388C-CDBF-4DA0-9E5F-AC4A1CDC1B16</guid>
 					</OdbRef>
 					<CreaTime>35270</CreaTime>
 					<ModiTime>35272</ModiTime>
@@ -543,7 +603,7 @@
 				<Name>Коридор</Name>
 				<Index>21</Index>
 				<Flags/>
-				<ModiTime>1679294815</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1040</Code>
@@ -554,13 +614,16 @@
 					<Green>47545</Green>
 					<Blue>43176</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Коридор - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="22" Name="Совмещенный санузел">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>631EEE2C-F04D-4932-88C5-E9FEB6585CA6</guid>
+						<guid>36F83B10-EDA6-493C-AD80-82347263954C</guid>
 					</OdbRef>
 					<CreaTime>35275</CreaTime>
 					<ModiTime>35277</ModiTime>
@@ -568,7 +631,7 @@
 				<Name>Совмещенный санузел</Name>
 				<Index>22</Index>
 				<Flags/>
-				<ModiTime>1679465708</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1050</Code>
@@ -579,13 +642,16 @@
 					<Green>65021</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Совмещенный санузел - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="23" Name="Санузел">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>EBD75CF1-EFD6-46D8-9139-2C4FBD7BAC84</guid>
+						<guid>554AE663-B4A2-4E87-9093-39DC38C57CB9</guid>
 					</OdbRef>
 					<CreaTime>35280</CreaTime>
 					<ModiTime>35282</ModiTime>
@@ -593,7 +659,7 @@
 				<Name>Санузел</Name>
 				<Index>23</Index>
 				<Flags/>
-				<ModiTime>1679294932</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1051</Code>
@@ -604,13 +670,16 @@
 					<Green>64250</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Санузел - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="24" Name="Ванная">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>45D3BDC7-CC2B-4C42-B856-9CEDCDC7A1B0</guid>
+						<guid>76F531BE-5996-4D94-B28C-F00EBF8BF359</guid>
 					</OdbRef>
 					<CreaTime>35285</CreaTime>
 					<ModiTime>35287</ModiTime>
@@ -618,7 +687,7 @@
 				<Name>Ванная</Name>
 				<Index>24</Index>
 				<Flags/>
-				<ModiTime>1679294975</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1052</Code>
@@ -629,13 +698,16 @@
 					<Green>63479</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Ванная - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="25" Name="Душевая">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>FBDD1AFE-6117-41E4-9E6D-BAEA2DD838D5</guid>
+						<guid>08A28333-9762-432E-8987-4ADADE9A52AA</guid>
 					</OdbRef>
 					<CreaTime>35290</CreaTime>
 					<ModiTime>35292</ModiTime>
@@ -643,7 +715,7 @@
 				<Name>Душевая</Name>
 				<Index>25</Index>
 				<Flags/>
-				<ModiTime>1679294993</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1053</Code>
@@ -654,13 +726,16 @@
 					<Green>62194</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Душевая - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="26" Name="Терраса">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>C00F8EBA-716A-4020-BDA5-994FA09A43C6</guid>
+						<guid>07FFED81-6502-496E-B2F1-59DBB7242DD2</guid>
 					</OdbRef>
 					<CreaTime>35295</CreaTime>
 					<ModiTime>35297</ModiTime>
@@ -668,7 +743,7 @@
 				<Name>Терраса</Name>
 				<Index>26</Index>
 				<Flags/>
-				<ModiTime>1679295065</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1061</Code>
@@ -679,13 +754,16 @@
 					<Green>51143</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Терраса - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="27" Name="Лоджия">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>8EFBA3B1-3AC1-4438-BD0A-768EFC0D8AE2</guid>
+						<guid>6B70750D-5AC7-4FD5-A6BB-10BC504A9406</guid>
 					</OdbRef>
 					<CreaTime>35300</CreaTime>
 					<ModiTime>35302</ModiTime>
@@ -693,7 +771,7 @@
 				<Name>Лоджия</Name>
 				<Index>27</Index>
 				<Flags/>
-				<ModiTime>1679465708</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1070</Code>
@@ -704,13 +782,16 @@
 					<Green>54998</Green>
 					<Blue>65278</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Лоджия - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="28" Name="Гардеробная">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>85F6365A-F313-4906-A70B-8B631282D843</guid>
+						<guid>D814907C-A2DD-4386-B8E2-D3760BE311B0</guid>
 					</OdbRef>
 					<CreaTime>35305</CreaTime>
 					<ModiTime>35307</ModiTime>
@@ -718,7 +799,7 @@
 				<Name>Гардеробная</Name>
 				<Index>28</Index>
 				<Flags/>
-				<ModiTime>1679295126</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1080</Code>
@@ -729,13 +810,16 @@
 					<Green>54998</Green>
 					<Blue>55769</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Гардеробная - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="29" Name="Кладовая">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>6DAA792A-ABBA-41DD-9849-B446EB3EB921</guid>
+						<guid>18FAAF9D-B2E1-4307-9030-E08F95FD2A2D</guid>
 					</OdbRef>
 					<CreaTime>35310</CreaTime>
 					<ModiTime>35312</ModiTime>
@@ -743,7 +827,7 @@
 				<Name>Кладовая</Name>
 				<Index>29</Index>
 				<Flags/>
-				<ModiTime>1679295151</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1081</Code>
@@ -754,13 +838,16 @@
 					<Green>49858</Green>
 					<Blue>51143</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Кладовая - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="30" Name="Постирочная">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>EB941ECB-33A6-41B0-9D77-152A0F0B8FF9</guid>
+						<guid>376778A6-FE7F-4C0D-BCCB-34D76F9AC260</guid>
 					</OdbRef>
 					<CreaTime>35315</CreaTime>
 					<ModiTime>35317</ModiTime>
@@ -768,7 +855,7 @@
 				<Name>Постирочная</Name>
 				<Index>30</Index>
 				<Flags/>
-				<ModiTime>1679295170</ModiTime>
+				<ModiTime>1793349233</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>1082</Code>
@@ -779,13 +866,16 @@
 					<Green>42405</Green>
 					<Blue>43947</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Постирочная - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="31" Name="МОП_ВхГ_Вестибюль">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>E33642C9-D49B-4315-B542-36A08A8674B8</guid>
+						<guid>A9F60B88-389C-44D5-868F-2AB21B265E1B</guid>
 					</OdbRef>
 					<CreaTime>35320</CreaTime>
 					<ModiTime>35322</ModiTime>
@@ -793,7 +883,7 @@
 				<Name>МОП_ВхГ_Вестибюль</Name>
 				<Index>31</Index>
 				<Flags/>
-				<ModiTime>1679295456</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>2011</Code>
@@ -804,13 +894,16 @@
 					<Green>51657</Green>
 					<Blue>21074</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - МОП_ВхГ_Вестибюль - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="32" Name="МОП_ВхГ_Тамбур">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>E8FFD8AB-90B0-4371-B61A-A6BC6061466B</guid>
+						<guid>AD96E240-2C81-44EE-8E7B-5444C1C5239B</guid>
 					</OdbRef>
 					<CreaTime>35325</CreaTime>
 					<ModiTime>35327</ModiTime>
@@ -818,7 +911,7 @@
 				<Name>МОП_ВхГ_Тамбур</Name>
 				<Index>32</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346380</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>2012</Code>
@@ -829,13 +922,16 @@
 					<Green>51657</Green>
 					<Blue>21074</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - МОП_ВхГ_Тамбур - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="33" Name="МОП_Пожаробезопасная зона">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>5FB9F078-1202-46A4-A8F4-FD3FB7E5C696</guid>
+						<guid>1DC00872-91A6-4695-9BF1-75CB74BF6FB1</guid>
 					</OdbRef>
 					<CreaTime>35335</CreaTime>
 					<ModiTime>35337</ModiTime>
@@ -843,7 +939,7 @@
 				<Name>МОП_Пожаробезопасная зона</Name>
 				<Index>33</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>2040</Code>
@@ -854,13 +950,16 @@
 					<Green>64250</Green>
 					<Blue>42662</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - МОП_Пожаробезопасная зона - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="34" Name="МОП_Лифтовой холл">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>569CD1D0-0F81-4BC6-A3AE-0D163F2D52ED</guid>
+						<guid>33DA913E-E738-4881-A702-89ADADAFB914</guid>
 					</OdbRef>
 					<CreaTime>35340</CreaTime>
 					<ModiTime>35342</ModiTime>
@@ -868,7 +967,7 @@
 				<Name>МОП_Лифтовой холл</Name>
 				<Index>34</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>2050</Code>
@@ -879,13 +978,16 @@
 					<Green>65535</Green>
 					<Blue>48573</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - МОП_Лифтовой холл - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="35" Name="МОП_Тамбур">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>CCB25E32-50CE-45E6-97E0-B7E494C61CA9</guid>
+						<guid>B63D8CFF-9136-4D7D-9127-1550DA9A8A8F</guid>
 					</OdbRef>
 					<CreaTime>35345</CreaTime>
 					<ModiTime>35347</ModiTime>
@@ -893,7 +995,7 @@
 				<Name>МОП_Тамбур</Name>
 				<Index>35</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>2060</Code>
@@ -904,13 +1006,16 @@
 					<Green>65535</Green>
 					<Blue>51914</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - МОП_Тамбур - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="36" Name="МОП_Тамбур-шлюз">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>0B73E49A-E160-4D12-8358-2961CD399503</guid>
+						<guid>7C8CAE77-0C99-47EE-A8DD-AD9FF7490FB0</guid>
 					</OdbRef>
 					<CreaTime>35350</CreaTime>
 					<ModiTime>35352</ModiTime>
@@ -918,7 +1023,7 @@
 				<Name>МОП_Тамбур-шлюз</Name>
 				<Index>36</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>2061</Code>
@@ -929,13 +1034,16 @@
 					<Green>65535</Green>
 					<Blue>34952</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - МОП_Тамбур-шлюз - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="37" Name="МОП_Переходной балкон">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>090BDFEE-F288-4B31-A710-D748077BED20</guid>
+						<guid>FA6CE7A8-2339-48B8-9D66-CED661C7CB42</guid>
 					</OdbRef>
 					<CreaTime>35355</CreaTime>
 					<ModiTime>35357</ModiTime>
@@ -943,7 +1051,7 @@
 				<Name>МОП_Переходной балкон</Name>
 				<Index>37</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>2070</Code>
@@ -954,13 +1062,16 @@
 					<Green>62708</Green>
 					<Blue>47288</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - МОП_Переходной балкон - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="38" Name="Подвал_Машинное помещение лифтов">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>90ECBAEB-4DF5-48DB-9CBF-4DB546E19606</guid>
+						<guid>C7179209-FCC7-40D5-92AA-8887E4AFBE56</guid>
 					</OdbRef>
 					<CreaTime>35360</CreaTime>
 					<ModiTime>35362</ModiTime>
@@ -968,7 +1079,7 @@
 				<Name>Подвал_Машинное помещение лифтов</Name>
 				<Index>38</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>3040</Code>
@@ -979,13 +1090,16 @@
 					<Green>46003</Green>
 					<Blue>65021</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Подвал_Машинное помещение лифтов - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="39" Name="Подвал_Пожаробезопасная зона">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>1F234D6E-9B54-4AE9-B616-971D3B3CA4D5</guid>
+						<guid>40A75D02-9F98-4842-A2F5-229E62F1F409</guid>
 					</OdbRef>
 					<CreaTime>35365</CreaTime>
 					<ModiTime>35367</ModiTime>
@@ -993,7 +1107,7 @@
 				<Name>Подвал_Пожаробезопасная зона</Name>
 				<Index>39</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>3050</Code>
@@ -1004,13 +1118,16 @@
 					<Green>40349</Green>
 					<Blue>65021</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Подвал_Пожаробезопасная зона - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="40" Name="Подвал_Кладовая">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>306A006C-097A-4196-B938-BD413ACE9B96</guid>
+						<guid>67529D81-FA94-4BDD-8122-0D5F44418EF6</guid>
 					</OdbRef>
 					<CreaTime>35370</CreaTime>
 					<ModiTime>35372</ModiTime>
@@ -1018,7 +1135,7 @@
 				<Name>Подвал_Кладовая</Name>
 				<Index>40</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793953305</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>3060</Code>
@@ -1029,13 +1146,16 @@
 					<Green>43433</Green>
 					<Blue>64507</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Подвал_Кладовая - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
 			<RoomCategory Idx="41" Name="Подвал_Блок кладовых">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>9962729C-626C-47AE-82F6-493BE62F32F6</guid>
+						<guid>2238C250-AA8A-40D8-B6C2-040AD7C7284A</guid>
 					</OdbRef>
 					<CreaTime>35375</CreaTime>
 					<ModiTime>35377</ModiTime>
@@ -1043,7 +1163,7 @@
 				<Name>Подвал_Блок кладовых</Name>
 				<Index>41</Index>
 				<Flags/>
-				<ModiTime>1679308423</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>3061</Code>
@@ -1054,46 +1174,24 @@
 					<Green>35723</Green>
 					<Blue>64250</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Подвал_Блок кладовых - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="42" Name="Подвал_Подвальное помещение">
+			<RoomCategory Idx="42" Name="-------ТЕХНИЧЕСКОЕ ПОМЕЩЕНИЕ-------">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>92CC7F3B-8F4C-4A5E-AB88-567B80A545AA</guid>
-					</OdbRef>
-					<CreaTime>35205</CreaTime>
-					<ModiTime>35207</ModiTime>
-				</OdbObj>
-				<Name>Подвал_Подвальное помещение</Name>
-				<Index>42</Index>
-				<Flags/>
-				<ModiTime>1679308464</ModiTime>
-				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
-				<ReadOnly>false</ReadOnly>
-				<Code>3070</Code>
-				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
-				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
-				<RGBColor>
-					<Red>57311</Red>
-					<Green>55512</Green>
-					<Blue>65278</Blue>
-				</RGBColor>
-				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
-				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
-			</RoomCategory>
-			<RoomCategory Idx="43" Name="-------ТЕХНИЧЕСКОЕ ПОМЕЩЕНИЕ-------">
-				<OdbObj Mv="4" Sv="0">
-					<OdbRef>
-						<guid>FD3BDC5E-F36D-452B-B36D-15429A08A56C</guid>
+						<guid>0DB6F537-3822-4EBF-9504-BEBD4970BF93</guid>
 					</OdbRef>
 					<CreaTime>35380</CreaTime>
 					<ModiTime>35382</ModiTime>
 				</OdbObj>
 				<Name>-------ТЕХНИЧЕСКОЕ ПОМЕЩЕНИЕ-------</Name>
-				<Index>43</Index>
+				<Index>42</Index>
 				<Flags/>
-				<ModiTime>1679296519</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>4</Code>
@@ -1104,21 +1202,24 @@
 					<Green>0</Green>
 					<Blue>0</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - -------ТЕХНИЧЕСКОЕ ПОМЕЩЕНИЕ------- - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="44" Name="ТП_Венткамера">
+			<RoomCategory Idx="43" Name="ТП_Венткамера">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>1DE121F4-662B-4ADD-90E1-A4DB37C63B7A</guid>
+						<guid>0F4B379E-BEAC-4C53-BF90-A0F29DA992AA</guid>
 					</OdbRef>
 					<CreaTime>35385</CreaTime>
 					<ModiTime>35387</ModiTime>
 				</OdbObj>
 				<Name>ТП_Венткамера</Name>
-				<Index>44</Index>
+				<Index>43</Index>
 				<Flags/>
-				<ModiTime>1679296786</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>4010</Code>
@@ -1129,21 +1230,24 @@
 					<Green>57311</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ТП_Венткамера - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="45" Name="ТП_Венткамера приточная">
+			<RoomCategory Idx="44" Name="ТП_Венткамера приточная">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>885692C1-5A5E-4F2C-BF3A-FCFB12AA5E23</guid>
+						<guid>51CE9A6B-C020-4212-97D1-AA15FCA9CE9B</guid>
 					</OdbRef>
 					<CreaTime>35390</CreaTime>
 					<ModiTime>35392</ModiTime>
 				</OdbObj>
 				<Name>ТП_Венткамера приточная</Name>
-				<Index>45</Index>
+				<Index>44</Index>
 				<Flags/>
-				<ModiTime>1679296813</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>4011</Code>
@@ -1154,21 +1258,24 @@
 					<Green>57311</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ТП_Венткамера приточная - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="46" Name="ТП_Водомерный узел">
+			<RoomCategory Idx="45" Name="ТП_Водомерный узел">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>5F475269-A1C7-4A8B-B676-876FFB5EBF7C</guid>
+						<guid>76177FD0-8642-4403-88D6-795E0D446207</guid>
 					</OdbRef>
 					<CreaTime>35395</CreaTime>
 					<ModiTime>35397</ModiTime>
 				</OdbObj>
 				<Name>ТП_Водомерный узел</Name>
-				<Index>46</Index>
+				<Index>45</Index>
 				<Flags/>
-				<ModiTime>1679296828</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>4020</Code>
@@ -1179,21 +1286,24 @@
 					<Green>58082</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ТП_Водомерный узел - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="47" Name="ТП_Венткамера вытяжная">
+			<RoomCategory Idx="46" Name="ТП_Венткамера вытяжная">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>D34E9ACE-CC03-4AAB-A51C-399AD033510F</guid>
+						<guid>3E41ABD0-92C8-4525-98A9-551DACD81F49</guid>
 					</OdbRef>
 					<CreaTime>35400</CreaTime>
 					<ModiTime>35402</ModiTime>
 				</OdbObj>
 				<Name>ТП_Венткамера вытяжная</Name>
-				<Index>47</Index>
+				<Index>46</Index>
 				<Flags/>
-				<ModiTime>1679296887</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>4012</Code>
@@ -1204,21 +1314,24 @@
 					<Green>57311</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ТП_Венткамера вытяжная - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="48" Name="ТП_Насосная">
+			<RoomCategory Idx="47" Name="ТП_Насосная">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>530655B6-EA62-4239-A776-E784334B3935</guid>
+						<guid>5DD7F621-1C77-4E64-B943-484932739939</guid>
 					</OdbRef>
 					<CreaTime>35405</CreaTime>
 					<ModiTime>35407</ModiTime>
 				</OdbObj>
 				<Name>ТП_Насосная</Name>
-				<Index>48</Index>
+				<Index>47</Index>
 				<Flags/>
-				<ModiTime>1679296974</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>4021</Code>
@@ -1229,21 +1342,24 @@
 					<Green>56026</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ТП_Насосная - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="49" Name="ТП_АУПТ-насосная пожаротушения">
+			<RoomCategory Idx="48" Name="ТП_АУПТ-насосная пожаротушения">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>7FBFEE3C-856E-4A5D-A6BC-A047830CADDB</guid>
+						<guid>9B5C048A-792C-46FD-9FE6-4524F587EC99</guid>
 					</OdbRef>
 					<CreaTime>35410</CreaTime>
 					<ModiTime>35412</ModiTime>
 				</OdbObj>
 				<Name>ТП_АУПТ-насосная пожаротушения</Name>
-				<Index>49</Index>
+				<Index>48</Index>
 				<Flags/>
-				<ModiTime>1679297017</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>4022</Code>
@@ -1254,21 +1370,24 @@
 					<Green>54998</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ТП_АУПТ-насосная пожаротушения - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="50" Name="ТП_Помещение водоочистки">
+			<RoomCategory Idx="49" Name="ТП_Помещение водоочистки">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>976ACBC1-4ED2-4C76-A1E8-1FA59A8404C8</guid>
+						<guid>0CA0B471-C9CB-4A7D-8E0A-012460E11A1E</guid>
 					</OdbRef>
 					<CreaTime>35415</CreaTime>
 					<ModiTime>35417</ModiTime>
 				</OdbObj>
 				<Name>ТП_Помещение водоочистки</Name>
-				<Index>50</Index>
+				<Index>49</Index>
 				<Flags/>
-				<ModiTime>1679297068</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>4023</Code>
@@ -1279,21 +1398,24 @@
 					<Green>50629</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ТП_Помещение водоочистки - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="51" Name="ТП_ИТП">
+			<RoomCategory Idx="50" Name="ТП_ИТП">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>17069E3A-F027-49CB-ABE8-2F2C20DE31B9</guid>
+						<guid>99201D2A-0EC5-46E5-8D0A-88B37200CAD0</guid>
 					</OdbRef>
 					<CreaTime>35420</CreaTime>
 					<ModiTime>35422</ModiTime>
 				</OdbObj>
 				<Name>ТП_ИТП</Name>
-				<Index>51</Index>
+				<Index>50</Index>
 				<Flags/>
-				<ModiTime>1679298181</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>4040</Code>
@@ -1304,21 +1426,24 @@
 					<Green>52428</Green>
 					<Blue>63993</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ТП_ИТП - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="52" Name="ТП_ГРЩ">
+			<RoomCategory Idx="51" Name="ТП_ГРЩ">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>38017ACA-D500-4554-842B-9135E053B6EE</guid>
+						<guid>23533989-98CE-4D7C-9B95-95B98C1F2E3C</guid>
 					</OdbRef>
 					<CreaTime>35425</CreaTime>
 					<ModiTime>35427</ModiTime>
 				</OdbObj>
 				<Name>ТП_ГРЩ</Name>
-				<Index>52</Index>
+				<Index>51</Index>
 				<Flags/>
-				<ModiTime>1679298220</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>4030</Code>
@@ -1329,21 +1454,24 @@
 					<Green>48059</Green>
 					<Blue>63736</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ТП_ГРЩ - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="53" Name="ТП_Электрощитовая">
+			<RoomCategory Idx="52" Name="ТП_Электрощитовая">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>983F294C-3795-4935-9DDC-D7F5D68B99D7</guid>
+						<guid>4DDE1E63-DE41-4E62-B0DF-01F4CC2095AD</guid>
 					</OdbRef>
 					<CreaTime>35430</CreaTime>
 					<ModiTime>35432</ModiTime>
 				</OdbObj>
 				<Name>ТП_Электрощитовая</Name>
-				<Index>53</Index>
+				<Index>52</Index>
 				<Flags/>
-				<ModiTime>1679298258</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>4050</Code>
@@ -1354,21 +1482,24 @@
 					<Green>53970</Green>
 					<Blue>64507</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ТП_Электрощитовая - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="54" Name="ТП_Пространство для прокладки коммуникаций">
+			<RoomCategory Idx="53" Name="ТП_Пространство для прокладки коммуникаций">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>88DBB461-FE39-4822-A84C-AC0EB5BB3AAE</guid>
+						<guid>A38F7B44-05B8-4148-9515-CBB873B11820</guid>
 					</OdbRef>
 					<CreaTime>35435</CreaTime>
 					<ModiTime>35437</ModiTime>
 				</OdbObj>
 				<Name>ТП_Пространство для прокладки коммуникаций</Name>
-				<Index>54</Index>
+				<Index>53</Index>
 				<Flags/>
-				<ModiTime>1679298289</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>4060</Code>
@@ -1379,21 +1510,24 @@
 					<Green>51914</Green>
 					<Blue>64507</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ТП_Пространство для прокладки коммуникаций - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="55" Name="Встроенные помещения">
+			<RoomCategory Idx="54" Name="Встроенные помещения">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>6EF43A63-0BEB-44CF-8747-89412BC60A1F</guid>
+						<guid>A5CBF8C3-A524-4AB0-BEA9-E1CA8604D7EE</guid>
 					</OdbRef>
 					<CreaTime>35440</CreaTime>
 					<ModiTime>35442</ModiTime>
 				</OdbObj>
 				<Name>Встроенные помещения</Name>
-				<Index>55</Index>
+				<Index>54</Index>
 				<Flags/>
-				<ModiTime>1793339015</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>5</Code>
@@ -1404,21 +1538,24 @@
 					<Green>0</Green>
 					<Blue>0</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Встроенные помещения - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="56" Name="ВПП_Административное помещение, Торговый зал, Торгово-выставочный зал, Подсобное помещение, Обеденный зал">
+			<RoomCategory Idx="55" Name="ВПП_Административное помещение, Торговый зал, Торгово-выставочный зал, Подсобное помещение, Обеденный зал">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>2E58A8D6-32CF-4AD3-8106-8F2D2A80EFBD</guid>
+						<guid>4F335759-9BA4-4266-A96B-7962F47105C0</guid>
 					</OdbRef>
 					<CreaTime>35445</CreaTime>
 					<ModiTime>35447</ModiTime>
 				</OdbObj>
 				<Name>ВПП_Административное помещение, Торговый зал, Торгово-выставочный зал, Подсобное помещение, Обеденный зал</Name>
-				<Index>56</Index>
+				<Index>55</Index>
 				<Flags/>
-				<ModiTime>1679307204</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>5010</Code>
@@ -1429,21 +1566,24 @@
 					<Green>54998</Green>
 					<Blue>51143</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ВПП_Административное помещение, Торговый зал, Торгово-выставочный зал, Подсобное помещение, Обеденный зал - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="57" Name="ВПП_Кладовая №хххх">
+			<RoomCategory Idx="56" Name="ВПП_Кладовая №хххх">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>B016E670-DAD5-45E9-8728-A818D07943CD</guid>
+						<guid>A2B8E292-671F-4501-90DC-78AC1D0B3F74</guid>
 					</OdbRef>
 					<CreaTime>35450</CreaTime>
 					<ModiTime>35452</ModiTime>
 				</OdbObj>
 				<Name>ВПП_Кладовая №хххх</Name>
-				<Index>57</Index>
+				<Index>56</Index>
 				<Flags/>
-				<ModiTime>1679306971</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>5020</Code>
@@ -1454,21 +1594,24 @@
 					<Green>50629</Green>
 					<Blue>44975</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ВПП_Кладовая №хххх - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="58" Name="ВПП_С/у">
+			<RoomCategory Idx="57" Name="ВПП_С/у">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>B47C2277-4FED-4BB6-9F26-E2FBAFB403BF</guid>
+						<guid>D34AB53E-AEB8-45E1-93A1-886304A55737</guid>
 					</OdbRef>
 					<CreaTime>35455</CreaTime>
 					<ModiTime>35457</ModiTime>
 				</OdbObj>
 				<Name>ВПП_С/у</Name>
-				<Index>58</Index>
+				<Index>57</Index>
 				<Flags/>
-				<ModiTime>1679306992</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>5030</Code>
@@ -1479,21 +1622,24 @@
 					<Green>43947</Green>
 					<Blue>35723</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ВПП_С_у - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="59" Name="ВПП_ПУИ с с/у">
+			<RoomCategory Idx="58" Name="ВПП_ПУИ с с/у">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>235DBE7F-9D14-47C1-9350-BE147F7DC932</guid>
+						<guid>BF83C3E3-1B99-442A-8217-741FDDAA9AC4</guid>
 					</OdbRef>
 					<CreaTime>35460</CreaTime>
 					<ModiTime>35462</ModiTime>
 				</OdbObj>
 				<Name>ВПП_ПУИ с с/у</Name>
-				<Index>59</Index>
+				<Index>58</Index>
 				<Flags/>
-				<ModiTime>1679307025</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>5040</Code>
@@ -1504,21 +1650,24 @@
 					<Green>41891</Green>
 					<Blue>33153</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ВПП_ПУИ с с_у - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="60" Name="ВПП_ПУИ">
+			<RoomCategory Idx="59" Name="ВПП_ПУИ">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>1E5B2249-528A-4A6B-806E-4C0D51C233D0</guid>
+						<guid>66A0A6DF-DC71-4C52-A703-CB86BA29A456</guid>
 					</OdbRef>
 					<CreaTime>35465</CreaTime>
 					<ModiTime>35467</ModiTime>
 				</OdbObj>
 				<Name>ВПП_ПУИ</Name>
-				<Index>60</Index>
+				<Index>59</Index>
 				<Flags/>
-				<ModiTime>1679307060</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>5050</Code>
@@ -1529,21 +1678,24 @@
 					<Green>37265</Green>
 					<Blue>26471</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ВПП_ПУИ - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="61" Name="-------ЭКСПЛУАТАЦИОННЫЕ ПОМЕЩЕНИЯ------ ">
+			<RoomCategory Idx="60" Name="-------ЭКСПЛУАТАЦИОННЫЕ ПОМЕЩЕНИЯ------ ">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>5789919A-01BA-444E-AFB4-BE2239AC8955</guid>
+						<guid>2B34D2D5-C0C1-44E9-88A7-D21B73FE7DB6</guid>
 					</OdbRef>
 					<CreaTime>35470</CreaTime>
 					<ModiTime>35472</ModiTime>
 				</OdbObj>
 				<Name>-------ЭКСПЛУАТАЦИОННЫЕ ПОМЕЩЕНИЯ------ </Name>
-				<Index>61</Index>
+				<Index>60</Index>
 				<Flags/>
-				<ModiTime>1679307485</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>6</Code>
@@ -1554,21 +1706,24 @@
 					<Green>0</Green>
 					<Blue>0</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - -------ЭКСПЛУАТАЦИОННЫЕ ПОМЕЩЕНИЯ------  - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="62" Name="ЭП_Диспетчерская">
+			<RoomCategory Idx="61" Name="ЭП_Диспетчерская">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>94467979-0589-4AFB-8281-EFE4973C13D4</guid>
+						<guid>D35924AB-5CFB-4057-9D63-2C8925CCD730</guid>
 					</OdbRef>
 					<CreaTime>35475</CreaTime>
 					<ModiTime>35477</ModiTime>
 				</OdbObj>
 				<Name>ЭП_Диспетчерская</Name>
-				<Index>62</Index>
+				<Index>61</Index>
 				<Flags/>
-				<ModiTime>1679307596</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>6011</Code>
@@ -1579,21 +1734,24 @@
 					<Green>26985</Green>
 					<Blue>27756</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ЭП_Диспетчерская - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="63" Name="ЭП_Помещение консьержа">
+			<RoomCategory Idx="62" Name="ЭП_Помещение консьержа">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>2187CF3C-4BAC-4CB7-89FF-C7FD4DCFC3A9</guid>
+						<guid>CAB9BD68-C3DD-4C9A-9E0A-9059FF505799</guid>
 					</OdbRef>
 					<CreaTime>35480</CreaTime>
 					<ModiTime>35482</ModiTime>
 				</OdbObj>
 				<Name>ЭП_Помещение консьержа</Name>
-				<Index>63</Index>
+				<Index>62</Index>
 				<Flags/>
-				<ModiTime>1679307691</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>6010</Code>
@@ -1604,21 +1762,24 @@
 					<Green>40606</Green>
 					<Blue>41120</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ЭП_Помещение консьержа - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="64" Name="ЭП_Помещение охраны">
+			<RoomCategory Idx="63" Name="ЭП_Помещение охраны">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>E3F95A93-9C85-4CB8-970E-415D555A3DC8</guid>
+						<guid>AB06133F-824B-4DBC-8A14-FEF81DAB1CB2</guid>
 					</OdbRef>
 					<CreaTime>35485</CreaTime>
 					<ModiTime>35487</ModiTime>
 				</OdbObj>
 				<Name>ЭП_Помещение охраны</Name>
-				<Index>64</Index>
+				<Index>63</Index>
 				<Flags/>
-				<ModiTime>1679307735</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>6012</Code>
@@ -1629,21 +1790,24 @@
 					<Green>40606</Green>
 					<Blue>41120</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ЭП_Помещение охраны - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="65" Name="ЭП_Рабочее помещение">
+			<RoomCategory Idx="64" Name="ЭП_Рабочее помещение">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>0239D759-98B5-4B89-9BB8-673AF6C02775</guid>
+						<guid>2E18AC5B-981E-4E7B-982D-4EED8B516635</guid>
 					</OdbRef>
 					<CreaTime>35490</CreaTime>
 					<ModiTime>35492</ModiTime>
 				</OdbObj>
 				<Name>ЭП_Рабочее помещение</Name>
-				<Index>65</Index>
+				<Index>64</Index>
 				<Flags/>
-				<ModiTime>1679307764</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>6013</Code>
@@ -1654,21 +1818,24 @@
 					<Green>40606</Green>
 					<Blue>41120</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ЭП_Рабочее помещение - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="66" Name="ЭП_Подсобное помещение">
+			<RoomCategory Idx="65" Name="ЭП_Подсобное помещение">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>7B2AD901-7468-478F-9C12-6CEDFD758E0D</guid>
+						<guid>92A687E7-3DD8-46CC-B32A-88F72B6852D5</guid>
 					</OdbRef>
 					<CreaTime>35495</CreaTime>
 					<ModiTime>35497</ModiTime>
 				</OdbObj>
 				<Name>ЭП_Подсобное помещение</Name>
-				<Index>66</Index>
+				<Index>65</Index>
 				<Flags/>
-				<ModiTime>1679307881</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>6014</Code>
@@ -1679,21 +1846,24 @@
 					<Green>40606</Green>
 					<Blue>41120</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ЭП_Подсобное помещение - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="67" Name="ЭП_ПУИ, ПУИ с с/у">
+			<RoomCategory Idx="66" Name="ЭП_ПУИ, ПУИ с с/у">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>1F9B0F8A-BAD9-4AB2-BBDC-173F47B78F14</guid>
+						<guid>CA1AEE99-C56C-413F-BECC-1952A5C787EB</guid>
 					</OdbRef>
 					<CreaTime>35500</CreaTime>
 					<ModiTime>35502</ModiTime>
 				</OdbObj>
 				<Name>ЭП_ПУИ, ПУИ с с/у</Name>
-				<Index>67</Index>
+				<Index>66</Index>
 				<Flags/>
-				<ModiTime>1679307911</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>6020</Code>
@@ -1704,21 +1874,24 @@
 					<Green>50372</Green>
 					<Blue>50629</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ЭП_ПУИ, ПУИ с с_у - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="68" Name="ЭП_Мусоросборная камера">
+			<RoomCategory Idx="67" Name="ЭП_Мусоросборная камера">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>2A3EE08F-DD10-4A9F-92E9-CE3D5A688E71</guid>
+						<guid>AB3D0573-884F-41A5-B98D-0B271B75E82D</guid>
 					</OdbRef>
 					<CreaTime>35505</CreaTime>
 					<ModiTime>35507</ModiTime>
 				</OdbObj>
 				<Name>ЭП_Мусоросборная камера</Name>
-				<Index>68</Index>
+				<Index>67</Index>
 				<Flags/>
-				<ModiTime>1679307940</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>6030</Code>
@@ -1729,21 +1902,24 @@
 					<Green>30069</Green>
 					<Blue>30840</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ЭП_Мусоросборная камера - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="69" Name="ЭП_УК">
+			<RoomCategory Idx="68" Name="ЭП_УК">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>E7CBE4DA-584D-449E-B218-7138760999E5</guid>
+						<guid>B5FA883F-2627-4323-ABF2-4C9F0B704A76</guid>
 					</OdbRef>
 					<CreaTime>35510</CreaTime>
 					<ModiTime>35512</ModiTime>
 				</OdbObj>
 				<Name>ЭП_УК</Name>
-				<Index>69</Index>
+				<Index>68</Index>
 				<Flags/>
-				<ModiTime>1679307958</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>6040</Code>
@@ -1754,21 +1930,24 @@
 					<Green>34695</Green>
 					<Blue>35466</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ЭП_УК - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="70" Name="ЭП_С/у">
+			<RoomCategory Idx="69" Name="ЭП_С/у">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>372004EF-B908-499D-B7B4-EF0D1AECADFD</guid>
+						<guid>655A7FC8-88C5-4009-9DBA-7F5AEF82ED4D</guid>
 					</OdbRef>
 					<CreaTime>35515</CreaTime>
 					<ModiTime>35517</ModiTime>
 				</OdbObj>
 				<Name>ЭП_С/у</Name>
-				<Index>70</Index>
+				<Index>69</Index>
 				<Flags/>
-				<ModiTime>1679307978</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>6050</Code>
@@ -1779,21 +1958,24 @@
 					<Green>44204</Green>
 					<Blue>44718</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ЭП_С_у - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="71" Name="-------ЧЕРДАК------ ">
+			<RoomCategory Idx="70" Name="-------ЧЕРДАК------ ">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>BB0DA223-9ADE-4D97-AD15-EAD698AAC42C</guid>
+						<guid>B951EA18-2C96-43A8-98CB-B886D8A1E085</guid>
 					</OdbRef>
 					<CreaTime>35520</CreaTime>
 					<ModiTime>35522</ModiTime>
 				</OdbObj>
 				<Name>-------ЧЕРДАК------ </Name>
-				<Index>71</Index>
+				<Index>70</Index>
 				<Flags/>
-				<ModiTime>1679308041</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>7</Code>
@@ -1804,21 +1986,24 @@
 					<Green>0</Green>
 					<Blue>0</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - -------ЧЕРДАК------  - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="72" Name="Чердак_Технический чердак">
+			<RoomCategory Idx="71" Name="Чердак_Технический чердак">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>EA6DE5DA-AFBB-495E-83FF-C1D0A4030B8C</guid>
+						<guid>FF7AEBD3-E657-4B87-8047-8559BABD4A9A</guid>
 					</OdbRef>
 					<CreaTime>35525</CreaTime>
 					<ModiTime>35527</ModiTime>
 				</OdbObj>
 				<Name>Чердак_Технический чердак</Name>
-				<Index>72</Index>
+				<Index>71</Index>
 				<Flags/>
-				<ModiTime>1679308074</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>7010</Code>
@@ -1829,21 +2014,24 @@
 					<Green>62194</Green>
 					<Blue>49601</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Чердак_Технический чердак - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="73" Name="Чердак_Машинной помещение лифтов">
+			<RoomCategory Idx="72" Name="Чердак_Машинной помещение лифтов">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>1DDA6F26-1BF8-4D09-8D0F-D4395B62EAF9</guid>
+						<guid>22F880D4-7D48-4F27-B0E3-A39C4457D105</guid>
 					</OdbRef>
 					<CreaTime>35530</CreaTime>
 					<ModiTime>35532</ModiTime>
 				</OdbObj>
 				<Name>Чердак_Машинной помещение лифтов</Name>
-				<Index>73</Index>
+				<Index>72</Index>
 				<Flags/>
-				<ModiTime>1679308116</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>7020</Code>
@@ -1854,21 +2042,24 @@
 					<Green>60652</Green>
 					<Blue>40349</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Чердак_Машинной помещение лифтов - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="74" Name="Чердак_Котельная">
+			<RoomCategory Idx="73" Name="Чердак_Котельная">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>8AEF4612-C1F5-4F1D-A7C4-7F6A55B16B0A</guid>
+						<guid>6A4F0ABF-8AC5-45EE-9348-8196556DDF2B</guid>
 					</OdbRef>
 					<CreaTime>35535</CreaTime>
 					<ModiTime>35537</ModiTime>
 				</OdbObj>
 				<Name>Чердак_Котельная</Name>
-				<Index>74</Index>
+				<Index>73</Index>
 				<Flags/>
-				<ModiTime>1679308134</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>7030</Code>
@@ -1879,21 +2070,24 @@
 					<Green>59367</Green>
 					<Blue>33924</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Чердак_Котельная - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="75" Name="Чердак_Венткамера">
+			<RoomCategory Idx="74" Name="Чердак_Венткамера">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>51FB7C37-94A7-409E-A4CA-343DCC313C3C</guid>
+						<guid>9735F7D6-4A58-4AC1-AC6F-5DD041B4700C</guid>
 					</OdbRef>
 					<CreaTime>35540</CreaTime>
 					<ModiTime>35542</ModiTime>
 				</OdbObj>
 				<Name>Чердак_Венткамера</Name>
-				<Index>75</Index>
+				<Index>74</Index>
 				<Flags/>
-				<ModiTime>1793339015</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>7040</Code>
@@ -1904,21 +2098,24 @@
 					<Green>56797</Green>
 					<Blue>21845</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Чердак_Венткамера - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="76" Name="Строительный объем">
+			<RoomCategory Idx="75" Name="Строительный объем">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>680A87F8-97B4-4CD1-A65A-26A5F25B28CE</guid>
+						<guid>1B6117A4-4FD0-4021-B130-0330633003FF</guid>
 					</OdbRef>
 					<CreaTime>35545</CreaTime>
 					<ModiTime>35547</ModiTime>
 				</OdbObj>
 				<Name>Строительный объем</Name>
-				<Index>76</Index>
+				<Index>75</Index>
 				<Flags/>
-				<ModiTime>1733311556</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>8010</Code>
@@ -1929,21 +2126,24 @@
 					<Green>57054</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Строительный объем - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="77" Name="------ТЭП------">
+			<RoomCategory Idx="76" Name="------ТЭП------">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>E677FC67-FCF2-48E6-9D4B-50880FA8F6CE</guid>
+						<guid>C46ECD35-0BE1-4501-933C-902400F6170D</guid>
 					</OdbRef>
 					<CreaTime>35550</CreaTime>
 					<ModiTime>35552</ModiTime>
 				</OdbObj>
 				<Name>------ТЭП------</Name>
-				<Index>77</Index>
+				<Index>76</Index>
 				<Flags/>
-				<ModiTime>1733311596</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>8</Code>
@@ -1954,21 +2154,24 @@
 					<Green>57054</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - ------ТЭП------ - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="78" Name="Площадь застройки">
+			<RoomCategory Idx="77" Name="Площадь застройки">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>4E96BD89-AB72-4A1C-84D3-3C6B02BF177D</guid>
+						<guid>7B282EC8-FDD6-44C8-8209-7CBD301AAE83</guid>
 					</OdbRef>
 					<CreaTime>35555</CreaTime>
 					<ModiTime>35557</ModiTime>
 				</OdbObj>
 				<Name>Площадь застройки</Name>
-				<Index>78</Index>
+				<Index>77</Index>
 				<Flags/>
-				<ModiTime>1733311623</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>8020</Code>
@@ -1979,19 +2182,22 @@
 					<Green>57054</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Площадь застройки - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="79" Name="Площадь жилого здания">
+			<RoomCategory Idx="78" Name="Площадь жилого здания">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>2E68666C-7E82-4302-A26A-3AF568B999A7</guid>
+						<guid>7051C3F0-A665-452E-BF58-F3159E5C4031</guid>
 					</OdbRef>
 					<CreaTime>35560</CreaTime>
 					<ModiTime>35562</ModiTime>
 				</OdbObj>
 				<Name>Площадь жилого здания</Name>
-				<Index>79</Index>
+				<Index>78</Index>
 				<Flags/>
 				<ModiTime>1733311647</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
@@ -2004,21 +2210,24 @@
 					<Green>57054</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Площадь жилого здания - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>
-			<RoomCategory Idx="80" Name="Площадь лестницы">
+			<RoomCategory Idx="79" Name="Площадь лестницы">
 				<OdbObj Mv="4" Sv="0">
 					<OdbRef>
-						<guid>73D16C68-7169-4F98-BC68-51AF2228F1E9</guid>
+						<guid>4129447B-035D-4E1C-B37A-4C35289A7D4F</guid>
 					</OdbRef>
 					<CreaTime>35565</CreaTime>
 					<ModiTime>35567</ModiTime>
 				</OdbObj>
 				<Name>Площадь лестницы</Name>
-				<Index>80</Index>
+				<Index>79</Index>
 				<Flags/>
-				<ModiTime>1733311663</ModiTime>
+				<ModiTime>1793346381</ModiTime>
 				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
 				<ReadOnly>false</ReadOnly>
 				<Code>8040</Code>
@@ -2029,6 +2238,37 @@
 					<Green>57054</Green>
 					<Blue>65535</Blue>
 				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Площадь лестницы - HimeraZone_АСП.xml</Location>
+				</AddParData>
+				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
+				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
+			</RoomCategory>
+			<RoomCategory Idx="80" Name="Подвал_Подвальное помещение">
+				<OdbObj Mv="4" Sv="0">
+					<OdbRef>
+						<guid>59FE1799-F727-420E-A0F1-E851A2A2ADE0</guid>
+					</OdbRef>
+					<CreaTime>35590</CreaTime>
+					<ModiTime>35592</ModiTime>
+				</OdbObj>
+				<Name>Подвал_Подвальное помещение</Name>
+				<Index>80</Index>
+				<Flags/>
+				<ModiTime>1793953302</ModiTime>
+				<RegMemoTable MemoNumber="0" Mv="1" Sv="0"/>
+				<ReadOnly>false</ReadOnly>
+				<Code>3070</Code>
+				<StampFileName>HimeraZone_АСП.gsm</StampFileName>
+				<StampDocumentName>HimeraZone_АСП</StampDocumentName>
+				<RGBColor>
+					<Red>40863</Red>
+					<Green>43433</Green>
+					<Blue>64507</Blue>
+				</RGBColor>
+				<AddParData>
+					<Location>AddPars\Zone - Подвал_Подвальное помещение - HimeraZone_АСП.xml</Location>
+				</AddParData>
 				<MainGuid>74D2561B-1B23-4787-AE10-4A78AA88340E</MainGuid>
 				<RevGuid>D9A8FF4A-4FF8-446B-9111-C5287E05BA4E</RevGuid>
 			</RoomCategory>

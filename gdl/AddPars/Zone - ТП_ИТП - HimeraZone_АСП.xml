@@ -1,0 +1,1117 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<AddPar Index="50" Name="Zone - ТП_ИТП - HimeraZone_АСП" UNID="{74D2561B-1B23-4787-AE10-4A78AA88340E}-{D9A8FF4A-4FF8-446B-9111-C5287E05BA4E}">
+	
+<Parameters>
+		<Length Name="A">
+			<Description><![CDATA[""]]></Description>
+			<Value>1</Value>
+		</Length>
+		<Length Name="B">
+			<Description><![CDATA[""]]></Description>
+			<Value>1</Value>
+		</Length>
+		<String Name="AC_TextFont_1">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value><![CDATA["ISOCPEUR Cyrillic"]]></Value>
+		</String>
+		<RealNum Name="AC_TextSize_1">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>2.5</Value>
+		</RealNum>
+		<Integer Name="AC_TextStyle_1">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>0</Value>
+		</Integer>
+		<Integer Name="AC_TextAlignment_1">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>1</Value>
+		</Integer>
+		<RealNum Name="AC_TextLeading_1">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>1</Value>
+		</RealNum>
+		<RealNum Name="AC_TextCharWidthFactor_1">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>1</Value>
+		</RealNum>
+		<RealNum Name="AC_TextCharSpaceFactor_1">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>1</Value>
+		</RealNum>
+		<PenColor Name="AC_TextPen_1">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>1</Value>
+		</PenColor>
+		<String Name="ROOM_NAME">
+			<Description><![CDATA[""]]></Description>
+			<Value><![CDATA["<имя зоны>"]]></Value>
+		</String>
+		<String Name="ROOM_NUMBER">
+			<Description><![CDATA[""]]></Description>
+			<Value><![CDATA["3"]]></Value>
+		</String>
+		<RealNum Name="ROOM_AREA">
+			<Description><![CDATA[""]]></Description>
+			<Value>0.064</Value>
+		</RealNum>
+		<Length Name="ROOM_PERIM">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</Length>
+		<Length Name="ROOM_HOLES_PRM">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</Length>
+		<Length Name="ROOM_WALLS_PRM">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</Length>
+		<Integer Name="ROOM_CORNERS">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</Integer>
+		<Integer Name="ROOM_CONCAVES">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</Integer>
+		<RealNum Name="ROOM_WALLS_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<Length Name="ROOM_DOORS_WID">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</Length>
+		<RealNum Name="ROOM_DOORS_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<Length Name="ROOM_WINDS_WID">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</Length>
+		<RealNum Name="ROOM_WINDS_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<Length Name="ROOM_BASELEV">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</Length>
+		<Length Name="ROOM_FL_THICK">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</Length>
+		<Length Name="ROOM_HEIGHT">
+			<Description><![CDATA[""]]></Description>
+			<Value>3</Value>
+		</Length>
+		<RealNum Name="ROOM_NET_AREA">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<Length Name="ROOM_NET_PERIMETER">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</Length>
+		<RealNum Name="ROOM_WALL_EXTR_AREA">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_CURTAINWALL_EXTR_AREA">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_COLUMN_EXTR_AREA">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_FILL_EXTR_AREA">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_LOW_EXTR_AREA">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_TOTAL_EXTR_AREA">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_REDUCED_AREA">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_AREA_FACTOR">
+			<Description><![CDATA[""]]></Description>
+			<Value>1</Value>
+		</RealNum>
+		<RealNum Name="ROOM_CALC_AREA">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_VOLUME">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_BOUNDARY_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_TOP_SURFACE">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_BOT_SURFACE">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_ROOF_TOP_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_ROOF_BOT_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_SLAB_TOP_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_SLAB_BOT_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_BEAM_TOP_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_BEAM_BOT_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_WALL_IN_TOP_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_WALL_IN_BACK_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="ROOM_WALL_IN_SIDE_SURF">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<String Name="listZoneProperty">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<ArrayValues FirstDimension="1" SecondDimension="2">
+				<AVal Column="1" Row="1"><![CDATA[""]]></AVal>
+				<AVal Column="2" Row="1"><![CDATA[""]]></AVal>
+			</ArrayValues>
+		</String>
+		<RealNum Name="LABPP_Area">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>0.064</Value>
+		</RealNum>
+		<RealNum Name="LABPP_Rounded_Area">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="LABPP_Rounded_Area_With_K">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<Boolean Name="koefByCat">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</Boolean>
+		<RealNum Name="koeff">
+			<Description><![CDATA[""]]></Description>
+			<Value>1</Value>
+		</RealNum>
+		<Boolean Name="bShowLines">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+
+		<!-- bypmv: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bypmv">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<Boolean Name="bZone">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="0">
+				<AVal Row="1">0</AVal>
+				<AVal Row="2">1</AVal>
+				<AVal Row="3">1</AVal>
+				<AVal Row="4">0</AVal>
+				<AVal Row="5">0</AVal>
+				<AVal Row="6">0</AVal>
+			</ArrayValues>
+		</Boolean>
+		<Integer Name="fZone">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="0">
+				<AVal Row="1">2</AVal>
+				<AVal Row="2">0</AVal>
+				<AVal Row="3">1</AVal>
+				<AVal Row="4">5</AVal>
+				<AVal Row="5">7</AVal>
+				<AVal Row="6">6</AVal>
+			</ArrayValues>
+		</Integer>
+		<RealNum Name="fsZone">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="0">
+				<AVal Row="1">0</AVal>
+				<AVal Row="2">0</AVal>
+				<AVal Row="3">0</AVal>
+				<AVal Row="4">0</AVal>
+				<AVal Row="5">0</AVal>
+				<AVal Row="6">0</AVal>
+			</ArrayValues>
+		</RealNum>
+		<PenColor Name="pzone">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="0">
+				<AVal Row="1">1</AVal>
+				<AVal Row="2">1</AVal>
+				<AVal Row="3">21</AVal>
+				<AVal Row="4">1</AVal>
+				<AVal Row="5">1</AVal>
+				<AVal Row="6">1</AVal>
+			</ArrayValues>
+		</PenColor>
+		<Boolean Name="onepen">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<RealNum Name="rZone">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="0">
+				<AVal Row="1">3</AVal>
+				<AVal Row="2">0</AVal>
+				<AVal Row="3">0</AVal>
+				<AVal Row="4">0</AVal>
+				<AVal Row="5">0</AVal>
+				<AVal Row="6">0</AVal>
+			</ArrayValues>
+		</RealNum>
+		<Boolean Name="catzoneforname">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<String Name="catpropid">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["ВСТРОЕННЫЙ ПАРАМЕТР ЗОНЫ"]]></Value>
+		</String>
+		<String Name="cat">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<String Name="custparamid">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["СПЕЦИАЛЬНЫЙ ПАРАМЕТР"]]></Value>
+		</String>
+		<String Name="custparam">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<Integer Name="bFullArea">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>2</Value>
+		</Integer>
+		<String Name="areaunit">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<Integer Name="areadec">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>6</Value>
+		</Integer>
+		<Boolean Name="decbyproject">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>1</Value>
+		</Boolean>
+		<Boolean Name="brounded">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+
+		<!-- bypmvattr: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bypmvattr">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>1</Value>
+		</Boolean>
+		<String Name="TextFont">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["Arial Narrow Кириллический"]]></Value>
+		</String>
+		<RealNum Name="TextSize">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>2.5</Value>
+		</RealNum>
+		<Integer Name="TextStyle">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Integer>
+		<PenColor Name="TextPen">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>1</Value>
+		</PenColor>
+		<FillPattern Name="fillmark">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>65</Value>
+		</FillPattern>
+		<Boolean Name="bFill">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<PenColor Name="penFill">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</PenColor>
+
+		<!-- _sp17: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Title Name="_sp17">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+		</Title>
+		<Material Name="votc">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Material>
+		<Material Name="votw">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Material>
+		<Material Name="votwbottom">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Material>
+		<Material Name="votp">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Material>
+		<Length Name="plinth">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0.1</Value>
+		</Length>
+
+		<!-- gjs22_sp0_A: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Title Name="gjs22_sp0_A">
+			<Description><![CDATA[""]]></Description>
+		</Title>
+		<Length Name="compoffx">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="6">
+				<AVal Column="1" Row="1">0</AVal>
+				<AVal Column="2" Row="1">0</AVal>
+				<AVal Column="3" Row="1">0</AVal>
+				<AVal Column="4" Row="1">0</AVal>
+				<AVal Column="5" Row="1">0</AVal>
+				<AVal Column="6" Row="1">0</AVal>
+				<AVal Column="1" Row="2">0</AVal>
+				<AVal Column="2" Row="2">0</AVal>
+				<AVal Column="3" Row="2">0</AVal>
+				<AVal Column="4" Row="2">0</AVal>
+				<AVal Column="5" Row="2">0</AVal>
+				<AVal Column="6" Row="2">0</AVal>
+				<AVal Column="1" Row="3">0</AVal>
+				<AVal Column="2" Row="3">0</AVal>
+				<AVal Column="3" Row="3">0</AVal>
+				<AVal Column="4" Row="3">0</AVal>
+				<AVal Column="5" Row="3">0</AVal>
+				<AVal Column="6" Row="3">0</AVal>
+				<AVal Column="1" Row="4">0</AVal>
+				<AVal Column="2" Row="4">0</AVal>
+				<AVal Column="3" Row="4">0</AVal>
+				<AVal Column="4" Row="4">0</AVal>
+				<AVal Column="5" Row="4">0</AVal>
+				<AVal Column="6" Row="4">0</AVal>
+				<AVal Column="1" Row="5">0</AVal>
+				<AVal Column="2" Row="5">0</AVal>
+				<AVal Column="3" Row="5">0</AVal>
+				<AVal Column="4" Row="5">0</AVal>
+				<AVal Column="5" Row="5">0</AVal>
+				<AVal Column="6" Row="5">0</AVal>
+				<AVal Column="1" Row="6">0</AVal>
+				<AVal Column="2" Row="6">0</AVal>
+				<AVal Column="3" Row="6">0</AVal>
+				<AVal Column="4" Row="6">0</AVal>
+				<AVal Column="5" Row="6">0</AVal>
+				<AVal Column="6" Row="6">0</AVal>
+			</ArrayValues>
+		</Length>
+		<Length Name="compoffy">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="6">
+				<AVal Column="1" Row="1">0</AVal>
+				<AVal Column="2" Row="1">0</AVal>
+				<AVal Column="3" Row="1">0</AVal>
+				<AVal Column="4" Row="1">0</AVal>
+				<AVal Column="5" Row="1">0</AVal>
+				<AVal Column="6" Row="1">0</AVal>
+				<AVal Column="1" Row="2">0</AVal>
+				<AVal Column="2" Row="2">0</AVal>
+				<AVal Column="3" Row="2">0</AVal>
+				<AVal Column="4" Row="2">0</AVal>
+				<AVal Column="5" Row="2">0</AVal>
+				<AVal Column="6" Row="2">0</AVal>
+				<AVal Column="1" Row="3">0</AVal>
+				<AVal Column="2" Row="3">0</AVal>
+				<AVal Column="3" Row="3">0</AVal>
+				<AVal Column="4" Row="3">0</AVal>
+				<AVal Column="5" Row="3">0</AVal>
+				<AVal Column="6" Row="3">0</AVal>
+				<AVal Column="1" Row="4">0</AVal>
+				<AVal Column="2" Row="4">0</AVal>
+				<AVal Column="3" Row="4">0</AVal>
+				<AVal Column="4" Row="4">0</AVal>
+				<AVal Column="5" Row="4">0</AVal>
+				<AVal Column="6" Row="4">0</AVal>
+				<AVal Column="1" Row="5">0</AVal>
+				<AVal Column="2" Row="5">0</AVal>
+				<AVal Column="3" Row="5">0</AVal>
+				<AVal Column="4" Row="5">0</AVal>
+				<AVal Column="5" Row="5">0</AVal>
+				<AVal Column="6" Row="5">0</AVal>
+				<AVal Column="1" Row="6">0</AVal>
+				<AVal Column="2" Row="6">0</AVal>
+				<AVal Column="3" Row="6">0</AVal>
+				<AVal Column="4" Row="6">0</AVal>
+				<AVal Column="5" Row="6">0</AVal>
+				<AVal Column="6" Row="6">0</AVal>
+			</ArrayValues>
+		</Length>
+		<Length Name="startoffx">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="6">
+				<AVal Column="1" Row="1">0</AVal>
+				<AVal Column="2" Row="1">0</AVal>
+				<AVal Column="3" Row="1">0</AVal>
+				<AVal Column="4" Row="1">0</AVal>
+				<AVal Column="5" Row="1">0</AVal>
+				<AVal Column="6" Row="1">0</AVal>
+				<AVal Column="1" Row="2">0</AVal>
+				<AVal Column="2" Row="2">0</AVal>
+				<AVal Column="3" Row="2">0</AVal>
+				<AVal Column="4" Row="2">0</AVal>
+				<AVal Column="5" Row="2">0</AVal>
+				<AVal Column="6" Row="2">0</AVal>
+				<AVal Column="1" Row="3">0</AVal>
+				<AVal Column="2" Row="3">0</AVal>
+				<AVal Column="3" Row="3">0</AVal>
+				<AVal Column="4" Row="3">0</AVal>
+				<AVal Column="5" Row="3">0</AVal>
+				<AVal Column="6" Row="3">0</AVal>
+				<AVal Column="1" Row="4">0</AVal>
+				<AVal Column="2" Row="4">0</AVal>
+				<AVal Column="3" Row="4">0</AVal>
+				<AVal Column="4" Row="4">0</AVal>
+				<AVal Column="5" Row="4">0</AVal>
+				<AVal Column="6" Row="4">0</AVal>
+				<AVal Column="1" Row="5">0</AVal>
+				<AVal Column="2" Row="5">0</AVal>
+				<AVal Column="3" Row="5">0</AVal>
+				<AVal Column="4" Row="5">0</AVal>
+				<AVal Column="5" Row="5">0</AVal>
+				<AVal Column="6" Row="5">0</AVal>
+				<AVal Column="1" Row="6">0</AVal>
+				<AVal Column="2" Row="6">0</AVal>
+				<AVal Column="3" Row="6">0</AVal>
+				<AVal Column="4" Row="6">0</AVal>
+				<AVal Column="5" Row="6">0</AVal>
+				<AVal Column="6" Row="6">0</AVal>
+			</ArrayValues>
+		</Length>
+		<Length Name="startoffy">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="6">
+				<AVal Column="1" Row="1">0</AVal>
+				<AVal Column="2" Row="1">0</AVal>
+				<AVal Column="3" Row="1">0</AVal>
+				<AVal Column="4" Row="1">0</AVal>
+				<AVal Column="5" Row="1">0</AVal>
+				<AVal Column="6" Row="1">0</AVal>
+				<AVal Column="1" Row="2">0</AVal>
+				<AVal Column="2" Row="2">0</AVal>
+				<AVal Column="3" Row="2">0</AVal>
+				<AVal Column="4" Row="2">0</AVal>
+				<AVal Column="5" Row="2">0</AVal>
+				<AVal Column="6" Row="2">0</AVal>
+				<AVal Column="1" Row="3">0</AVal>
+				<AVal Column="2" Row="3">0</AVal>
+				<AVal Column="3" Row="3">0</AVal>
+				<AVal Column="4" Row="3">0</AVal>
+				<AVal Column="5" Row="3">0</AVal>
+				<AVal Column="6" Row="3">0</AVal>
+				<AVal Column="1" Row="4">0</AVal>
+				<AVal Column="2" Row="4">0</AVal>
+				<AVal Column="3" Row="4">0</AVal>
+				<AVal Column="4" Row="4">0</AVal>
+				<AVal Column="5" Row="4">0</AVal>
+				<AVal Column="6" Row="4">0</AVal>
+				<AVal Column="1" Row="5">0</AVal>
+				<AVal Column="2" Row="5">0</AVal>
+				<AVal Column="3" Row="5">0</AVal>
+				<AVal Column="4" Row="5">0</AVal>
+				<AVal Column="5" Row="5">0</AVal>
+				<AVal Column="6" Row="5">0</AVal>
+				<AVal Column="1" Row="6">0</AVal>
+				<AVal Column="2" Row="6">0</AVal>
+				<AVal Column="3" Row="6">0</AVal>
+				<AVal Column="4" Row="6">0</AVal>
+				<AVal Column="5" Row="6">0</AVal>
+				<AVal Column="6" Row="6">0</AVal>
+			</ArrayValues>
+		</Length>
+		<Length Name="letxt">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<ArrayValues FirstDimension="6" SecondDimension="0">
+				<AVal Row="1">0</AVal>
+				<AVal Row="2">0</AVal>
+				<AVal Row="3">0</AVal>
+				<AVal Row="4">0</AVal>
+				<AVal Row="5">0</AVal>
+				<AVal Row="6">0</AVal>
+			</ArrayValues>
+		</Length>
+		<Boolean Name="bUseGL">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<String Name="stRoomType">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value><![CDATA["07 ЛК, ЛХ, Фойе"]]></Value>
+		</String>
+		<String Name="stFloorType">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value><![CDATA["3"]]></Value>
+		</String>
+
+		<!-- bFinishWall: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bFinishWall">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<Length Name="FinishSize">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0.01</Value>
+		</Length>
+
+		<!-- sp_Area: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Title Name="sp_Area">
+			<Description><![CDATA[""]]></Description>
+		</Title>
+		<RealNum Name="UpArea">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="WallArea">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="FloorArea">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="PlinthLenght">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+
+		<!-- sp_mat: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Title Name="sp_mat">
+			<Description><![CDATA[""]]></Description>
+		</Title>
+		<String Name="stUpMat">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["00 Покраска"]]></Value>
+		</String>
+		<String Name="stWallMat">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["03 Винил обои"]]></Value>
+		</String>
+		<String Name="stWallDownMat">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["00 Покраска"]]></Value>
+		</String>
+		<String Name="stColumnMat">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["01 побелка"]]></Value>
+		</String>
+		<String Name="stWindowSideMat">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<String Name="stDoorMat">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["01 нет"]]></Value>
+		</String>
+		<String Name="stDownMat">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["00 Покраска"]]></Value>
+		</String>
+		<String Name="stPlinthMat">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA["00 Покраска"]]></Value>
+		</String>
+
+		<!-- bUseWallDown: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bUseWallDown">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>1</Value>
+		</Boolean>
+		<RealNum Name="WallFloorArea">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<Length Name="WallDownHigh">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>1.8</Value>
+		</Length>
+		<Length Name="WallDownHighWindow">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0.9</Value>
+		</Length>
+
+		<!-- bColumsAdd: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bColumsAdd">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<RealNum Name="ColumnArea">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+
+		<!-- bWindowAdd: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bWindowAdd">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<RealNum Name="WindowSideArea">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<Integer Name="nWindow">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>1</Value>
+		</Integer>
+		<Length Name="WindowSideDepth">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0.38</Value>
+		</Length>
+
+		<!-- bDoorAdd: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bDoorAdd">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<RealNum Name="DoorArea">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<Length Name="DoorHight">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>2.1</Value>
+		</Length>
+
+		<!-- bCorrection: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bCorrection">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<Length Name="CorrectionLen">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Length>
+
+		<!-- bFloorAdd: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Boolean Name="bFloorAdd">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_BoldName/>
+			</Flags>
+			<Value>1</Value>
+		</Boolean>
+		<RealNum Name="floorAdd">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+
+		<!-- sp_stampAddon: PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK ===== PARAMETER BLOCK -->
+
+		<Title Name="sp_stampAddon">
+			<Description><![CDATA[""]]></Description>
+		</Title>
+		<Integer Name="iTypeZone">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>4</Value>
+		</Integer>
+		<RealNum Name="asAddOn_SubArea">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>3</Value>
+		</RealNum>
+		<Integer Name="asAddOn_SubRegul">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>4</Value>
+		</Integer>
+		<RealNum Name="asAddOn_SubFinish">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>1</Value>
+		</RealNum>
+		<RealNum Name="asAddOn_CalcArea">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="asAddOn_FloorArea">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<RealNum Name="asAddOn_FillArea">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</RealNum>
+		<String Name="asAddOn_stApartmentCode">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<String Name="asAddOn_stStaircaseCode">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<String Name="asAddOn_stHouseCode">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<String Name="asAddOn_stPositionCode">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value><![CDATA[""]]></Value>
+		</String>
+		<Boolean Name="PositionCodeByStory">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
+		<RealNum Name="AreaCoeff">
+			<Description><![CDATA[""]]></Description>
+			<Value>0</Value>
+		</RealNum>
+		<String Name="dfloortype">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<ArrayValues FirstDimension="1" SecondDimension="0">
+				<AVal Row="1"><![CDATA["
+"]]></AVal>
+			</ArrayValues>
+		</String>
+		<Integer Name="gs_ui_current_page">
+			<Description><![CDATA[""]]></Description>
+			<Flags>
+				<ParFlg_Hidden/>
+			</Flags>
+			<Value>2</Value>
+		</Integer>
+	
+</Parameters>	
+</AddPar>
