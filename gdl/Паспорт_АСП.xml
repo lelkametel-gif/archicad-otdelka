@@ -24,9 +24,9 @@ k = GLOB_SCALE / 1000
 ! в GDL имена переменных без учёта регистра: _h и _H — одна переменная, поэтому имена разные
 ! iKind = 0 — квартира: слева номер (верх) и тип (низ), справа 4 площади;
 ! iKind = 1 — встроенное помещение: слева «АП», справа номер, площадь, высота
-_w1 = wType * k
-_w2 = wArea * k
-_hr = hRow * k
+_w1 = wCol1 * k
+_w2 = wCol2 * k
+_hr = hRow2 * k
 _nRows = 4
 if iKind = 1 then _nRows = 3
 _wTot = _w1 + _w2
@@ -48,13 +48,13 @@ line2 _w1, 0, _w1, _hTot
 for i = 1 to _nRows - 1
 	line2 _w1, i * _hr, _wTot, i * _hr
 next i
-if _num then line2 0, _hTot / 2, _w1, _hTot / 2
+if _num then line2 _w1 * 0.1, _hTot / 2, _w1 * 0.9, _hTot / 2
 
 pen gs_text_pen
 _face = 0
 if bTypeBold then _face = 1
-define style "aspType" sFont, tSizeType, 5, _face
-define style "aspArea" sFont, tSize, 5, 0
+define style "aspType" sFont, tSizeT, 5, _face
+define style "aspArea" sFont, tSizeA, 5, 0
 
 set style "aspType"
 if _num then
@@ -245,26 +245,26 @@ next i
 		<Title Name="tiView">
 			<Description><![CDATA["Оформление"]]></Description>
 		</Title>
-		<RealNum Name="wType">
+		<RealNum Name="wCol1">
 			<Description><![CDATA["Ширина ячейки типа, мм листа"]]></Description>
 			<Flags>
 				<ParFlg_Child/>
 			</Flags>
-			<Value>8</Value>
+			<Value>7.5</Value>
 		</RealNum>
-		<RealNum Name="wArea">
+		<RealNum Name="wCol2">
 			<Description><![CDATA["Ширина ячейки площадей, мм листа"]]></Description>
 			<Flags>
 				<ParFlg_Child/>
 			</Flags>
-			<Value>10</Value>
+			<Value>9.5</Value>
 		</RealNum>
-		<RealNum Name="hRow">
+		<RealNum Name="hRow2">
 			<Description><![CDATA["Высота строки, мм листа"]]></Description>
 			<Flags>
 				<ParFlg_Child/>
 			</Flags>
-			<Value>3.5</Value>
+			<Value>4.4</Value>
 		</RealNum>
 		<String Name="sFont">
 			<Description><![CDATA["Шрифт"]]></Description>
@@ -273,19 +273,19 @@ next i
 			</Flags>
 			<Value><![CDATA["Arial"]]></Value>
 		</String>
-		<RealNum Name="tSize">
+		<RealNum Name="tSizeA">
 			<Description><![CDATA["Высота шрифта площадей, мм"]]></Description>
 			<Flags>
 				<ParFlg_Child/>
 			</Flags>
-			<Value>2</Value>
+			<Value>2.8</Value>
 		</RealNum>
-		<RealNum Name="tSizeType">
+		<RealNum Name="tSizeT">
 			<Description><![CDATA["Высота шрифта типа, мм"]]></Description>
 			<Flags>
 				<ParFlg_Child/>
 			</Flags>
-			<Value>2.5</Value>
+			<Value>2.8</Value>
 		</RealNum>
 		<Boolean Name="bTypeBold">
 			<Description><![CDATA["Тип жирным"]]></Description>

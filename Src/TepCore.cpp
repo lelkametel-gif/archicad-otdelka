@@ -71,14 +71,14 @@ std::wstring DefaultConfigText ()
 {
 	return
 		L"# ТЭП и паспорта квартир — данные проекта (надстройка «Ведомость отделки»)\n"
-		L"# Версия: 2\n"
+		L"# Версия: 3\n"
 		L"# Коды категорий зон: «1010, 1011» — точно; «5» — все категории 5xxx; «-5020» — кроме 5020.\n"
 		L"# Подземные этажи — этажи с отрицательным индексом (подвал = -1).\n"
 		L"\n"
 		L"[Площади]\n"
 		L"Знаков после запятой = 1\n"
 		L"# площадь каждого помещения округляется, затем складывается (как в паспортах на плане)\n"
-		L"Разделитель в паспортах = .\n"
+		L"Разделитель в паспортах = ,\n"
 		L"Коэффициент балконов и террас = 0,3\n"
 		L"Коэффициент лоджий = 0,5\n"
 		L"Площадь на жителя = 30\n"
@@ -113,25 +113,43 @@ std::wstring DefaultConfigText ()
 		L"18 =\n";
 }
 
+static bool ReplaceLine (std::wstring& text, const std::wstring& oldLine, const std::wstring& newLines)
+{
+	const size_t p = text.find (oldLine);
+	if (p == std::wstring::npos) return false;
+	size_t e = p + oldLine.size ();
+	while (e < text.size () && (text[e] == L' ' || text[e] == L'\t')) ++e;
+	if (e < text.size () && text[e] != L'\r' && text[e] != L'\n') return false;		// значение изменено вручную — не трогаем
+	const bool crlf = e < text.size () && text[e] == L'\r';
+	std::wstring nl = newLines;
+	if (crlf) {
+		std::wstring t;
+		for (wchar_t c : nl) { if (c == L'\n') t += L'\r'; t += c; }
+		nl = t;
+	}
+	text.replace (p, e - p, nl);
+	return true;
+}
+
 bool MigrateConfigText (std::wstring& text)
 {
-	const size_t v = text.find (L"# Версия: 1");
-	if (v == std::wstring::npos) return false;
-	text.replace (v, 11, L"# Версия: 2");
-	// версия 1: подвал — все зоны подземных этажей, техпомещения — 4xxx; версия 2: подвал — 3xxx
-	const std::wstring oldLine = L"Техпомещения подвала = 4";
-	const size_t p = text.find (oldLine);
-	if (p != std::wstring::npos) {
-		size_t e = p + oldLine.size ();
-		while (e < text.size () && (text[e] == L' ' || text[e] == L'\t')) ++e;
-		if (e >= text.size () || text[e] == L'\r' || text[e] == L'\n') {
-			const bool crlf = e < text.size () && text[e] == L'\r';
-			const std::wstring nl = crlf ? L"\r\n" : L"\n";
-			text.replace (p, e - p, L"Подвальные помещения = 3" + nl + L"Техпомещения подвала = 3, -3030, -3070" + nl +
-									L"Подвальное помещение и ЛК = 3030, 3070");
-		}
+	bool changed = false;
+	size_t v = text.find (L"# Версия: 1");
+	if (v != std::wstring::npos) {
+		text.replace (v, 11, L"# Версия: 2");
+		// версия 1: подвал — все зоны подземных этажей, техпомещения — 4xxx; версия 2: подвал — 3xxx
+		ReplaceLine (text, L"Техпомещения подвала = 4", L"Подвальные помещения = 3\nТехпомещения подвала = 3, -3030, -3070\n"
+															L"Подвальное помещение и ЛК = 3030, 3070");
+		changed = true;
 	}
-	return true;
+	v = text.find (L"# Версия: 2");
+	if (v != std::wstring::npos) {
+		text.replace (v, 11, L"# Версия: 3");
+		// версия 3: в паспортах квартир — запятая, как в исходных паспортах
+		ReplaceLine (text, L"Разделитель в паспортах = .", L"Разделитель в паспортах = ,");
+		changed = true;
+	}
+	return changed;
 }
 
 static double ToNum (const std::wstring& s, double def)

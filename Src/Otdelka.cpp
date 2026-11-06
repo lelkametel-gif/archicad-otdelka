@@ -1333,7 +1333,7 @@ tep::Config LoadTepConfig (std::vector<std::wstring>& warnings, std::wstring& pa
 	if (tep::MigrateConfigText (text)) {
 		WriteBytes (loc, "\xEF\xBB\xBF" + otd::ToUtf8 (text));
 		warnings.push_back (L"Файл данных ТЭП обновлён до версии " + std::to_wstring (tep::kConfigVersion) +
-							L": подвал — зоны 3xxx, тех. помещения — 3xxx кроме 3030, 3070; подвальное помещение и ЛК — 3030, 3070.");
+							L" (подвал — зоны 3xxx; в паспортах квартир — запятая), если эти строки не меняли вручную.");
 	}
 	return tep::ParseConfig (text, &warnings);
 }
@@ -1594,8 +1594,8 @@ std::vector<PassportObj> FindPassports (Int32 libInd, int& inHotlinks)
 			p.key = otd::Trim (au::ToW (P.Str ("stKey")));
 			p.x = el.object.pos.x;
 			p.y = el.object.pos.y;
-			p.wMm = P.Real ("wType", 8) + P.Real ("wArea", 10);
-			p.hMm = (P.Int ("iKind", 0) == 1 ? 3 : 4) * P.Real ("hRow", 3.5);
+			p.wMm = P.Real ("wCol1", 7.5) + P.Real ("wCol2", 9.5);
+			p.hMm = (P.Int ("iKind", 0) == 1 ? 3 : 4) * P.Real ("hRow2", 4.4);
 			const double px = P.Real ("rPlaceX", 0), py = P.Real ("rPlaceY", 0);
 			p.movable = (std::fabs (px) < 1e-9 && std::fabs (py) < 1e-9) ||
 						(std::fabs (p.x - px) < 1e-3 && std::fabs (p.y - py) < 1e-3);
@@ -2003,15 +2003,15 @@ void DoPassports ()
 	double scale = 100;
 	if (ACAPI_Drawing_GetDrawingScale (&scale) != NoError || scale <= 0)
 		scale = 100;
-	double wMm = 18, hMm = 14;		// размер паспорта по умолчанию — из объекта
+	double wMm = 17, hMm = 17.6;		// размер паспорта по умолчанию — из объекта
 	{
 		double pa = 0, pb = 0;
 		Int32 n = 0;
 		API_AddParType** pars = nullptr;
 		if (ACAPI_LibraryPart_GetParams (libInd, &pa, &pb, &n, &pars) == NoError && pars != nullptr) {
 			au::Params P (pars);
-			wMm = P.Real ("wType", 8) + P.Real ("wArea", 10);
-			hMm = 4 * P.Real ("hRow", 3.5);
+			wMm = P.Real ("wCol1", 7.5) + P.Real ("wCol2", 9.5);
+			hMm = 4 * P.Real ("hRow2", 4.4);
 			ACAPI_DisposeAddParHdl (&pars);
 		}
 	}

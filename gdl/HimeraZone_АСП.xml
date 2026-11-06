@@ -2552,7 +2552,10 @@ if bypmvattr then
 else
 	parameters	AC_TextFont_1=TextFont, AC_TextSize_1=TextSize, AC_TextStyle_1=TextStyle
 endif
+of_mov = 1			!!! вид для смещения надписей (1…6); без глобальных настроек библиотеки — 1, иначе ручки перемещения не работают
 success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "of_mov", of_mov)
+if of_mov < 1 or of_mov > 6 then of_mov = 1
+of_mov = int(of_mov)
 success = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "numid", numid)
 !==================================================================================================================
 !-------------------use Global---end--------------------------------------------------------------------------------

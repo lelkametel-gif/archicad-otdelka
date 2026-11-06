@@ -25,7 +25,7 @@ std::wstring	CodesText (const CodeSet& s);
 
 struct Config {
 	int				dec = 1;					// знаков после запятой у площади помещения (округление до суммирования)
-	std::wstring	passportSep = L".";			// разделитель дробной части в паспорте
+	std::wstring	passportSep = L",";			// разделитель дробной части в паспорте
 	double			perResident = 30;			// м² приведённой площади квартир на жителя
 	double			coefBalcony = 0.3, coefLoggia = 0.5;
 	std::wstring	studioLabel = L"С";			// обозначение студии в паспорте (остальные — «1К», «2К»…)
@@ -39,7 +39,7 @@ struct Config {
 	std::map<std::wstring, std::map<std::wstring, std::wstring>>	manual;
 };
 
-const int			kConfigVersion = 2;
+const int			kConfigVersion = 3;
 std::wstring		DefaultConfigText ();
 // Обновить файл данных прежней версии (значения по умолчанию прежней версии -> новые); true — текст изменён
 bool				MigrateConfigText (std::wstring& text);

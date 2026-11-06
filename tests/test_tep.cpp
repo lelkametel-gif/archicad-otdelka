@@ -46,7 +46,9 @@ int main (int argc, char** argv)
 	{	// файл данных версии 1 -> 2
 		std::wstring old = L"# Версия: 1\r\n[Категории]\r\nТехпомещения подвала = 4\r\nОбщедомовые помещения = 2, 6\r\n";
 		CHECK (MigrateConfigText (old));
-		CHECK (old.find (L"# Версия: 2") != std::wstring::npos && old.find (L"= 4\r") == std::wstring::npos);
+		CHECK (old.find (L"# Версия: 3") != std::wstring::npos && old.find (L"= 4\r") == std::wstring::npos);
+		std::wstring v2 = L"# Версия: 2\n[Площади]\nРазделитель в паспортах = .\n";
+		CHECK (MigrateConfigText (v2) && ParseConfig (v2).passportSep == L",");
 		const Config m = ParseConfig (old);
 		CHECK (m.tech.Has (L"3010") && !m.tech.Has (L"3030") && !m.tech.Has (L"4050") && m.basementRest.Has (L"3070"));
 		std::wstring cur = DefaultConfigText ();
@@ -125,7 +127,7 @@ int main (int argc, char** argv)
 		NEAR (a1->reduced, 61.1);
 		CHECK (a1->label == L"2К");
 		CHECK (a1->typeName == L"2-х комнатных с кухней-столовой");
-		CHECK (PassportNum (a1->reduced, c) == L"61.1");
+		CHECK (PassportNum (a1->reduced, c) == L"61,1");
 		NEAR (a1->x1, 0); NEAR (a1->y2, 14);
 		NEAR (a1->ax1, 0); NEAR (a1->ax2, 4); NEAR (a1->ay1, 10);		// у самой большой жилой комнаты (10,9)
 		double x, y;
