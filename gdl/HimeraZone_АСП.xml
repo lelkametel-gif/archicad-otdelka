@@ -67,6 +67,13 @@ for comp=1 to 6  ! Подготовка текстовых блоков с вы�
 		tbName = "tb" + dcomp[comp][2]
 		letxt0=0
 		if strlen(szone[comp])> 8 then letxt0 = letxt[comp] * 2000
+		!!! ширина не задана — длинное название из нескольких слов переносится по словам на 2 строки
+		if bNameWrap and letxt0 < EPS and strstr(szone[comp], " ") > 0 then
+			tbTmp = "tw" + dcomp[comp][2]
+			textblock tbTmp 0, 5, 0, 1, 1, 1, parName
+			sss=request("TEXTBLOCK_INFO", tbTmp, tbWidth, tbHeight)
+			if tbWidth > fontSize * 7 then letxt0 = tbWidth * 0.55
+		endif
 		textblock tbName letxt0, 5, 0, 1, 1, 1, parName
 		sss=request("TEXTBLOCK_INFO", tbName, tbWidth, tbHeight)
 
@@ -1177,6 +1184,13 @@ values "WallDownHighWindow" RANGE [0,ROOM_HEIGHT]
 				<AVal Row="6">0</AVal>
 			</ArrayValues>
 		</Length>
+		<Boolean Name="bNameWrap">
+			<Description><![CDATA["Переносить длинные названия по словам (если ширина текста не задана)"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>1</Value>
+		</Boolean>
 		<Boolean Name="bUseGL">
 			<Description><![CDATA["Исполз. глоб. праметры для опред типа"]]></Description>
 			<Flags>
