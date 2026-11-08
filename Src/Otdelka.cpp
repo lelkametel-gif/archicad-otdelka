@@ -2967,6 +2967,38 @@ private:
 	DG::IntEdit		edWallMax;
 };
 
+const wchar_t*	kPylLayerPart = L"01_Штукатурка (на пилонах";
+const wchar_t*	kPylLayerName = L"01_Штукатурка (на пилонах и вентблоках)";
+
+// Слой стенок: первый, в названии которого есть «01_Штукатурка (на пилонах», иначе создаётся
+// «01_Штукатурка (на пилонах и вентблоках)». Вызывать внутри шага отмены.
+bool PylonLayer (API_AttributeIndex& idx, std::wstring& name, bool& created)
+{
+	created = false;
+	bool found = false;
+	const std::wstring part = otd::Lower (kPylLayerPart);
+	ACAPI_Attribute_EnumerateAttributesByType (API_LayerID, [&] (API_Attribute& a) {
+		if (found) return;
+		const std::wstring n = AttrName (API_LayerID, a.header.index);
+		if (otd::Lower (n).find (part) != std::wstring::npos) {
+			idx = a.header.index;
+			name = n;
+			found = true;
+		}
+	});
+	if (found) return true;
+	API_Attribute a = {};
+	a.header.typeID = API_LayerID;
+	GS::UniString uName = au::FromW (kPylLayerName);
+	a.header.uniStringNamePtr = &uName;
+	if (ACAPI_Attribute_Create (&a, nullptr) != NoError)
+		return false;
+	idx = a.header.index;
+	name = kPylLayerName;
+	created = true;
+	return true;
+}
+
 struct NewWall {
 	short		floorInd = 0;
 	otd::FinishSeg	seg;
@@ -3120,15 +3152,20 @@ void DoPylonFinish ()
 
 	// ---- создание стенок (один шаг отмены)
 	GS::Array<API_Neig> newNeigs;
+	API_AttributeIndex layerIdx;
+	std::wstring layerName;
+	bool layerOk = false, layerCreated = false;
 	int errs = 0;
 	GSErrCode firstErr = NoError;
 	if (!toCreate.empty ()) {
 		ACAPI_CallUndoableCommand (au::FromW (L"Отделка пилонов"), [&] () -> GSErrCode {
+			layerOk = PylonLayer (layerIdx, layerName, layerCreated);
 			for (const NewWall& nw : toCreate) {
 				API_Element w = {};
 				w.header.type = API_WallID;
 				if (ACAPI_Element_GetDefaults (&w, nullptr) != NoError) { ++errs; continue; }
 				w.header.floorInd = nw.floorInd;
+				if (layerOk) w.header.layer = layerIdx;
 				w.wall.type = APIWtyp_Normal;
 				w.wall.begC = { nw.seg.ax, nw.seg.ay };
 				w.wall.endC = { nw.seg.bx, nw.seg.by };
@@ -3170,6 +3207,12 @@ void DoPylonFinish ()
 						 L" м) у " + std::to_wstring (pylonsDone.size ()) + L" пилонов" +
 						 (pylonWalls.empty () ? std::wstring () : L", из них ж/б стен-пилонов " + std::to_wstring (pylonWalls.size ())) +
 						 L". Они выделены на плане.");
+	if (!toCreate.empty ()) {
+		if (!layerOk)
+			lines.push_back (L"Не удалось найти или создать слой «" + std::wstring (kPylLayerName) + L"» — стенки на слое из настроек стены.");
+		else if (!newNeigs.IsEmpty ())
+			lines.push_back (L"Слой: «" + layerName + L"»" + (layerCreated ? L" (создан)." : L"."));
+	}
 	if (!pylonsAlready.empty ())
 		lines.push_back (L"Уже с отделкой (все грани закрыты): " + std::to_wstring (pylonsAlready.size ()) + L" пилонов — не тронуты.");
 	if (!pylonsHidden.empty ())
