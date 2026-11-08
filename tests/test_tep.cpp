@@ -232,6 +232,22 @@ int main (int argc, char** argv)
 
 	// ---- ТЭП
 	const Tep t = BuildTep (rooms, apts, c);
+	{	// зоны строк ТЭП для «показать на плане»: метка «T:key|секция», GUID — в ZonesText
+		std::vector<Room> gr = rooms;
+		for (size_t i = 0; i < gr.size (); ++i) gr[i].guid = L"G" + std::to_wstring (i);
+		const Tep tg = BuildTep (gr, BuildApartments (gr, c), c);
+		const std::wstring zt = ZonesText (tg);
+		size_t n6 = 0, n6s = 0;
+		for (const Room& r : gr) if (c.builtIn.Has (r.catCode)) { ++n6; if (r.section == tg.sections[0]) ++n6s; }
+		CHECK (ZonesByTag (zt, tg.ZoneTag (L"6")).size () == n6);
+		CHECK (n6s == 0 || ZonesByTag (zt, tg.ZoneTag (L"6", tg.sections[0])).size () == n6s);
+		CHECK (!ZonesByTag (zt, tg.ZoneTag (L"16")).empty ());
+		CHECK (tg.ZoneTag (L"нет такой строки").empty ());
+		const otd::TableLayout lt = LayoutTep (tg, L"ТЭП");
+		bool tagged = false;
+		for (const auto& tx : lt.texts) if (tx.tag == L"T:6|") tagged = true;
+		CHECK (tagged);
+	}
 	CHECK (t.sections.size () == 2 && t.sections[0] == L"1" && t.sections[1] == L"2");
 	auto find = [&t] (const wchar_t* num, const wchar_t* name = nullptr) -> const TepRow* {
 		for (const auto& r : t.rows)

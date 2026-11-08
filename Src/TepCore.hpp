@@ -133,7 +133,16 @@ struct Tep {
 	std::vector<std::wstring>	floorsInfo;		// какие этажи вошли в этажность / подземные — для отчёта
 	// таблица проверки: строка ТЭП (key) -> секция -> что учтено (строки текста)
 	std::map<std::wstring, std::map<std::wstring, std::vector<std::wstring>>>	check;
+	// зоны строки: строка ТЭП (key) -> секция -> GUID зон (для «показать на плане»)
+	std::map<std::wstring, std::map<std::wstring, std::vector<std::wstring>>>	zones;
+	// метка текста таблицы: «T:<key>|<секция>» (пустая секция — все); сами GUID — в ZonesText (данные проекта)
+	std::wstring	ZoneTag (const std::wstring& key, const std::wstring& section = std::wstring ()) const;
 };
+
+// GUID зон строк ТЭП для хранения в проекте: строки «key<TAB>секция<TAB>guid;guid;…»
+std::wstring				ZonesText (const Tep& t);
+// GUID зон по метке «T:<key>|<секция>» из ZonesText
+std::vector<std::wstring>	ZonesByTag (const std::wstring& zonesText, const std::wstring& tag);
 
 // Подземный этаж: отметка ниже −0,5 м, отрицательный индекс или «подвал / подполье / подзем» в названии
 bool			IsUnderground (int index, double level, const std::wstring& name);

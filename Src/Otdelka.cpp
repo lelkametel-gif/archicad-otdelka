@@ -48,6 +48,7 @@
 namespace {
 
 const char*		kSettingsKey	= "OtdSettings";
+const char*		kTepZonesKey	= "TepZones";		// GUID зон строк ТЭП (метки «T:…» на текстах листа «ТЭП»)
 const wchar_t*	kRulesFile		= L"Ведомость отделки - правила.txt";
 
 // ----------------------------------------------------------------------------- настройки
@@ -1185,7 +1186,8 @@ void SetZoneTag (const API_Guid& textGuid, const std::wstring& zoneGuid)
 }
 
 
-bool GetZoneTag (const API_Guid& elemGuid, API_Guid& zone)
+// Зоны текста таблицы: «OTDZONE:<guid>» (проверка ведомости) или «OTDZONE:<guid>;<guid>;…» (строка ТЭП)
+bool GetZoneTags (const API_Guid& elemGuid, std::vector<API_Guid>& zones, std::wstring& tepZones)
 {
 	API_Elem_Head head = {};
 	head.guid = elemGuid;
@@ -1199,9 +1201,25 @@ bool GetZoneTag (const API_Guid& elemGuid, API_Guid& zone)
 	const size_t n = strlen (kZoneTag);
 	if (data.compare (0, n, kZoneTag) != 0)
 		return false;
-	const std::string g = data.substr (n);
-	zone = APIGuidFromString (g.c_str ());
-	return zone != APINULLGuid;
+	bool any = false;
+	if (data.compare (n, 2, "T:") == 0) {		// строка ТЭП: GUID зон — в данных проекта
+		if (tepZones.empty ()) tepZones = LoadModulText (kTepZonesKey);
+		for (const std::wstring& g : tep::ZonesByTag (tepZones, otd::FromUtf8 (data.substr (n)))) {
+			const API_Guid z = APIGuidFromString (otd::ToUtf8 (g).c_str ());
+			if (z != APINULLGuid) { zones.push_back (z); any = true; }
+		}
+		return any;
+	}
+	size_t p = n;
+	while (p < data.size ()) {
+		size_t e = data.find (';', p);
+		if (e == std::string::npos) e = data.size ();
+		const std::string g = data.substr (p, e - p);
+		const API_Guid z = APIGuidFromString (g.c_str ());
+		if (z != APINULLGuid) { zones.push_back (z); any = true; }
+		p = e + 1;
+	}
+	return any;
 }
 
 
@@ -2195,40 +2213,58 @@ void DoSelectZones ()
 	BMKillHandle ((GSHandle*) &selInfo.marquee.coords);
 
 	std::vector<API_Guid> zones;
-	for (const API_Neig& n : sel) {
-		API_Guid z;
-		if (GetZoneTag (n.guid, z) && std::find (zones.begin (), zones.end (), z) == zones.end ())
-			zones.push_back (z);
+	{
+		std::set<API_Guid> seen;
+		std::wstring tepZones;
+		for (const API_Neig& n : sel) {
+			std::vector<API_Guid> zs;
+			if (GetZoneTags (n.guid, zs, tepZones))
+				for (const API_Guid& z : zs)
+					if (seen.insert (z).second) zones.push_back (z);
+		}
 	}
 	if (zones.empty ()) {
-		ShowReport ({ L"Выделите на рабочем листе «Ведомость отделки - секция N» текст строки таблицы проверки",
-					  L"(имя или номер зоны; можно несколько строк) и снова запустите команду.",
-					  L"Таблица проверки строится кнопкой «Рассчитать + проверка зон»." });
+		ShowReport ({ L"Выделите на рабочем листе текст строки таблицы и снова запустите команду:",
+					  L"• «Ведомость отделки - секция N» — строку таблицы проверки (имя или номер зоны; можно несколько строк);",
+					  L"• «ТЭП» — номер, название или значение строки ТЭП либо строку таблицы проверки ТЭП (значение секции — зоны этой секции).",
+					  L"Таблицы с привязкой к зонам строятся заново командами «Рассчитать + проверка зон» и «ТЭП по дому»." });
 		return;
 	}
 
-	{	// план этажа
-		API_WindowInfo wi = {};
-		wi.typeID = APIWind_FloorPlanID;
-		ACAPI_Window_ChangeWindow (&wi);
-	}
-	// этаж — первой найденной зоны; зоны на других этажах — в отчёт
-	GS::Array<API_Neig> neigs;
-	short story = 0;
-	bool hasStory = false;
-	std::vector<std::wstring> other;
+	// зоны по этажам
+	std::map<short, GS::Array<API_Neig>> byStory;
 	int missing = 0;
 	for (const API_Guid& g : zones) {
 		API_Elem_Head h = {};
 		h.guid = g;
 		if (ACAPI_Element_GetHeader (&h) != NoError) { ++missing; continue; }
-		if (!hasStory) { story = h.floorInd; hasStory = true; }
-		if (h.floorInd != story) { other.push_back (std::to_wstring (h.floorInd)); continue; }
-		neigs.Push (API_Neig (g));
+		byStory[h.floorInd].Push (API_Neig (g));
 	}
-	if (!hasStory) {
-		ShowReport ({ L"Зоны из выделенных строк в проекте не найдены (удалены?). Пересчитайте таблицу проверки." });
+	if (byStory.empty ()) {
+		ShowReport ({ L"Зоны из выделенных строк в проекте не найдены (удалены?). Пересчитайте таблицу." });
 		return;
+	}
+	// этаж: открытый, если на нём есть зоны строки, иначе этаж с наибольшим числом зон
+	API_StoryInfo si = {};
+	ACAPI_ProjectSetting_GetStorySettings (&si);
+	const short act = si.actStory;
+	std::map<short, std::wstring> storyNames;
+	if (si.data != nullptr) {
+		for (Int32 i = 0; i <= si.lastStory - si.firstStory; ++i)
+			storyNames[(*si.data)[i].index] = au::ToW (GS::UniString ((*si.data)[i].uName));
+		BMKillHandle ((GSHandle*) &si.data);
+	}
+	short story = byStory.begin ()->first;
+	if (byStory.count (act))
+		story = act;
+	else
+		for (const auto& kv : byStory)
+			if (kv.second.GetSize () > byStory[story].GetSize ()) story = kv.first;
+
+	{	// план этажа
+		API_WindowInfo wi = {};
+		wi.typeID = APIWind_FloorPlanID;
+		ACAPI_Window_ChangeWindow (&wi);
 	}
 	API_StoryCmdType cmd = {};
 	cmd.action = APIStory_GoTo;
@@ -2236,16 +2272,26 @@ void DoSelectZones ()
 	ACAPI_ProjectSetting_ChangeStorySettings (&cmd);
 
 	ACAPI_Selection_DeselectAll ();
-	ACAPI_Selection_Select (neigs, true);
+	ACAPI_Selection_Select (byStory[story], true);
 	ACAPI_View_ZoomToSelected ();
 
-	if (!other.empty () || missing > 0) {
+	if (byStory.size () > 1 || missing > 0) {
+		auto label = [&storyNames] (short s) {
+			const auto it = storyNames.find (s);
+			return it != storyNames.end () && !it->second.empty () ? it->second : L"этаж " + std::to_wstring (s);
+		};
 		std::vector<std::wstring> lines;
-		lines.push_back (L"Выделено зон: " + std::to_wstring (neigs.GetSize ()) + L" (этаж с индексом " + std::to_wstring (story) + L").");
-		if (!other.empty ())
-			lines.push_back (L"Зоны на других этажах (выделите их строки отдельно): " + std::to_wstring (other.size ()) + L".");
+		lines.push_back (L"Зон в выделенных строках: " + std::to_wstring (zones.size () - (size_t) missing) +
+						 L". Показан этаж «" + label (story) + L"» — выделено " + std::to_wstring (byStory[story].GetSize ()) + L".");
+		if (byStory.size () > 1) {
+			std::wstring s;
+			for (const auto& kv : byStory)
+				if (kv.first != story) s += (s.empty () ? L"" : L", ") + label (kv.first) + L" — " + std::to_wstring (kv.second.GetSize ());
+			lines.push_back (L"На других этажах: " + s + L".");
+			lines.push_back (L"Чтобы увидеть их, откройте нужный этаж и снова запустите команду (зоны открытого этажа выделятся).");
+		}
 		if (missing > 0)
-			lines.push_back (L"Не найдено в проекте: " + std::to_wstring (missing) + L" — пересчитайте таблицу проверки.");
+			lines.push_back (L"Не найдено в проекте: " + std::to_wstring (missing) + L" — пересчитайте таблицу.");
 		ShowReport (lines);
 	}
 }
@@ -2422,6 +2468,10 @@ void DoTep ()
 	const std::wstring wsName = L"ТЭП";
 	otd::TableLayout layout = tep::LayoutTep (t, title);
 	otd::AppendLayout (layout, tep::LayoutTepCheck (t, L"Проверка ТЭП: какие зоны учтены"), 20);
+	ACAPI_CallUndoableCommand (au::FromW (L"ТЭП: зоны строк"), [&] () -> GSErrCode {
+		StoreModulText (kTepZonesKey, tep::ZonesText (t));
+		return NoError;
+	});
 	const GSErrCode wsErr = DrawOnWorksheet (wsName, L"ТЭП", layout, L"ТЭП: таблица", existed, dr, step);
 	DrawReport (wsName, wsErr, existed, dr, step, lines);
 

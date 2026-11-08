@@ -600,10 +600,16 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 	// для таблицы проверки: строка -> секция -> «код имя» -> (кол-во, сумма)
 	std::map<std::wstring, std::map<std::wstring, std::map<std::wstring, std::pair<int, double>>>> contrib;
 	std::map<std::wstring, std::map<std::wstring, std::vector<std::wstring>>> notes;
-	auto add = [&contrib] (const std::wstring& key, const Room& r, double v, const std::wstring& suffix = std::wstring ()) {
+	std::map<std::wstring, std::map<std::wstring, std::set<std::wstring>>> zoneSeen;
+	auto addZone = [&t, &zoneSeen] (const std::wstring& key, const Room& r) {
+		if (!r.guid.empty () && zoneSeen[key][r.section].insert (r.guid).second)
+			t.zones[key][r.section].push_back (r.guid);
+	};
+	auto add = [&contrib, &addZone] (const std::wstring& key, const Room& r, double v, const std::wstring& suffix = std::wstring ()) {
 		auto& e = contrib[key][r.section][r.catCode + L" " + r.name + suffix];
 		e.first += 1;
 		e.second += v;
+		addZone (key, r);
 	};
 	const std::wstring kVolU = L"3/в т.ч. подземная часть:", kVolA = L"3/в т.ч. надземная часть:", kHouseU = L"4/в т.ч. подземная часть:";
 	const std::wstring kTech = L"5/в т.ч. площадь тех. помещений:", kBaseRest = L"5/в т.ч. площадь подвального помещения и ЛК:";
@@ -649,6 +655,8 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 		for (size_t i : a.rooms) {
 			if (i >= rooms.size ()) continue;
 			const Room& r = rooms[i];
+			addZone (L"16", r);
+			if (!a.typeName.empty ()) addZone (L"16/" + a.typeName, r);
 			const double ar = RoundTo (r.area, c.dec);
 			double kf = 1;
 			if (c.balcony.Has (r.catCode)) kf = c.coefBalcony;
@@ -856,6 +864,54 @@ Tep BuildTep (const std::vector<Room>& rooms, const std::vector<Apartment>& apts
 	return t;
 }
 
+std::wstring Tep::ZoneTag (const std::wstring& key, const std::wstring& section) const
+{
+	const auto it = zones.find (key);
+	if (it == zones.end ()) return std::wstring ();
+	if (!section.empty () && it->second.count (section) == 0) return std::wstring ();
+	return L"T:" + key + L"|" + section;
+}
+
+std::wstring ZonesText (const Tep& t)
+{
+	std::wstring s;
+	for (const auto& kv : t.zones)
+		for (const auto& sv : kv.second) {
+			s += kv.first + L"\t" + sv.first + L"\t";
+			for (size_t i = 0; i < sv.second.size (); ++i) s += (i ? L";" : L"") + sv.second[i];
+			s += L"\n";
+		}
+	return s;
+}
+
+std::vector<std::wstring> ZonesByTag (const std::wstring& zonesText, const std::wstring& tag)
+{
+	std::vector<std::wstring> res;
+	if (tag.compare (0, 2, L"T:") != 0) return res;
+	const size_t bar = tag.rfind (L'|');
+	if (bar == std::wstring::npos) return res;
+	const std::wstring key = tag.substr (2, bar - 2), sec = tag.substr (bar + 1);
+	size_t p = 0;
+	while (p < zonesText.size ()) {
+		size_t e = zonesText.find (L'\n', p);
+		if (e == std::wstring::npos) e = zonesText.size ();
+		const std::wstring line = zonesText.substr (p, e - p);
+		p = e + 1;
+		const size_t t1 = line.find (L'\t'), t2 = t1 == std::wstring::npos ? t1 : line.find (L'\t', t1 + 1);
+		if (t2 == std::wstring::npos) continue;
+		if (line.substr (0, t1) != key) continue;
+		if (!sec.empty () && line.substr (t1 + 1, t2 - t1 - 1) != sec) continue;
+		size_t q = t2 + 1;
+		while (q < line.size ()) {
+			size_t f = line.find (L';', q);
+			if (f == std::wstring::npos) f = line.size ();
+			if (f > q) res.push_back (line.substr (q, f - q));
+			q = f + 1;
+		}
+	}
+	return res;
+}
+
 otd::TableLayout LayoutTep (const Tep& t, const std::wstring& title)
 {
 	std::vector<double> colW = { 14, 110, 16, 26 };
@@ -869,11 +925,17 @@ otd::TableLayout LayoutTep (const Tep& t, const std::wstring& title)
 	for (size_t i = 0; i < t.sections.size (); ++i) add (0, 4 + (int) i, L"Секция " + t.sections[i], true);
 	int r = 1;
 	for (const auto& row : t.rows) {
+		const size_t c0 = cells.size ();
+		const std::wstring all = t.ZoneTag (row.key);
 		add (r, 0, row.num);
 		add (r, 1, row.name, row.bold, true, row.sub ? 8.0 : 0.0);
 		add (r, 2, row.unit);
 		add (r, 3, row.total, row.bold);
-		for (size_t i = 0; i < row.cells.size (); ++i) add (r, 4 + (int) i, row.cells[i]);
+		for (size_t k = c0; k < cells.size (); ++k) cells[k].tag = all;		// номер, название, всего — зоны всех секций
+		for (size_t i = 0; i < row.cells.size (); ++i) {
+			add (r, 4 + (int) i, row.cells[i]);
+			if (i < t.sections.size ()) cells.back ().tag = t.ZoneTag (row.key, t.sections[i]);
+		}
 		++r;
 	}
 	otd::TableStyle st;
@@ -901,13 +963,19 @@ otd::TableLayout LayoutTepCheck (const Tep& t, const std::wstring& title)
 			if (jt == it->second.end ()) continue;
 			std::wstring txt;
 			for (const auto& l : jt->second) txt += (txt.empty () ? L"" : L"\n") + l;
+			const size_t c0 = cells.size ();
 			add (r, r, 2, t.sections[i]);
 			add (r, r, 3, txt, false, true);
 			add (r, r, 4, i < row.cells.size () ? row.cells[i] : std::wstring ());
+			const std::wstring tag = t.ZoneTag (row.key, t.sections[i]);
+			for (size_t k = c0; k < cells.size (); ++k) cells[k].tag = tag;
 			++r;
 		}
+		const std::wstring all = t.ZoneTag (row.key);
 		add (r0, r - 1, 0, row.num);
+		cells.back ().tag = all;
 		add (r0, r - 1, 1, row.name, false, true, row.sub ? 4.0 : 0.0);
+		cells.back ().tag = all;
 	}
 	otd::TableStyle st;
 	st.minRow = 6;
