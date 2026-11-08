@@ -954,12 +954,12 @@ std::vector<FinishSeg> PylonFinishSegs (const Shape& sh, const std::vector<FaceR
 		const double l = std::hypot (dx, dy);
 		ux = l > 0 ? dx / l : 0; uy = l > 0 ? dy / l : 0;
 	};
-	auto near = [&] (double x, double y, const Pt& p) { return std::hypot (x - p.first, y - p.second) <= tol; };
+	auto atPt = [&] (double x, double y, const Pt& p) { return std::hypot (x - p.first, y - p.second) <= tol; };
 	// грань f открыта у своей вершины: есть участок, начинающийся (atStart) / кончающийся в этой вершине
 	auto runAt = [&] (size_t f, bool atStart) {
 		const Pt& v = atStart ? sh[f] : sh[(f + 1) % n];
 		for (const FaceRun& r : runs)
-			if ((size_t) r.face == f && (atStart ? near (r.ax, r.ay, v) : near (r.bx, r.by, v)) && r.Length () >= minLen)
+			if ((size_t) r.face == f && (atStart ? atPt (r.ax, r.ay, v) : atPt (r.bx, r.by, v)) && r.Length () >= minLen)
 				return true;
 		return false;
 	};
@@ -980,7 +980,7 @@ std::vector<FinishSeg> PylonFinishSegs (const Shape& sh, const std::vector<FaceR
 		// внешний угол — продлить на t (закрыть угол), внутренний — укоротить на t (стенка следующей грани идёт до вершины)
 		const double a = 0;
 		double b = r.Length ();
-		if (near (r.bx, r.by, sh[fn]) && runAt (fn, true))
+		if (atPt (r.bx, r.by, sh[fn]) && runAt (fn, true))
 			b += convex (f, fn) ? t : -t;
 		if (b - a < minLen) continue;
 		FinishSeg s;
