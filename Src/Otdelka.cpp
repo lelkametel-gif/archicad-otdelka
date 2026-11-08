@@ -2822,3 +2822,379 @@ void DoRestoreZoneParams ()
 	for (const auto& w : warn) lines.push_back (w);
 	ShowReport (lines);
 }
+
+// ============================================================================= отделка пилонов
+// Выделенные на плане зоны -> у пилонов (колонны; по галочке — короткие ж/б стены), у которых грани в зону
+// не закрыты другими элементами, создаются стенки штукатурки заданной толщины из выбранного строительного материала.
+// Высота стенки — высота зоны (в пределах высоты пилона). Уже оштукатуренные грани (есть стенка вплотную) пропускаются,
+// поэтому повторный запуск новых стенок не создаёт.
+
+namespace {
+
+const char*	kPylSettingsKey = "PylFinish";
+
+struct PylSettings {
+	int				thickMm = 15;
+	std::wstring	material;			// имя строительного материала
+	bool			walls = true;		// ж/б стены-пилоны
+	int				wallMaxMm = 1500;	// длина стены-пилона, до
+
+	std::wstring Serialize () const
+	{
+		std::wostringstream o;
+		o << L"thick\t" << thickMm << L"\n" << L"material\t" << material << L"\n"
+		  << L"walls\t" << (walls ? 1 : 0) << L"\n" << L"wallMax\t" << wallMaxMm << L"\n";
+		return o.str ();
+	}
+
+	void Parse (const std::wstring& text)
+	{
+		std::wistringstream in (text);
+		std::wstring line;
+		while (std::getline (in, line)) {
+			const size_t t = line.find (L'\t');
+			if (t == std::wstring::npos) continue;
+			const std::wstring k = line.substr (0, t), v = line.substr (t + 1);
+			auto toInt = [&v] (int def) { try { return std::stoi (v); } catch (...) { return def; } };
+			if (k == L"thick") thickMm = toInt (thickMm);
+			else if (k == L"material") material = v;
+			else if (k == L"walls") walls = toInt (1) != 0;
+			else if (k == L"wallMax") wallMaxMm = toInt (wallMaxMm);
+		}
+	}
+};
+
+struct MatRec { std::wstring name; API_AttributeIndex index; };
+
+std::vector<MatRec> LoadBuildingMaterials ()
+{
+	std::vector<MatRec> res;
+	ACAPI_Attribute_EnumerateAttributesByType (API_BuildingMaterialID, [&] (API_Attribute& a) {
+		MatRec m;
+		m.index = a.header.index;
+		m.name = AttrName (API_BuildingMaterialID, a.header.index);
+		if (!m.name.empty ()) res.push_back (m);
+	});
+	std::sort (res.begin (), res.end (), [] (const MatRec& a, const MatRec& b) { return otd::Lower (a.name) < otd::Lower (b.name); });
+	return res;
+}
+
+
+class PylDialog : public DG::ModalDialog,
+				  public DG::PanelObserver,
+				  public DG::ButtonItemObserver,
+				  public DG::CheckItemObserver,
+				  public DG::CompoundItemObserver
+{
+public:
+	enum {
+		OkId = 1, CancelId = 2, LblThick = 3, EdThick = 4, LblMat = 5, PopMat = 6,
+		ChkWalls = 7, EdWallMax = 8, LblHint = 9, Sep = 10
+	};
+
+	PylDialog (PylSettings& s, const std::vector<MatRec>& mats) :
+		DG::ModalDialog (ACAPI_GetOwnResModule (), ID_PYL_DLG, ACAPI_GetOwnResModule ()),
+		st (s), mats (mats),
+		okButton (GetReference (), OkId),
+		cancelButton (GetReference (), CancelId),
+		edThick (GetReference (), EdThick),
+		popMat (GetReference (), PopMat),
+		chkWalls (GetReference (), ChkWalls),
+		edWallMax (GetReference (), EdWallMax)
+	{
+		edThick.SetValue (st.thickMm);
+		chkWalls.SetState (st.walls);
+		edWallMax.SetValue (st.wallMaxMm);
+		// материал: последний выбранный, иначе первый со «штук» в имени
+		short sel = 0, plaster = 0;
+		for (size_t i = 0; i < mats.size (); ++i) {
+			popMat.AppendItem ();
+			const short it = popMat.GetItemCount ();
+			popMat.SetItemText (it, au::FromW (mats[i].name));
+			if (sel == 0 && !st.material.empty () && otd::SameText (mats[i].name, st.material)) sel = it;
+			if (plaster == 0 && otd::Lower (mats[i].name).find (L"штук") != std::wstring::npos) plaster = it;
+		}
+		if (sel == 0) sel = plaster;
+		if (sel == 0 && popMat.GetItemCount () > 0) sel = 1;
+		if (sel > 0) popMat.SelectItem (sel);
+		UpdateItems ();
+		AttachToAllItems (*this);
+		Attach (*this);
+	}
+
+	~PylDialog ()
+	{
+		Detach (*this);
+		DetachFromAllItems (*this);
+	}
+
+private:
+	virtual void ButtonClicked (const DG::ButtonClickEvent& ev) override
+	{
+		if (ev.GetSource () == &okButton) {
+			const short it = popMat.GetSelectedItem ();
+			if (it < 1 || it > (short) mats.size ()) {
+				ACAPI_WriteReport (au::FromW (L"Выберите строительный материал."), true);
+				return;
+			}
+			st.material = mats[(size_t) it - 1].name;
+			st.thickMm = (int) edThick.GetValue ();
+			st.walls = chkWalls.IsChecked ();
+			st.wallMaxMm = (int) edWallMax.GetValue ();
+			PostCloseRequest (DG::ModalDialog::Accept);
+		} else if (ev.GetSource () == &cancelButton) {
+			PostCloseRequest (DG::ModalDialog::Cancel);
+		}
+	}
+
+	virtual void CheckItemChanged (const DG::CheckItemChangeEvent& ev) override
+	{
+		if (ev.GetSource () == &chkWalls)
+			UpdateItems ();
+	}
+
+	void UpdateItems ()
+	{
+		if (chkWalls.IsChecked ()) edWallMax.Enable (); else edWallMax.Disable ();
+	}
+
+	PylSettings&				st;
+	const std::vector<MatRec>&	mats;
+	DG::Button		okButton, cancelButton;
+	DG::IntEdit		edThick;
+	DG::PopUp		popMat;
+	DG::CheckBox	chkWalls;
+	DG::IntEdit		edWallMax;
+};
+
+struct NewWall {
+	short		floorInd = 0;
+	otd::FinishSeg	seg;
+	double		bottomOffset = 0, height = 0;
+};
+
+}	// namespace
+
+
+void DoPylonFinish ()
+{
+	// ---- выделенные зоны
+	std::vector<API_Guid> zoneGuids;
+	{
+		API_SelectionInfo selInfo = {};
+		GS::Array<API_Neig> sel;
+		ACAPI_Selection_Get (&selInfo, &sel, false);
+		BMKillHandle ((GSHandle*) &selInfo.marquee.coords);
+		std::set<API_Guid> seen;
+		for (const API_Neig& n : sel) {
+			API_Elem_Head h = {};
+			h.guid = n.guid;
+			if (ACAPI_Element_GetHeader (&h) == NoError && h.type.typeID == API_ZoneID && seen.insert (n.guid).second)
+				zoneGuids.push_back (n.guid);
+		}
+	}
+	if (zoneGuids.empty ()) {
+		ShowReport ({ L"Выделите на плане этажа зоны (можно рамкой или Ctrl+A при инструменте «Зона») и снова запустите «Создать отделку пилонам»." });
+		return;
+	}
+
+	const std::vector<MatRec> mats = LoadBuildingMaterials ();
+	if (mats.empty ()) {
+		ShowReport ({ L"В проекте нет строительных материалов." });
+		return;
+	}
+	PylSettings ps;
+	ps.Parse (LoadModulText (kPylSettingsKey));
+	{
+		PylDialog dlg (ps, mats);
+		if (!dlg.Invoke ())
+			return;
+	}
+	API_AttributeIndex matIdx = mats.front ().index;
+	for (const MatRec& m : mats)
+		if (m.name == ps.material) { matIdx = m.index; break; }
+	const double t = std::max (1, ps.thickMm) / 1000.0;
+	const double wallMax = ps.wallMaxMm / 1000.0;
+
+	std::vector<std::wstring> warn;
+	std::wstring rulesPath;
+	const otd::Rules rules = LoadRules (warn, rulesPath);
+	const std::vector<StoryRec> stories = LoadStories ();
+	std::map<int, double> storyLevel;
+	for (const auto& sr : stories) storyLevel[sr.index] = sr.level;
+	LayerCache layerCache;
+	const std::vector<ElemGeo> allElems = LoadElemGeo (stories, true, layerCache);
+	std::map<API_Guid, WallInfo> wallCache;
+
+	std::vector<NewWall> toCreate;
+	std::vector<otd::Shape> created;			// новые стенки — закрывают грани для следующих зон
+	std::set<API_Guid> pylonsDone, pylonsAlready, pylonsHidden, pylonsRotated;
+	std::set<API_Guid> pylonWalls;
+	int zonesUsed = 0, zonesNoPylons = 0;
+	double totalLen = 0;
+
+	for (const API_Guid& zg : zoneGuids) {
+		API_Element el = {};
+		el.header.guid = zg;
+		if (ACAPI_Element_Get (&el) != NoError)
+			continue;
+		API_ElementMemo memo = {};
+		if (ACAPI_Element_GetMemo (zg, &memo, APIMemoMask_Polygon) != NoError)
+			continue;
+		const otd::Polys polys = ZonePolys (memo);
+		ACAPI_DisposeElemMemoHdls (&memo);
+		if (polys.empty ())
+			continue;
+		++zonesUsed;
+		const short fl = el.header.floorInd;
+		const double lev = storyLevel.count (fl) ? storyLevel[fl] : 0.0;
+		const double zBot = lev + el.zone.roomBaseLev;
+		const double zTop = zBot + (el.zone.roomHeight > 0.1 ? el.zone.roomHeight : 3.0);
+		double zx1 = 1e30, zy1 = 1e30, zx2 = -1e30, zy2 = -1e30;
+		for (const auto& poly : polys)
+			for (const auto& pt : poly) {
+				zx1 = std::min (zx1, pt.first); zy1 = std::min (zy1, pt.second);
+				zx2 = std::max (zx2, pt.first); zy2 = std::max (zy2, pt.second);
+			}
+		// элементы у зоны по её высоте (как в ведомости) + стенки, созданные для предыдущих зон
+		std::vector<const ElemGeo*> nearElems;
+		std::vector<otd::Shape> shapes;
+		std::vector<int> prio;
+		for (const ElemGeo& e : allElems) {
+			if (e.x2 < zx1 - 0.1 || e.x1 > zx2 + 0.1 || e.y2 < zy1 - 0.1 || e.y1 > zy2 + 0.1)
+				continue;
+			if (std::min (e.top, zTop) - std::max (e.bot, zBot) < 0.3)
+				continue;
+			nearElems.push_back (&e);
+			shapes.push_back (e.shape);
+			int pr = 0;
+			if (e.isColumn) pr = 2;
+			else if (otd::IsReinforcedConcrete (ReadWall (e.guid, rules, wallCache).construction)) pr = 1;
+			prio.push_back (pr);
+		}
+		const size_t nOwn = shapes.size ();
+		for (const otd::Shape& s : created) { shapes.push_back (s); prio.push_back (0); }
+
+		int found = 0;
+		for (size_t i = 0; i < nOwn; ++i) {
+			const ElemGeo& e = *nearElems[i];
+			bool pylon = e.isColumn;
+			if (!pylon && ps.walls && prio[i] == 1 && !e.polyWall && otd::IsPylonWall (e.x2 - e.x1, e.y2 - e.y1, wallMax))
+				pylon = true;
+			if (!pylon || e.floor != fl)
+				continue;
+			const std::vector<otd::FaceRun> alone = otd::ExposedFaces (polys, std::vector<otd::Shape> { e.shape }, 0, 0.01);
+			double aloneLen = 0;
+			for (const auto& r : alone) aloneLen += r.Length ();
+			if (aloneLen < 0.05)
+				continue;						// пилон не выходит в эту зону
+			++found;
+			if (e.hidden) { pylonsHidden.insert (e.guid); continue; }
+			if (!e.ortho) { pylonsRotated.insert (e.guid); continue; }
+			const std::vector<otd::FinishSeg> segs = otd::PylonFinishSegs (e.shape, otd::ExposedFaces (polys, shapes, i, 0.01, prio), t);
+			if (segs.empty ()) { pylonsAlready.insert (e.guid); continue; }
+			const double lo = std::max (zBot, e.bot), hi = std::min (zTop, e.top);
+			if (hi - lo < 0.1)
+				continue;
+			pylonsDone.insert (e.guid);
+			if (!e.isColumn) pylonWalls.insert (e.guid);
+			for (const otd::FinishSeg& s : segs) {
+				NewWall nw;
+				nw.floorInd = fl;
+				nw.seg = s;
+				nw.bottomOffset = lo - lev;
+				nw.height = hi - lo;
+				toCreate.push_back (nw);
+				totalLen += s.Length ();
+				// контур стенки — чтобы соседняя выделенная зона не получила вторую стенку на той же грани
+				const double L = s.Length ();
+				const double nx = (s.by - s.ay) / L * t / 2, ny = -(s.bx - s.ax) / L * t / 2;
+				const otd::Shape sh = { { s.ax - nx, s.ay - ny }, { s.bx - nx, s.by - ny }, { s.bx + nx, s.by + ny }, { s.ax + nx, s.ay + ny } };
+				created.push_back (sh);
+				shapes.push_back (sh);
+				prio.push_back (0);
+			}
+		}
+		if (found == 0) ++zonesNoPylons;
+	}
+
+	// ---- создание стенок (один шаг отмены)
+	GS::Array<API_Neig> newNeigs;
+	int errs = 0;
+	GSErrCode firstErr = NoError;
+	if (!toCreate.empty ()) {
+		ACAPI_CallUndoableCommand (au::FromW (L"Отделка пилонов"), [&] () -> GSErrCode {
+			for (const NewWall& nw : toCreate) {
+				API_Element w = {};
+				w.header.type = API_WallID;
+				if (ACAPI_Element_GetDefaults (&w, nullptr) != NoError) { ++errs; continue; }
+				w.header.floorInd = nw.floorInd;
+				w.wall.type = APIWtyp_Normal;
+				w.wall.begC = { nw.seg.ax, nw.seg.ay };
+				w.wall.endC = { nw.seg.bx, nw.seg.by };
+				w.wall.angle = 0.0;
+				w.wall.referenceLineLocation = APIWallRefLine_Center;
+				w.wall.offset = 0.0;
+				w.wall.flipped = false;
+				w.wall.modelElemStructureType = API_BasicStructure;
+				w.wall.buildingMaterial = matIdx;
+				w.wall.thickness = t;
+				w.wall.thickness1 = t;
+				w.wall.relativeTopStory = 0;
+				w.wall.bottomOffset = nw.bottomOffset;
+				w.wall.topOffset = 0.0;
+				w.wall.height = nw.height;
+				const GSErrCode err = ACAPI_Element_Create (&w, nullptr);
+				if (err != NoError) {
+					if (errs++ == 0) firstErr = err;
+					continue;
+				}
+				newNeigs.Push (API_Neig (w.header.guid));
+			}
+			return NoError;
+		});
+		if (!newNeigs.IsEmpty ()) {
+			ACAPI_Selection_DeselectAll ();
+			ACAPI_Selection_Select (newNeigs, true);
+		}
+	}
+
+	// ---- отчёт
+	std::vector<std::wstring> lines;
+	lines.push_back (L"Отделка пилонов: выделено зон " + std::to_wstring (zonesUsed) + L".");
+	lines.push_back (L"Стенки: «" + ps.material + L"», " + std::to_wstring (ps.thickMm) + L" мм, высота — высота зоны (в пределах пилона).");
+	if (newNeigs.IsEmpty ())
+		lines.push_back (L"Новых стенок нет.");
+	else
+		lines.push_back (L"Создано стенок: " + std::to_wstring (newNeigs.GetSize ()) + L" (общая длина " + otd::FormatNum (totalLen, 2) +
+						 L" м) у " + std::to_wstring (pylonsDone.size ()) + L" пилонов" +
+						 (pylonWalls.empty () ? std::wstring () : L", из них ж/б стен-пилонов " + std::to_wstring (pylonWalls.size ())) +
+						 L". Они выделены на плане.");
+	if (!pylonsAlready.empty ())
+		lines.push_back (L"Уже с отделкой (все грани закрыты): " + std::to_wstring (pylonsAlready.size ()) + L" пилонов — не тронуты.");
+	if (!pylonsHidden.empty ())
+		lines.push_back (L"На скрытых слоях: " + std::to_wstring (pylonsHidden.size ()) + L" пилонов — пропущены.");
+	if (!pylonsRotated.empty ())
+		lines.push_back (L"Повёрнутые (не под 0/90°): " + std::to_wstring (pylonsRotated.size ()) + L" пилонов — пропущены, отделайте вручную.");
+	if (zonesNoPylons > 0)
+		lines.push_back (L"Зон без пилонов: " + std::to_wstring (zonesNoPylons) + L".");
+	if (errs > 0)
+		lines.push_back (L"Не удалось создать стенок: " + std::to_wstring (errs) + L" (код " + std::to_wstring ((int) firstErr) + L").");
+	{
+		const int col = otd::ClassifyWall (ps.material, rules);
+		if (col == 0)
+			lines.push_back (L"Внимание: материал «" + ps.material + L"» не определён правилами ведомости (столбец не задан) — "
+							 L"стенки попадут в «без столбца». Добавьте его в правила или выберите другой материал.");
+		else
+			lines.push_back (L"В ведомости отделки стенки пойдут в столбец " + std::to_wstring (col) + L".");
+	}
+	if (!newNeigs.IsEmpty ())
+		lines.push_back (L"Если площадь зон должна учитывать стенки — обновите зоны. Отменить — Ctrl+Z.");
+	for (const auto& w : warn) lines.push_back (w);
+	ShowReport (lines);
+
+	ACAPI_CallUndoableCommand (au::FromW (L"Отделка пилонов: настройки"), [&] () -> GSErrCode {
+		StoreModulText (kPylSettingsKey, ps.Serialize ());
+		return NoError;
+	});
+}

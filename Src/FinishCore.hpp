@@ -111,6 +111,13 @@ std::vector<double>		ContourGaps (const Polys& zone, const std::vector<Shape>& s
 // prio — приоритет элемента на общей грани (колонна вырезает стену: у колонны больше); пусто — все равны
 std::vector<FaceRun>	ExposedFaces (const Polys& zone, const std::vector<Box>& boxes, size_t idx, double step = 0.01,
 									  const std::vector<int>& prio = std::vector<int> ());
+// Отделка пилонов: стенки штукатурки толщиной t вдоль открытых в зону участков граней пилона shape (runs —
+// ExposedFaces этого пилона). Ось стенки — грань, смещённая наружу на t/2. На внешнем углу, где открыты обе грани,
+// стенка продлевается на t (угол закрыт), на внутреннем — укорачивается на t (без нахлёста). Участки короче minLen — нет.
+struct FinishSeg { double ax = 0, ay = 0, bx = 0, by = 0; int face = 0; double Length () const; };
+std::vector<FinishSeg>	PylonFinishSegs (const Shape& shape, const std::vector<FaceRun>& runs, double t, double minLen = 0.05);
+// Пилон-стена: ж/б стена, длина в плане не больше maxLen (м)
+bool					IsPylonWall (double sizeX, double sizeY, double maxLen);
 // Участки контура зоны, вдоль которых снаружи нет ни одного элемента (проходы), длины, м
 std::vector<double>		ContourGaps (const Polys& zone, const std::vector<Box>& boxes, double minLen = 0.1, double step = 0.01);
 

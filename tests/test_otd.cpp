@@ -192,6 +192,40 @@ int main (int argc, char** argv)
 		CHECK (w3.empty () && r3.col3Else == 1 && r3.col3Except.size () == 1);
 	}
 
+	// --- отделка пилонов: стенки штукатурки по открытым граням
+	{
+		Polys zone = { { { 0, 0 }, { 6, 0 }, { 6, 6 }, { 0, 6 } } };
+		std::vector<Shape> sh = { BoxShape ({ -0.2, -0.2, 0.0, 6.2 }),		// 0 стена слева
+								  BoxShape ({ 2.0, 2.0, 2.4, 3.0 }),		// 1 свободный пилон 400×1000
+								  BoxShape ({ 0.0, 4.0, 0.6, 4.2 }) };		// 2 пилон у стены 600×200
+		const std::vector<int> pr = { 1, 2, 2 };
+		const double t = 0.015;
+		auto segs = [&] (size_t i) { return PylonFinishSegs (sh[i], ExposedFaces (zone, sh, i, 0.01, pr), t); };
+		auto sumLen = [] (const std::vector<FinishSeg>& v) { double s = 0; for (const auto& x : v) s += x.Length (); return s; };
+		const auto s1 = segs (1);
+		CHECK (s1.size () == 4);
+		CHECK (std::fabs (sumLen (s1) - (2 * 0.4 + 2 * 1.0 + 4 * t)) < 1e-6);	// каждый угол закрыт продлением
+		// ось нижней стенки — на t/2 ниже грани, от x=2,0 до 2,4+t
+		bool okBottom = false;
+		for (const auto& x : s1)
+			if (x.face == 0) okBottom = std::fabs (x.ay - (2.0 - t / 2)) < 1e-9 && std::fabs (x.ax - 2.0) < 1e-9 && std::fabs (x.bx - (2.4 + t)) < 1e-9;
+		CHECK (okBottom);
+		const auto s2 = segs (2);										// у стены: 3 грани, 2 внешних угла
+		CHECK (s2.size () == 3);
+		CHECK (std::fabs (sumLen (s2) - (0.6 * 2 + 0.2 + 2 * t)) < 1e-6);
+		// повторный запуск: стенки уже есть — новых нет
+		for (const auto& v : { s1, s2 })
+			for (const auto& x : v) {
+				const double dx = (x.bx - x.ax) / x.Length (), dy = (x.by - x.ay) / x.Length ();
+				const double nx = dy * t / 2, ny = -dx * t / 2;
+				sh.push_back ({ { x.ax - nx, x.ay - ny }, { x.bx - nx, x.by - ny }, { x.bx + nx, x.by + ny }, { x.ax + nx, x.ay + ny } });
+			}
+		std::vector<int> pr2 = pr; pr2.resize (sh.size (), 0);
+		CHECK (PylonFinishSegs (sh[1], ExposedFaces (zone, sh, 1, 0.01, pr2), t).empty ());
+		CHECK (PylonFinishSegs (sh[2], ExposedFaces (zone, sh, 2, 0.01, pr2), t).empty ());
+		CHECK (IsPylonWall (0.2, 1.5, 1.5) && !IsPylonWall (0.2, 3.0, 1.5));
+	}
+
 	// --- колонна поверх стены: общая грань — у колонны
 	{
 		Polys zone = { { { 0, 0 }, { 3, 0 }, { 3, 6 }, { 0, 6 } } };

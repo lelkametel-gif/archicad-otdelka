@@ -933,6 +933,66 @@ std::vector<FaceRun> ExposedFaces (const Polys& zone, const std::vector<Box>& bo
 }
 
 
+double FinishSeg::Length () const { return std::hypot (bx - ax, by - ay); }
+
+
+bool IsPylonWall (double sizeX, double sizeY, double maxLen)
+{
+	return std::max (sizeX, sizeY) <= maxLen + 1e-6;
+}
+
+
+std::vector<FinishSeg> PylonFinishSegs (const Shape& sh, const std::vector<FaceRun>& runs, double t, double minLen)
+{
+	std::vector<FinishSeg> res;
+	const size_t n = sh.size ();
+	if (n < 3 || t <= 0) return res;
+	const bool ccw = SignedArea (sh) > 0;
+	const double tol = 2e-3;
+	auto dir = [&] (size_t f, double& ux, double& uy) {
+		const double dx = sh[(f + 1) % n].first - sh[f].first, dy = sh[(f + 1) % n].second - sh[f].second;
+		const double l = std::hypot (dx, dy);
+		ux = l > 0 ? dx / l : 0; uy = l > 0 ? dy / l : 0;
+	};
+	auto near = [&] (double x, double y, const Pt& p) { return std::hypot (x - p.first, y - p.second) <= tol; };
+	// грань f открыта у своей вершины: есть участок, начинающийся (atStart) / кончающийся в этой вершине
+	auto runAt = [&] (size_t f, bool atStart) {
+		const Pt& v = atStart ? sh[f] : sh[(f + 1) % n];
+		for (const FaceRun& r : runs)
+			if ((size_t) r.face == f && (atStart ? near (r.ax, r.ay, v) : near (r.bx, r.by, v)) && r.Length () >= minLen)
+				return true;
+		return false;
+	};
+	// угол в вершине между гранями a (входит) и b (выходит): внешний (выпуклый) — true
+	auto convex = [&] (size_t a, size_t b) {
+		double ax, ay, bx, by;
+		dir (a, ax, ay); dir (b, bx, by);
+		const double cr = ax * by - ay * bx;
+		return ccw ? cr > 1e-9 : cr < -1e-9;
+	};
+	for (const FaceRun& r : runs) {
+		if (r.Length () < minLen) continue;
+		const size_t f = (size_t) r.face % n, fn = (f + 1) % n;
+		double ux, uy;
+		dir (f, ux, uy);
+		const double nx = ccw ? uy : -uy, ny = ccw ? -ux : ux;		// наружу
+		// начало участка — как есть; конец в вершине (f+1), если следующая грань тоже открыта от этой вершины:
+		// внешний угол — продлить на t (закрыть угол), внутренний — укоротить на t (стенка следующей грани идёт до вершины)
+		const double a = 0;
+		double b = r.Length ();
+		if (near (r.bx, r.by, sh[fn]) && runAt (fn, true))
+			b += convex (f, fn) ? t : -t;
+		if (b - a < minLen) continue;
+		FinishSeg s;
+		s.face = (int) f;
+		s.ax = r.ax + ux * a + nx * t / 2; s.ay = r.ay + uy * a + ny * t / 2;
+		s.bx = r.ax + ux * b + nx * t / 2; s.by = r.ay + uy * b + ny * t / 2;
+		res.push_back (s);
+	}
+	return res;
+}
+
+
 std::vector<double> ContourGaps (const Polys& zone, const std::vector<Shape>& shapes, double minLen, double step)
 {
 	std::vector<double> res;
