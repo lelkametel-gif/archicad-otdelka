@@ -2288,8 +2288,59 @@ void DoSelectZones ()
 					if (seen.insert (z).second) zones.push_back (z);
 		}
 	}
+	// выделенные паспорта квартир (Паспорт_АСП): зоны их квартир — по ключу «секция|квартира» на этаже паспорта
+	int passSel = 0, passNoKey = 0, passNotFound = 0;
+	{
+		Int32 libInd = 0;
+		std::set<std::pair<int, std::wstring>> keys;
+		if (PassportLibInd (libInd))
+			for (const API_Neig& n : sel) {
+				API_Element el = {};
+				el.header.guid = n.guid;
+				if (ACAPI_Element_Get (&el) != NoError || el.header.type.typeID != API_ObjectID || el.object.libInd != libInd)
+					continue;
+				++passSel;
+				API_ElementMemo memo = {};
+				std::wstring key;
+				if (ACAPI_Element_GetMemo (n.guid, &memo, APIMemoMask_AddPars) == NoError) {
+					au::Params P (memo.params);
+					key = otd::Trim (au::ToW (P.Str ("stKey")));
+				}
+				ACAPI_DisposeElemMemoHdls (&memo);
+				if (key.empty ()) { ++passNoKey; continue; }
+				keys.insert ({ (int) el.header.floorInd, key });
+			}
+		if (!keys.empty ()) {
+			AptData d;
+			LoadAptData (d);
+			std::set<API_Guid> seen (zones.begin (), zones.end ());
+			std::set<std::pair<int, std::wstring>> found;
+			for (const auto* list : { &d.apts, &d.premises })
+				for (const tep::Apartment& a : *list) {
+					const std::pair<int, std::wstring> k { a.story, a.Key () };
+					if (!keys.count (k)) continue;
+					found.insert (k);
+					for (size_t i : a.rooms) {
+						const API_Guid g = APIGuidFromString (otd::ToUtf8 (d.rooms[i].guid).c_str ());
+						if (seen.insert (g).second) zones.push_back (g);
+					}
+				}
+			passNotFound = (int) (keys.size () - found.size ());
+		}
+	}
+	if (zones.empty () && passSel > 0) {
+		std::vector<std::wstring> l;
+		l.push_back (L"Выделено паспортов квартир: " + std::to_wstring (passSel) + L", зон не найдено.");
+		if (passNoKey > 0) l.push_back (L"Без ключа квартиры (поставлены вручную): " + std::to_wstring (passNoKey) + L" — их зоны неизвестны.");
+		if (passNotFound > 0) l.push_back (L"Квартиры этих паспортов на их этаже уже нет (" + std::to_wstring (passNotFound) +
+										   L") — запустите «Паспорта квартир на планах этажей».");
+		ShowReport (l);
+		return;
+	}
+
 	if (zones.empty ()) {
-		ShowReport ({ L"Выделите на рабочем листе текст строки таблицы и снова запустите команду:",
+		ShowReport ({ L"Выделите паспорт квартиры на плане или текст строки таблицы на рабочем листе и снова запустите команду:",
+					  L"• паспорт квартиры (Паспорт_АСП) — выделятся зоны этой квартиры (можно несколько паспортов);",
 					  L"• «Ведомость отделки - секция N» — строку таблицы проверки (имя или номер зоны; можно несколько строк);",
 					  L"• «ТЭП» — номер, название или значение строки ТЭП либо строку таблицы проверки ТЭП (значение секции — зоны этой секции).",
 					  L"Таблицы с привязкой к зонам строятся заново командами «Рассчитать + проверка зон» и «ТЭП по дому»." });
@@ -2358,6 +2409,13 @@ void DoSelectZones ()
 		if (missing > 0)
 			lines.push_back (L"Не найдено в проекте: " + std::to_wstring (missing) + L" — пересчитайте таблицу.");
 		ShowReport (lines);
+	}
+	if (passNoKey > 0 || passNotFound > 0) {
+		std::vector<std::wstring> l;
+		if (passNoKey > 0) l.push_back (L"Паспортов без ключа квартиры (поставлены вручную): " + std::to_wstring (passNoKey) + L" — их зоны неизвестны.");
+		if (passNotFound > 0) l.push_back (L"Паспортов, чьей квартиры на этаже уже нет: " + std::to_wstring (passNotFound) +
+										   L" — запустите «Паспорта квартир на планах этажей».");
+		ShowReport (l);
 	}
 }
 
