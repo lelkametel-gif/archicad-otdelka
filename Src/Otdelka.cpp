@@ -1330,6 +1330,59 @@ GSErrCode DrawTable (const otd::TableLayout& t, DrawResult& dr)
 
 // ============================================================================= паспорта квартир и ТЭП
 
+// Слой для создаваемых элементов: первый, в названии которого есть part (без учёта регистра), иначе создаётся createName.
+// Скрытый / заблокированный найденный слой включается и разблокируется (иначе Archicad не даст поставить элемент).
+// Вызывать внутри шага отмены.
+struct LayerResult { API_AttributeIndex index; std::wstring name; bool ok = false, created = false, shown = false, unlocked = false; };
+
+LayerResult EnsureLayer (const std::wstring& part, const std::wstring& createName)
+{
+	LayerResult r;
+	const std::wstring lp = otd::Lower (part);
+	ACAPI_Attribute_EnumerateAttributesByType (API_LayerID, [&] (API_Attribute& a) {
+		if (r.ok) return;
+		const std::wstring n = AttrName (API_LayerID, a.header.index);
+		if (otd::Lower (n).find (lp) != std::wstring::npos) {
+			r.index = a.header.index;
+			r.name = n;
+			r.ok = true;
+		}
+	});
+	if (r.ok) {
+		API_Attribute a = {};
+		a.header.typeID = API_LayerID;
+		a.header.index = r.index;
+		if (ACAPI_Attribute_Get (&a) == NoError && (a.header.flags & (APILay_Hidden | APILay_Locked)) != 0) {
+			r.shown = (a.header.flags & APILay_Hidden) != 0;
+			r.unlocked = (a.header.flags & APILay_Locked) != 0;
+			a.header.flags &= ~(APILay_Hidden | APILay_Locked);
+			if (ACAPI_Attribute_Modify (&a, nullptr) != NoError) r.shown = r.unlocked = false;
+		}
+		return r;
+	}
+	API_Attribute a = {};
+	a.header.typeID = API_LayerID;
+	GS::UniString uName = au::FromW (createName);
+	a.header.uniStringNamePtr = &uName;
+	if (ACAPI_Attribute_Create (&a, nullptr) != NoError)
+		return r;
+	r.index = a.header.index;
+	r.name = createName;
+	r.ok = r.created = true;
+	return r;
+}
+
+std::wstring LayerReport (const LayerResult& r, const std::wstring& createName)
+{
+	if (!r.ok) return L"Не удалось найти или создать слой «" + createName + L"» — элементы на слое по умолчанию.";
+	std::wstring s = L"Слой: «" + r.name + L"»";
+	if (r.created) s += L" (создан — добавьте его в нужные комбинации слоёв)";
+	else if (r.shown || r.unlocked) s += std::wstring (L" (был ") + (r.shown ? L"скрыт" : L"") + (r.shown && r.unlocked ? L" и " : L"") +
+										 (r.unlocked ? L"заблокирован" : L"") + L" — включён)";
+	return s + L".";
+}
+
+const wchar_t*	kPassportLayer = L"04_Квартирография";
 const wchar_t*	kPassportLib = L"Паспорт_АСП";
 
 std::wstring SafeFileName (std::wstring s)
@@ -1659,7 +1712,7 @@ std::vector<PassportObj> FindPassports (Int32 libInd, int& inHotlinks)
 	return res;
 }
 
-GSErrCode CreatePassport (Int32 libInd, short floor, double x, double y, const tep::Apartment& a, const tep::Config& c)
+GSErrCode CreatePassport (Int32 libInd, short floor, double x, double y, const tep::Apartment& a, const tep::Config& c, const LayerResult& layer)
 {
 	API_Element el = {};
 	el.header.type = API_ObjectID;
@@ -1673,6 +1726,7 @@ GSErrCode CreatePassport (Int32 libInd, short floor, double x, double y, const t
 	if (err != NoError) { ACAPI_DisposeElemMemoHdls (&memo); return err; }
 	el.header.guid = APINULLGuid;
 	el.header.floorInd = floor;
+	if (layer.ok) el.header.layer = layer.index;
 	el.object.libInd = libInd;
 	el.object.xRatio = pa;
 	el.object.yRatio = pb;
@@ -2380,6 +2434,8 @@ void DoPassports ()
 	std::vector<tep::Apartment> all = d.apts;
 	all.insert (all.end (), d.premises.begin (), d.premises.end ());
 	const double hRow1 = hMm / 4 * k;		// высота строки паспорта, м
+	LayerResult layer;
+	bool needLayer = false;
 	ACAPI_CallUndoableCommand (au::FromW (L"Паспорта квартир"), [&] () -> GSErrCode {
 		for (const auto& a : all) {
 			const double h = (a.office ? 3 : 4) * hRow1;
@@ -2408,7 +2464,8 @@ void DoPassports ()
 				break;
 			}
 			if (found) continue;
-			const GSErrCode e = CreatePassport (libInd, (short) a.story, x, y, a, d.cfg);
+			if (!needLayer) { needLayer = true; layer = EnsureLayer (kPassportLayer, kPassportLayer); }
+			const GSErrCode e = CreatePassport (libInd, (short) a.story, x, y, a, d.cfg, layer);
 			if (e != NoError) { if (errs++ == 0) firstErr = e; }
 			else { ++created; createdBySt[a.storyName] += 1; space[a.story].AddRect ({ x, y, x + w, y + h }); }
 		}
@@ -2428,6 +2485,8 @@ void DoPassports ()
 	lines.push_back (L"Поставлено новых паспортов: " + std::to_wstring (created) + (createdBySt.empty () ? std::wstring () : L" (" + JoinCounts (createdBySt, 30) + L")") + L".");
 	lines.push_back (L"Обновлено: " + std::to_wstring (updated) + L", без изменений: " + std::to_wstring (same) +
 					 L", удалено (квартиры больше нет или повтор): " + std::to_wstring (deleted) + L".");
+	if (needLayer)
+		lines.push_back (L"Новые паспорта — " + LayerReport (layer, kPassportLayer));
 	if (movedN > 0)
 		lines.push_back (L"Перенесено к своим квартирам (их не двигали вручную): " + std::to_wstring (movedN) + L".");
 	if (created > 0 || movedN > 0)
@@ -2440,7 +2499,7 @@ void DoPassports ()
 		lines.push_back (L"Паспортов в модулях (hotlink) — не тронуты: " + std::to_wstring (inHot) + L".");
 	if (errs > 0)
 		lines.push_back (L"Ошибок при создании / изменении: " + std::to_wstring (errs) + L" (первая — код " + std::to_wstring (firstErr) +
-						 L"). Проверьте, не заблокирован ли слой объектов по умолчанию.");
+						 L"). Проверьте, не скрыт / не заблокирован ли слой паспорта (код " + std::to_wstring ((int) APIERR_HIDDENLAY) + L" — слой скрыт).");
 	lines.push_back (L"Площадь помещения — как в штампе зоны (" + std::to_wstring (d.rs.fromStamp) + L" зон), у остальных " +
 					 std::to_wstring (d.rs.fromArchicad) + L" — расчётная площадь Archicad; округляется до " + std::to_wstring (d.cfg.dec) +
 					 L" знака и складывается.");
@@ -2970,35 +3029,6 @@ private:
 const wchar_t*	kPylLayerPart = L"01_Штукатурка (на пилонах";
 const wchar_t*	kPylLayerName = L"01_Штукатурка (на пилонах и вентблоках)";
 
-// Слой стенок: первый, в названии которого есть «01_Штукатурка (на пилонах», иначе создаётся
-// «01_Штукатурка (на пилонах и вентблоках)». Вызывать внутри шага отмены.
-bool PylonLayer (API_AttributeIndex& idx, std::wstring& name, bool& created)
-{
-	created = false;
-	bool found = false;
-	const std::wstring part = otd::Lower (kPylLayerPart);
-	ACAPI_Attribute_EnumerateAttributesByType (API_LayerID, [&] (API_Attribute& a) {
-		if (found) return;
-		const std::wstring n = AttrName (API_LayerID, a.header.index);
-		if (otd::Lower (n).find (part) != std::wstring::npos) {
-			idx = a.header.index;
-			name = n;
-			found = true;
-		}
-	});
-	if (found) return true;
-	API_Attribute a = {};
-	a.header.typeID = API_LayerID;
-	GS::UniString uName = au::FromW (kPylLayerName);
-	a.header.uniStringNamePtr = &uName;
-	if (ACAPI_Attribute_Create (&a, nullptr) != NoError)
-		return false;
-	idx = a.header.index;
-	name = kPylLayerName;
-	created = true;
-	return true;
-}
-
 struct NewWall {
 	short		floorInd = 0;
 	otd::FinishSeg	seg;
@@ -3152,20 +3182,18 @@ void DoPylonFinish ()
 
 	// ---- создание стенок (один шаг отмены)
 	GS::Array<API_Neig> newNeigs;
-	API_AttributeIndex layerIdx;
-	std::wstring layerName;
-	bool layerOk = false, layerCreated = false;
+	LayerResult layer;
 	int errs = 0;
 	GSErrCode firstErr = NoError;
 	if (!toCreate.empty ()) {
 		ACAPI_CallUndoableCommand (au::FromW (L"Отделка пилонов"), [&] () -> GSErrCode {
-			layerOk = PylonLayer (layerIdx, layerName, layerCreated);
+			layer = EnsureLayer (kPylLayerPart, kPylLayerName);
 			for (const NewWall& nw : toCreate) {
 				API_Element w = {};
 				w.header.type = API_WallID;
 				if (ACAPI_Element_GetDefaults (&w, nullptr) != NoError) { ++errs; continue; }
 				w.header.floorInd = nw.floorInd;
-				if (layerOk) w.header.layer = layerIdx;
+				if (layer.ok) w.header.layer = layer.index;
 				w.wall.type = APIWtyp_Normal;
 				w.wall.begC = { nw.seg.ax, nw.seg.ay };
 				w.wall.endC = { nw.seg.bx, nw.seg.by };
@@ -3207,12 +3235,8 @@ void DoPylonFinish ()
 						 L" м) у " + std::to_wstring (pylonsDone.size ()) + L" пилонов" +
 						 (pylonWalls.empty () ? std::wstring () : L", из них ж/б стен-пилонов " + std::to_wstring (pylonWalls.size ())) +
 						 L". Они выделены на плане.");
-	if (!toCreate.empty ()) {
-		if (!layerOk)
-			lines.push_back (L"Не удалось найти или создать слой «" + std::wstring (kPylLayerName) + L"» — стенки на слое из настроек стены.");
-		else if (!newNeigs.IsEmpty ())
-			lines.push_back (L"Слой: «" + layerName + L"»" + (layerCreated ? L" (создан)." : L"."));
-	}
+	if (!toCreate.empty ())
+		lines.push_back (LayerReport (layer, kPylLayerName));
 	if (!pylonsAlready.empty ())
 		lines.push_back (L"Уже с отделкой (все грани закрыты): " + std::to_wstring (pylonsAlready.size ()) + L" пилонов — не тронуты.");
 	if (!pylonsHidden.empty ())
