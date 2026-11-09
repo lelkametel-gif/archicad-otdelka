@@ -1504,6 +1504,7 @@ std::vector<tep::Room> ReadRooms (const Settings& st, const std::vector<StoryRec
 				catCode = otd::Trim (au::ToW (GS::UniString (a.zoneCat.catCode)));
 		}
 		r.catCode = tep::CodeOf (catCode, catName);
+		r.catName = catName;
 		r.name = otd::Trim (au::ToW (GS::UniString (el.zone.roomName)));
 		if (r.name.empty ()) r.name = catName;
 		r.story = el.header.floorInd;
@@ -1584,6 +1585,11 @@ void AptSummary (const AptData& d, std::vector<std::wstring>& lines)
 		lines.push_back (L"   Зон из модулей (hotlink): " + std::to_wstring (d.rs.fromHotlink) + L".");
 	if (!d.rs.hiddenLayers.empty ())
 		lines.push_back (L"Пропущены зоны на скрытых слоях: " + JoinCounts (d.rs.hiddenLayers) + L".");
+	const std::vector<std::wstring> notApt = tep::NotApartmentRooms (d.rooms, d.cfg);
+	if (!notApt.empty ()) {
+		lines.push_back (L"Зоны с номером квартиры, но не квартирной категории (в квартиры и паспорта не вошли — проверьте категорию):");
+		for (const auto& s : notApt) lines.push_back (L"   " + s);
+	}
 }
 
 void AptFooter (const AptData& d, std::vector<std::wstring>& lines)
@@ -1775,10 +1781,10 @@ GSErrCode UpdatePassport (const API_Guid& g, const tep::Apartment& a, const tep:
 			ACAPI_ELEMENT_MASK_SET (mask, API_ObjectType, pos);
 			moved = true;
 		}
-		if ((notRecorded || untouched) && std::fabs (el.object.angle - angle) > 1e-6) {
-			el.object.angle = angle;		// вдоль стен здания
+		if (std::fabs (el.object.angle - angle) > 1e-6) {
+			el.object.angle = angle;		// все паспорта — вдоль стен здания (и передвинутые вручную: место сохраняется)
 			ACAPI_ELEMENT_MASK_SET (mask, API_ObjectType, angle);
-			moved = true;
+			changed = true;
 		}
 		if (notRecorded || untouched) {
 			if (std::fabs (px - x) > 1e-6 || std::fabs (py - y) > 1e-6) changed = true;
@@ -2513,7 +2519,7 @@ void DoPassports ()
 					 L", удалено (квартиры больше нет или повтор): " + std::to_wstring (deleted) + L".");
 	if (angle != 0)
 		lines.push_back (L"Здание в плане повёрнуто на " + otd::FormatNum (angle * 180 / 3.14159265358979, 2) +
-						 L"° — паспорта ставятся вдоль его стен (тот же угол).");
+						 L"° — все паспорта повёрнуты вдоль его стен (тот же угол), передвинутые вручную остаются на своём месте.");
 	if (needLayer)
 		lines.push_back (L"Новые паспорта — " + LayerReport (layer, kPassportLayer));
 	if (movedN > 0)

@@ -44,6 +44,15 @@ int main (int argc, char** argv)
 
 	std::vector<std::wstring> warn;
 	const Config c = ParseConfig (DefaultConfigText (), &warn);
+	{	// зоны с номером квартиры, но не квартирной категории
+		std::vector<Room> rs = { R (L"1", 2, L"7", L"1010", L"Комната", 10),
+								 R (L"1", 2, L"7", L"2010", L"Комната", 12),
+								 R (L"1", 2, L"", L"2010", L"Коридор", 5),
+								 R (L"1", 2, L"1005", L"5010", L"Офис", 40) };
+		rs[1].catName = L"МОП_Коридор"; rs[1].number = L"12"; rs[1].storyName = L"Этаж 2";
+		const auto na = NotApartmentRooms (rs, c);
+		CHECK (na.size () == 1 && na[0].find (L"кв. 7 — 12 Комната (МОП_Коридор, 2010)") != std::wstring::npos && na[0].find (L"Этаж 2 (1)") == 0);
+	}
 	for (const auto& w : warn) std::printf ("%s\n", U (w).c_str ());
 	CHECK (warn.empty ());
 	CHECK (c.dec == 1);
@@ -137,7 +146,8 @@ int main (int argc, char** argv)
 	const std::vector<Apartment> apts = BuildApartments (rooms, c, &warn);
 	for (const auto& w : warn) std::printf ("  %s\n", U (w).c_str ());
 	CHECK (apts.size () == 5);
-	CHECK (warn.size () == 2);		// зона без номера; номер квартиры у МОП
+	CHECK (warn.size () == 1);		// зона без номера
+	CHECK (NotApartmentRooms (rooms, c).size () == 1);	// номер квартиры у МОП — отдельной строкой отчёта
 	const Apartment* a1 = nullptr; const Apartment* a2 = nullptr; const Apartment* a3 = nullptr;
 	for (const auto& a : apts) {
 		if (a.section == L"2" && a.code == L"1") a1 = &a;

@@ -48,6 +48,7 @@ Config				ParseConfig (const std::wstring& text, std::vector<std::wstring>* warn
 // ----------------------------------------------------------------------------- помещения и квартиры
 struct Room {
 	std::wstring	guid, section, apartment, catCode, name, number, storyName;
+	std::wstring	catName;				// имя категории зоны
 	int				story = 0;				// индекс этажа Archicad
 	bool			underground = false;	// подземный этаж (индекс < 0)
 	double			area = 0;				// площадь помещения, м² (как в штампе зоны)
@@ -82,6 +83,9 @@ std::wstring			StoryKey (int story);
 // Квартиры по параметру «Квартира»; warnings — зоны квартир без номера и т. п.
 // Поворот здания в плане: преобладающее направление сторон зон (по длине), приведённое к (−45°; 45°], радианы.
 // Паспорта ставятся в системе, повёрнутой на этот угол, — вдоль стен здания.
+// Зоны с заполненным «Квартира», но не квартирной категории (и не встроенные помещения) — в квартиры не входят.
+// Строки отчёта по этажам: «Этаж 2 (1): кв. 7 — 12 Комната (Балкон, 1060).». Пусто — таких нет.
+std::vector<std::wstring>	NotApartmentRooms (const std::vector<Room>& rooms, const Config& c);
 double					BuildingAngle (const std::vector<Room>& rooms);
 // Повернуть контуры зон на угол ang (рад) вокруг начала координат и пересчитать габариты
 void					RotateRooms (std::vector<Room>& rooms, double ang);

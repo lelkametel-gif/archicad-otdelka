@@ -274,6 +274,32 @@ static std::wstring TypeName (int n, bool kd, bool studio)
 	return s;
 }
 
+std::vector<std::wstring> NotApartmentRooms (const std::vector<Room>& rooms, const Config& c)
+{
+	std::map<int, std::pair<std::wstring, std::vector<std::wstring>>> bySt;
+	for (const Room& r : rooms) {
+		const std::wstring code = Trim (r.apartment);
+		if (code.empty () || c.apartment.Has (r.catCode) || c.builtIn.Has (r.catCode)) continue;
+		std::wstring cat = Trim (r.catName);
+		if (!r.catCode.empty ()) cat += (cat.empty () ? L"" : L", ") + r.catCode;
+		auto& e = bySt[r.story];
+		e.first = r.storyName;
+		e.second.push_back (L"кв. " + code + L" — " + (r.number.empty () ? std::wstring () : r.number + L" ") + r.name +
+							(cat.empty () ? std::wstring () : L" (" + cat + L")"));
+	}
+	std::vector<std::wstring> res;
+	for (auto& kv : bySt) {
+		auto& v = kv.second.second;
+		std::sort (v.begin (), v.end ());
+		std::wstring s;
+		for (size_t i = 0; i < v.size () && i < 30; ++i) s += (i ? L"; " : L"") + v[i];
+		if (v.size () > 30) s += L" и ещё " + std::to_wstring (v.size () - 30);
+		res.push_back (kv.second.first + L" (" + std::to_wstring (v.size ()) + L"): " + s + L".");
+	}
+	return res;
+}
+
+
 double BuildingAngle (const std::vector<Room>& rooms)
 {
 	// усреднение 4φ: стороны под 0° и 90° (и 180°, 270°) дают одно направление
@@ -317,7 +343,6 @@ std::vector<Apartment> BuildApartments (const std::vector<Room>& rooms, const Co
 	std::map<std::wstring, Apartment> byKey;
 	std::vector<std::wstring> order;
 	std::map<std::wstring, std::vector<std::wstring>> noCode;	// этаж -> зоны квартир без номера
-	std::map<std::wstring, std::vector<std::wstring>> notApt;
 	std::map<std::wstring, double> bestLiving;
 	for (size_t i = 0; i < rooms.size (); ++i) {
 		const Room& r = rooms[i];
@@ -325,7 +350,6 @@ std::vector<Apartment> BuildApartments (const std::vector<Room>& rooms, const Co
 		const bool aptCat = c.apartment.Has (r.catCode);
 		const std::wstring code = Trim (r.apartment);
 		if (!aptCat) {
-			if (!code.empty () && !c.builtIn.Has (r.catCode)) notApt[r.storyName].push_back (r.number + L" " + r.name + L" (" + r.catCode + L")");
 			continue;
 		}
 		if (code.empty ()) {
@@ -394,11 +418,6 @@ std::vector<Apartment> BuildApartments (const std::vector<Room>& rooms, const Co
 			for (size_t i = 0; i < kv.second.size () && i < 12; ++i) s += (i ? L", " : L"") + kv.second[i];
 			if (kv.second.size () > 12) s += L" и ещё " + std::to_wstring (kv.second.size () - 12);
 			warnings->push_back (L"Зоны квартир без параметра «Квартира» (не вошли в паспорта и ТЭП), " + kv.first + L": " + s + L".");
-		}
-		for (const auto& kv : notApt) {
-			std::wstring s;
-			for (size_t i = 0; i < kv.second.size () && i < 8; ++i) s += (i ? L", " : L"") + kv.second[i];
-			warnings->push_back (L"Заполнен номер квартиры, но категория не квартирная (не вошли в квартиры), " + kv.first + L": " + s + L".");
 		}
 	}
 	return res;
