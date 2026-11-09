@@ -274,6 +274,44 @@ static std::wstring TypeName (int n, bool kd, bool studio)
 	return s;
 }
 
+double BuildingAngle (const std::vector<Room>& rooms)
+{
+	// усреднение 4φ: стороны под 0° и 90° (и 180°, 270°) дают одно направление
+	double sx = 0, sy = 0;
+	for (const Room& r : rooms)
+		for (const auto& poly : r.polys)
+			for (size_t i = 0; i < poly.size (); ++i) {
+				const auto& a = poly[i];
+				const auto& b = poly[(i + 1) % poly.size ()];
+				const double dx = b.first - a.first, dy = b.second - a.second, l = std::hypot (dx, dy);
+				if (l < 1e-6) continue;
+				const double f = 4 * std::atan2 (dy, dx);
+				sx += l * std::cos (f); sy += l * std::sin (f);
+			}
+	if (std::hypot (sx, sy) < 1e-9) return 0;
+	return std::atan2 (sy, sx) / 4;
+}
+
+
+void RotateRooms (std::vector<Room>& rooms, double ang)
+{
+	const double c = std::cos (ang), s = std::sin (ang);
+	for (Room& r : rooms) {
+		bool any = false;
+		r.x1 = r.y1 = 1e30; r.x2 = r.y2 = -1e30;
+		for (auto& poly : r.polys)
+			for (auto& p : poly) {
+				const double x = p.first * c - p.second * s, y = p.first * s + p.second * c;
+				p = { x, y };
+				r.x1 = std::min (r.x1, x); r.y1 = std::min (r.y1, y);
+				r.x2 = std::max (r.x2, x); r.y2 = std::max (r.y2, y);
+				any = true;
+			}
+		if (!any) r.x1 = r.y1 = r.x2 = r.y2 = 0;
+	}
+}
+
+
 std::vector<Apartment> BuildApartments (const std::vector<Room>& rooms, const Config& c, std::vector<std::wstring>* warnings)
 {
 	std::map<std::wstring, Apartment> byKey;

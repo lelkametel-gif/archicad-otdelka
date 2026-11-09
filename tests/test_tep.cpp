@@ -27,6 +27,21 @@ static Room R (const wchar_t* sec, int story, const wchar_t* apt, const wchar_t*
 
 int main (int argc, char** argv)
 {
+	{	// поворот здания: прямоугольники под 9,15° (и стороны под 99,15°) -> 9,15°; обратно — 0
+		const double a = 9.15 * 3.14159265358979 / 180, c = std::cos (a), sn = std::sin (a);
+		std::vector<Room> rs (2);
+		const double pts[2][4][2] = { { { 0, 0 }, { 6, 0 }, { 6, 4 }, { 0, 4 } }, { { 6, 0 }, { 9, 0 }, { 9, 7 }, { 6, 7 } } };
+		for (int k = 0; k < 2; ++k) {
+			std::vector<otd::Pt> p;
+			for (auto& q : pts[k]) p.push_back ({ q[0] * c - q[1] * sn, q[0] * sn + q[1] * c });
+			rs[k].polys.push_back (p);
+		}
+		NEAR (BuildingAngle (rs), a);
+		RotateRooms (rs, -a);
+		NEAR (BuildingAngle (rs), 0);
+		NEAR (rs[1].x1, 6); NEAR (rs[1].y2, 7);
+	}
+
 	std::vector<std::wstring> warn;
 	const Config c = ParseConfig (DefaultConfigText (), &warn);
 	for (const auto& w : warn) std::printf ("%s\n", U (w).c_str ());

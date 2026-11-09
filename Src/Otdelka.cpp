@@ -1712,7 +1712,7 @@ std::vector<PassportObj> FindPassports (Int32 libInd, int& inHotlinks)
 	return res;
 }
 
-GSErrCode CreatePassport (Int32 libInd, short floor, double x, double y, const tep::Apartment& a, const tep::Config& c, const LayerResult& layer)
+GSErrCode CreatePassport (Int32 libInd, short floor, double x, double y, const tep::Apartment& a, const tep::Config& c, const LayerResult& layer, double angle)
 {
 	API_Element el = {};
 	el.header.type = API_ObjectID;
@@ -1732,7 +1732,7 @@ GSErrCode CreatePassport (Int32 libInd, short floor, double x, double y, const t
 	el.object.yRatio = pb;
 	el.object.pos.x = x;
 	el.object.pos.y = y;
-	el.object.angle = 0;
+	el.object.angle = angle;
 	el.object.level = 0;
 	el.object.reflected = false;
 	el.object.linkToSettings.newCreationMode = false;
@@ -1750,7 +1750,7 @@ GSErrCode CreatePassport (Int32 libInd, short floor, double x, double y, const t
 
 // Цифры обновляются всегда. Место — только если паспорт не двигали после того, как его поставила надстройка
 // (или место ещё не записано — паспорта прежней версии): тогда он переносится в (x, y).
-GSErrCode UpdatePassport (const API_Guid& g, const tep::Apartment& a, const tep::Config& c, double x, double y,
+GSErrCode UpdatePassport (const API_Guid& g, const tep::Apartment& a, const tep::Config& c, double x, double y, double angle,
 						  bool& changed, bool& moved)
 {
 	changed = moved = false;
@@ -1773,6 +1773,11 @@ GSErrCode UpdatePassport (const API_Guid& g, const tep::Apartment& a, const tep:
 			el.object.pos.x = x;
 			el.object.pos.y = y;
 			ACAPI_ELEMENT_MASK_SET (mask, API_ObjectType, pos);
+			moved = true;
+		}
+		if ((notRecorded || untouched) && std::fabs (el.object.angle - angle) > 1e-6) {
+			el.object.angle = angle;		// вдоль стен здания
+			ACAPI_ELEMENT_MASK_SET (mask, API_ObjectType, angle);
 			moved = true;
 		}
 		if (notRecorded || untouched) {
@@ -2390,6 +2395,20 @@ void DoPassports ()
 	}
 	const double k = scale / 1000.0, wApt = wMm * k, wAp = wApMm * k, gap = 12 * k;
 
+	// здание повёрнуто в плане — паспорта ставятся вдоль его стен: расчёт мест в системе, повёрнутой на −angle,
+	// результат поворачивается обратно, паспорт — с углом angle
+	double angle = tep::BuildingAngle (d.rooms);
+	if (std::fabs (angle) < 1e-4) angle = 0;
+	const double rc = std::cos (angle), rs = std::sin (angle);
+	auto toFrame = [&] (double& x, double& y) { const double nx = x * rc + y * rs, ny = -x * rs + y * rc; x = nx; y = ny; };
+	auto toModel = [&] (double& x, double& y) { const double nx = x * rc - y * rs, ny = x * rs + y * rc; x = nx; y = ny; };
+	if (angle != 0) {
+		tep::RotateRooms (d.rooms, -angle);
+		std::vector<std::wstring> w2;
+		d.apts = tep::BuildApartments (d.rooms, d.cfg, &w2);
+		d.premises = tep::BuildPremises (d.rooms, d.cfg);
+	}
+
 	// габарит этажа (все секции) — по нему выбирается наружная сторона квартиры; паспорт — у стены квартиры
 	std::map<std::wstring, std::vector<double>> box;
 	for (const auto& r : d.rooms) {
@@ -2420,14 +2439,19 @@ void DoPassports ()
 		for (const auto& sr : d.stories) lev[sr.index] = sr.level;
 		LayerCache lc;
 		for (const ElemGeo& e : LoadElemGeo (d.stories, false, lc)) {
+			otd::Shape sh = e.shape;
+			for (auto& p : sh) toFrame (p.first, p.second);
 			for (int s : aptStories) {
 				const double z = (lev.count (s) ? lev[s] : 0) + 1.0;		// на высоте 1 м над этажом
-				if (e.floor == s || (e.bot < z && e.top > z)) space[s].AddShape (e.shape);
+				if (e.floor == s || (e.bot < z && e.top > z)) space[s].AddShape (sh);
 			}
 		}
 		for (const auto& o : objs)
-			if (!o.movable)
-				space[o.floor].AddRect ({ o.x, o.y, o.x + o.wMm * k, o.y + o.hMm * k });
+			if (!o.movable) {
+				double ox = o.x, oy = o.y;
+				toFrame (ox, oy);
+				space[o.floor].AddRect ({ ox, oy, ox + o.wMm * k, oy + o.hMm * k });
+			}
 	}
 	const double minGap = 2 * k, maxGap = 80 * k, step = 1.5 * k, margin = 0.8 * k;
 
@@ -2449,13 +2473,15 @@ void DoPassports ()
 					tep::PassportPlace (a, bi->second[0], bi->second[1], bi->second[2], bi->second[3], w, h, gap, x, y);
 				}
 			}
+			double mx = x, my = y;			// место в координатах модели
+			toModel (mx, my);
 			bool found = false;
 			for (auto& o : objs) {
 				if (o.used || o.floor != a.story || o.key != a.Key ()) continue;
 				o.used = true;
 				found = true;
 				bool ch = false, mv = false;
-				const GSErrCode e = UpdatePassport (o.guid, a, d.cfg, x, y, ch, mv);
+				const GSErrCode e = UpdatePassport (o.guid, a, d.cfg, mx, my, angle, ch, mv);
 				if (e != NoError) { if (errs++ == 0) firstErr = e; }
 				else if (ch || mv) ++updated;
 				else ++same;
@@ -2465,7 +2491,7 @@ void DoPassports ()
 			}
 			if (found) continue;
 			if (!needLayer) { needLayer = true; layer = EnsureLayer (kPassportLayer, kPassportLayer); }
-			const GSErrCode e = CreatePassport (libInd, (short) a.story, x, y, a, d.cfg, layer);
+			const GSErrCode e = CreatePassport (libInd, (short) a.story, mx, my, a, d.cfg, layer, angle);
 			if (e != NoError) { if (errs++ == 0) firstErr = e; }
 			else { ++created; createdBySt[a.storyName] += 1; space[a.story].AddRect ({ x, y, x + w, y + h }); }
 		}
@@ -2485,6 +2511,9 @@ void DoPassports ()
 	lines.push_back (L"Поставлено новых паспортов: " + std::to_wstring (created) + (createdBySt.empty () ? std::wstring () : L" (" + JoinCounts (createdBySt, 30) + L")") + L".");
 	lines.push_back (L"Обновлено: " + std::to_wstring (updated) + L", без изменений: " + std::to_wstring (same) +
 					 L", удалено (квартиры больше нет или повтор): " + std::to_wstring (deleted) + L".");
+	if (angle != 0)
+		lines.push_back (L"Здание в плане повёрнуто на " + otd::FormatNum (angle * 180 / 3.14159265358979, 2) +
+						 L"° — паспорта ставятся вдоль его стен (тот же угол).");
 	if (needLayer)
 		lines.push_back (L"Новые паспорта — " + LayerReport (layer, kPassportLayer));
 	if (movedN > 0)

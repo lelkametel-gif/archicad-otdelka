@@ -80,6 +80,11 @@ double					RoundTo (double v, int dec);
 std::wstring			CodeOf (const std::wstring& catCode, const std::wstring& catName);	// код или первое число имени
 std::wstring			StoryKey (int story);
 // Квартиры по параметру «Квартира»; warnings — зоны квартир без номера и т. п.
+// Поворот здания в плане: преобладающее направление сторон зон (по длине), приведённое к (−45°; 45°], радианы.
+// Паспорта ставятся в системе, повёрнутой на этот угол, — вдоль стен здания.
+double					BuildingAngle (const std::vector<Room>& rooms);
+// Повернуть контуры зон на угол ang (рад) вокруг начала координат и пересчитать габариты
+void					RotateRooms (std::vector<Room>& rooms, double ang);
 std::vector<Apartment>	BuildApartments (const std::vector<Room>& rooms, const Config& c, std::vector<std::wstring>* warnings = nullptr);
 // Встроенные помещения (категории «Встроенные помещения») по тому же параметру «Квартира» (номер помещения: 1005):
 // площадь — сумма зон, высота и место паспорта — по самой большой зоне
