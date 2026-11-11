@@ -829,12 +829,12 @@ std::vector<otd::ZoneData> ReadZones (const Settings& st, const std::map<int, in
 			continue;
 		au::Params P (memo.params);
 		otd::ZoneData z;
+		// секция — параметр зоны «Секция» (asAddOn_stStaircaseCode); пуст — свойство «Секция №»
+		z.section = otd::Trim (au::ToW (P.Str ("asAddOn_stStaircaseCode")));
 		std::wstring sec;
-		if (secProp != APINULLGuid && ReadPropertyText (g, secProp, sec)) {
-			z.section = sec;
+		if (z.section.empty () && secProp != APINULLGuid && ReadPropertyText (g, secProp, sec) && !otd::Trim (sec).empty ()) {
+			z.section = otd::Trim (sec);
 			++rs.secFromProp;
-		} else {
-			z.section = otd::Trim (au::ToW (P.Str ("asAddOn_stStaircaseCode")));
 		}
 		rs.sections[z.section] += 1;
 		if (!st.section.empty () && !otd::SameText (z.section, st.section)) {
@@ -1474,11 +1474,11 @@ std::vector<tep::Room> ReadRooms (const Settings& st, const std::vector<StoryRec
 		tep::Room r;
 		{
 			au::Params P (memo.params);
+			// секция — параметр зоны «Секция»; пуст — свойство «Секция №»
+			r.section = otd::Trim (au::ToW (P.Str ("asAddOn_stStaircaseCode")));
 			std::wstring sec;
-			if (secProp != APINULLGuid && ReadPropertyText (g, secProp, sec))
-				r.section = sec;
-			else
-				r.section = otd::Trim (au::ToW (P.Str ("asAddOn_stStaircaseCode")));
+			if (r.section.empty () && secProp != APINULLGuid && ReadPropertyText (g, secProp, sec))
+				r.section = otd::Trim (sec);
 			r.apartment = otd::Trim (au::ToW (P.Str ("asAddOn_stApartmentCode")));
 			r.area = P.Real ("asAddOn_CalcArea", 0);		// площадь, как в штампе зоны
 			const otd::Polys polys = ZonePolys (memo);
@@ -1564,7 +1564,7 @@ void LoadAptData (AptData& d)
 	d.stories = LoadStories ();
 	std::wstring secPropName;
 	const API_Guid secProp = FindPropertyDef ({ L"Секция №", L"Секция", L"Номер секции" }, secPropName);
-	d.secInfo = secProp != APINULLGuid ? L"Секция — из свойства «" + secPropName + L"», иначе из параметра зоны «Секция»."
+	d.secInfo = secProp != APINULLGuid ? L"Секция — из параметра зоны «Секция», если он пуст — из свойства «" + secPropName + L"»."
 									   : L"Секция — из параметра зоны «Секция».";
 	d.cfg = LoadTepConfig (d.warn, d.cfgPath, d.cfgCreated);
 	d.rooms = ReadRooms (d.st, d.stories, secProp, d.rs);
@@ -2103,8 +2103,8 @@ void DoOtdelka (bool checkOnly)
 	std::wstring floorsInfo;
 	for (const auto& kv : floors)
 		floorsInfo += (floorsInfo.empty () ? L"" : L", ") + std::to_wstring (kv.second) + L" -> " + StoryLabel (stories, kv.first);
-	const std::wstring secInfo = secProp != APINULLGuid ? L"Секция — из свойства «" + secPropName + L"» (у " + std::to_wstring (rs.secFromProp) +
-		L" зон), иначе из параметра зоны." : L"Секция — из параметра зоны «Секция» (свойство «Секция №» в проекте не найдено).";
+	const std::wstring secInfo = L"Секция — из параметра зоны «Секция»" + (secProp != APINULLGuid && rs.secFromProp > 0 ?
+		L"; у " + std::to_wstring (rs.secFromProp) + L" зон он пуст — взято свойство «" + secPropName + L"»." : std::wstring (L"."));
 
 	if (zones.empty ()) {
 		lines.push_back (L"Зоны для ведомости не найдены.");
@@ -2889,7 +2889,7 @@ void DoRestoreZoneParams ()
 			const std::wstring name = otd::Trim (au::ToW (GS::UniString (el.zone.roomName)));
 			bool g1 = false;
 			const int ri = zp::FindRec (recs, au::ToW (APIGuidToString (g)), el.header.floorInd, number, name, &g1);
-			// секция — из свойства «Секция №», если оно у зоны заполнено (важнее значения в файле)
+			// секция — из файла (параметр зоны); свойство «Секция №» — только если параметр остался пустым
 			std::wstring sec;
 			if (secProp != APINULLGuid && ReadPropertyText (g, secProp, sec) && !otd::Trim (sec).empty ()) {
 				sec = otd::Trim (sec);
@@ -2925,6 +2925,8 @@ void DoRestoreZoneParams ()
 			API_ElementMemo memo = {};
 			if (ACAPI_Element_GetMemo (g, &memo, APIMemoMask_AddPars) != NoError) continue;
 			int ch = ri >= 0 ? ApplyPars (memo.params, recs[(size_t) ri]) : 0;
+			if (!sec.empty () && !otd::Trim (au::ToW (au::Params (memo.params).Str ("asAddOn_stStaircaseCode"))).empty ())
+				sec.clear ();		// параметр «Секция» заполнен — его не трогаем
 			if (!sec.empty () && SetStrPar (memo.params, L"asAddOn_stStaircaseCode", sec)) {
 				++ch;
 				++secSet;
@@ -2958,8 +2960,7 @@ void DoRestoreZoneParams ()
 			lines.push_back (L"   Не удалось сменить категорию у " + std::to_wstring (catErrs) + L" зон.");
 	}
 	if (secProp != APINULLGuid)
-		lines.push_back (L"Параметр «Секция» — из свойства «" + secPropName + L"» (заполнено у " + std::to_wstring (secFromProp) +
-						 L" зон); изменён у " + std::to_wstring (secSet) + L" зон.");
+		lines.push_back (L"Параметр «Секция» — из файла; где он пуст — из свойства «" + secPropName + L"» (взято у " + std::to_wstring (secSet) + L" зон).");
 	else
 		lines.push_back (L"Свойство «Секция №» в проекте не найдено — параметр «Секция» взят из файла.");
 	if (notFound > 0) {
