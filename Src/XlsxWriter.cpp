@@ -24,6 +24,14 @@ void Sheet::SetNum (int r, int c, double v, int style)
 }
 
 
+void Sheet::SetFormula (int r, int c, const std::string& f, double cached, int style)
+{
+	Cell cell;
+	cell.row = r; cell.col = c; cell.num = cached; cell.isNum = true; cell.formula = f; cell.style = style;
+	cells.push_back (cell);
+}
+
+
 void Sheet::Merge (int r1, int c1, int r2, int c2)
 {
 	merges.push_back ({ r1, c1, r2, c2 });
@@ -107,6 +115,9 @@ static std::string SheetXml (const Sheet& sh)
 	x += "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" "
 		 "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">";
 	x += "<sheetPr><pageSetUpPr fitToPage=\"1\"/></sheetPr>";
+	if (sh.freezeRows > 0)
+		x += "<sheetViews><sheetView workbookViewId=\"0\"><pane ySplit=\"" + std::to_string (sh.freezeRows) + "\" topLeftCell=\"A" +
+			 std::to_string (sh.freezeRows + 1) + "\" activePane=\"bottomLeft\" state=\"frozen\"/></sheetView></sheetViews>";
 	if (!sh.colWidth.empty ()) {
 		x += "<cols>";
 		for (const auto& w : sh.colWidth)
@@ -131,7 +142,11 @@ static std::string SheetXml (const Sheet& sh)
 		}
 		x += "<c r=\"" + Ref (c.row, c.col) + "\"";
 		if (c.style != Default) x += " s=\"" + std::to_string (c.style) + "\"";
-		if (c.isNum) {
+		if (c.isNum && !c.formula.empty ()) {
+			std::string f;
+			for (char ch : c.formula) { if (ch == '&') f += "&amp;"; else if (ch == '<') f += "&lt;"; else if (ch == '>') f += "&gt;"; else f += ch; }
+			x += "><f>" + f + "</f><v>" + Num (c.num) + "</v></c>";
+		} else if (c.isNum) {
 			x += "><v>" + Num (c.num) + "</v></c>";
 		} else if (!c.text.empty ()) {
 			x += " t=\"inlineStr\"><is><t xml:space=\"preserve\">" + Esc (c.text) + "</t></is></c>";
@@ -173,7 +188,7 @@ static std::string StylesXml ()
 		"<top style=\"thin\"><color auto=\"1\"/></top><bottom style=\"thin\"><color auto=\"1\"/></bottom><diagonal/></border>"
 		"</borders>"
 		"<cellStyleXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"/></cellStyleXfs>"
-		"<cellXfs count=\"10\">"
+		"<cellXfs count=\"13\">"
 		// 0 Default
 		"<xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\"/>"
 		// 1 Title
@@ -194,6 +209,12 @@ static std::string StylesXml ()
 		"<xf numFmtId=\"0\" fontId=\"2\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\"/>"
 		// 9 TextLeft
 		"<xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" vertical=\"center\" wrapText=\"1\"/></xf>"
+		// 10 BoldNum1
+		"<xf numFmtId=\"164\" fontId=\"2\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" vertical=\"center\"/></xf>"
+		// 11 BoldText
+		"<xf numFmtId=\"0\" fontId=\"2\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" vertical=\"center\" wrapText=\"1\"/></xf>"
+		// 12 Num2B
+		"<xf numFmtId=\"165\" fontId=\"0\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyNumberFormat=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" vertical=\"center\"/></xf>"
 		"</cellXfs>"
 		"<cellStyles count=\"1\"><cellStyle name=\"Normal\" xfId=\"0\" builtinId=\"0\"/></cellStyles>"
 		"</styleSheet>";
@@ -239,7 +260,7 @@ std::string BuildXlsx (const std::vector<Sheet>& sheets)
 	const std::string sid = std::to_string (sheets.size () + 1);
 	rels += "<Relationship Id=\"rId" + sid + "\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>";
 	rels += "</Relationships>";
-	wb += "</sheets></workbook>";
+	wb += "</sheets><calcPr calcId=\"191029\" fullCalcOnLoad=\"1\"/></workbook>";
 	e.push_back ({ "xl/workbook.xml", wb });
 	e.push_back ({ "xl/_rels/workbook.xml.rels", rels });
 	e.push_back ({ "xl/styles.xml", StylesXml () });

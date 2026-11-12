@@ -19,7 +19,10 @@ enum Style {
 	Plain,		// без рамки, слева
 	Num2,		// число с двумя знаками, без рамки
 	Bold,		// жирный, без рамки
-	TextLeft	// ячейка таблицы: рамка, слева, перенос
+	TextLeft,	// ячейка таблицы: рамка, слева, перенос
+	BoldNum1,	// итог: жирное число с одним знаком, рамка
+	BoldText,	// итог: жирный текст, рамка, по центру
+	Num2B		// число с двумя знаками, рамка, по центру
 };
 
 struct Cell {
@@ -27,6 +30,7 @@ struct Cell {
 	std::wstring	text;
 	double			num = 0;
 	bool			isNum = false;
+	std::string		formula;			// формула без «=» (num — значение до пересчёта)
 	int				style = Default;
 };
 
@@ -39,9 +43,11 @@ struct Sheet {
 	std::map<int, double>		colWidth;	// в символах
 	std::map<int, double>		rowHeight;	// в пунктах
 	bool						landscape = true;
+	int							freezeRows = 0;	// закрепить строки шапки
 
 	void Set (int r, int c, const std::wstring& t, int style = Default);
 	void SetNum (int r, int c, double v, int style = Num1);
+	void SetFormula (int r, int c, const std::string& f, double cached, int style = Num1);
 	void Merge (int r1, int c1, int r2, int c2);
 };
 

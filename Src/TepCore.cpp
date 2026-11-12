@@ -428,7 +428,8 @@ std::vector<Apartment> BuildPremises (const std::vector<Room>& rooms, const Conf
 	std::map<std::wstring, Apartment> byKey;
 	std::map<std::wstring, double> best;
 	std::vector<std::wstring> order;
-	for (const Room& r : rooms) {
+	for (size_t ri = 0; ri < rooms.size (); ++ri) {
+		const Room& r = rooms[ri];
 		const std::wstring code = Trim (r.apartment);
 		if (code.empty () || !c.builtIn.Has (r.catCode) || c.apartment.Has (r.catCode)) continue;
 		const std::wstring key = r.section + L"|" + StoryKey (r.story) + L"|" + code;
@@ -443,6 +444,7 @@ std::vector<Apartment> BuildPremises (const std::vector<Room>& rooms, const Conf
 			order.push_back (key);
 		}
 		Apartment& a = it->second;
+		a.rooms.push_back (ri);
 		const double ar = RoundTo (r.area, c.dec);
 		a.area += ar; a.total += ar; a.reduced += ar;
 		a.x1 = std::min (a.x1, r.x1); a.y1 = std::min (a.y1, r.y1);

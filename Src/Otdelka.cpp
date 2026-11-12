@@ -31,6 +31,7 @@
 #include "XlsxWriter.hpp"
 #include "FinishTable.hpp"
 #include "TepCore.hpp"
+#include "PremisesReport.hpp"
 #include "ZoneParamsFile.hpp"
 #include "ApiUtils.hpp"
 
@@ -3358,4 +3359,37 @@ void DoPylonFinish ()
 		StoreModulText (kPylSettingsKey, ps.Serialize ());
 		return NoError;
 	});
+}
+
+// ============================================================================= ведомость помещений (Excel)
+// Квартиры с площадями помещений, общедомовые помещения по секциям, нежилые помещения — как в декларации.
+// Зоны и квартиры — как в паспортах и ТЭП (файл данных ТЭП: категории, округление, коэффициенты).
+
+void DoPremisesReport ()
+{
+	AptData d;
+	LoadAptData (d);
+	std::vector<std::wstring> lines;
+	lines.push_back (L"Ведомость помещений (Excel).");
+	AptSummary (d, lines);
+	prem::Info info;
+	const std::vector<xlsx::Sheet> sheets = prem::PremisesSheets (d.rooms, d.apts, d.premises, d.cfg, &info);
+	std::wstring base = TepFileBase ();
+	if (base.rfind (L"ТЭП", 0) == 0) base = L"Ведомость помещений" + base.substr (3);
+	const std::wstring fname = base + L".xlsx";
+	IO::Location loc;
+	const GSErrCode err = DocumentsFile (fname, loc) ? WriteBytes (loc, xlsx::BuildXlsx (sheets)) : APIERR_GENERAL;
+	lines.push_back (L"");
+	if (err == NoError) {
+		lines.push_back (L"Файл: " + PathOf (loc));
+		lines.push_back (L"Листы: «Квартиры с площ.» — " + std::to_wstring (info.apartments) + L" квартир; «Общедомовые N секция» — " +
+						 std::to_wstring (info.common) + L" помещений; «Нежилые» — встроенных помещений " + std::to_wstring (info.offices) +
+						 L", кладовых и др. " + std::to_wstring (info.storages) + L".");
+		lines.push_back (L"Площади — как в паспортах (округление до 0,1 и сумма; летние — с коэффициентом от точной площади). Суммы — формулами Excel.");
+		lines.push_back (L"Общедомовые: категории 2 и 3; «Техническое» — помещения подвала (3), кроме коридора 3030; этаж выше последнего жилого — «Выход на кровлю».");
+		OpenInShell (PathOf (loc), false);
+	} else
+		lines.push_back (L"Не удалось записать «" + fname + L"» в папку «Документы». Если файл открыт в Excel — закройте и запустите ещё раз.");
+	AptFooter (d, lines);
+	ShowReport (lines);
 }

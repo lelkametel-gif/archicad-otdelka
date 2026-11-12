@@ -17,5 +17,7 @@ void DoSaveZoneParams ();
 void DoRestoreZoneParams ();
 // Выделенные зоны: стенки штукатурки у пилонов без отделки (окно: толщина, строительный материал)
 void DoPylonFinish ();
+// Ведомость помещений в Excel: квартиры с площадями, общедомовые по секциям, нежилые
+void DoPremisesReport ();
 
 #endif
