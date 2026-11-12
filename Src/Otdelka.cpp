@@ -21,6 +21,7 @@
 #include "ResourceIds.hpp"
 #include "DGModule.hpp"
 #include "UniString.hpp"
+#include "HashTable.hpp"
 #include "File.hpp"
 #include "FileSystem.hpp"
 #include "Location.hpp"
@@ -2876,10 +2877,78 @@ void DoRestoreZoneParams ()
 	int catSet = 0, catMissing = 0, catErrs = 0, recsWithCat = 0;
 	std::map<std::wstring, int> catLost;		// категории из файла, которых нет в проекте
 	for (const auto& r : recs) if (!r.catName.empty () || !r.catCode.empty ()) ++recsWithCat;
-	int zones = 0, byGuid = 0, byNum = 0, notFound = 0, changedZones = 0, changedPars = 0, hot = 0, errs = 0;
+	int zones = 0, byGuid = 0, byNum = 0, byModule = 0, notFound = 0, changedZones = 0, changedPars = 0, hot = 0, errs = 0;
 	GSErrCode firstErr = NoError;
 	std::vector<std::wstring> missing;
+
+	// Зоны модулей (hotlink) в проекте менять нельзя. Если модуль размещён с этажа этого же проекта, его исходные
+	// зоны — обычные зоны проекта: им и восстанавливаем (их запись в файле, иначе — запись первой зоны-копии модуля).
+	std::map<API_Guid, int> srcRec;				// исходная зона -> запись копии модуля
+	std::set<API_Guid> srcZones;				// исходные зоны модулей в этом проекте
+	std::set<int> srcStories;
+	int hotOutside = 0;							// копии, чьи исходные зоны — в других файлах
+	{
+		std::map<API_Guid, std::map<API_Guid, API_Guid>> proxyToSrc;		// экземпляр модуля -> (копия -> исходная)
+		for (const API_Guid& g : list) {
+			API_Element el = {};
+			el.header.guid = g;
+			if (ACAPI_Element_Get (&el) != NoError || el.header.hotlinkGuid == APINULLGuid) continue;
+			API_Guid owner = el.header.hotlinkGuid;
+			auto pit = proxyToSrc.find (owner);
+			if (pit == proxyToSrc.end ()) {
+				std::map<API_Guid, API_Guid> inv;
+				GS::HashTable<API_Guid, API_Guid> table;
+				if (ACAPI_Hotlink_GetHotlinkProxyElementTable (&owner, &table) == NoError)
+					for (auto it = table.Enumerate (); it != nullptr; ++it)
+						inv[*it->value] = *it->key;
+				pit = proxyToSrc.emplace (owner, inv).first;
+			}
+			bool isSrcHere = false;
+			const auto sit = pit->second.find (g);
+			if (sit != pit->second.end ()) {
+				API_Element se = {};
+				se.header.guid = sit->second;
+				if (ACAPI_Element_Get (&se) == NoError && se.header.type.typeID == API_ZoneID && se.header.hotlinkGuid == APINULLGuid) {
+					isSrcHere = true;
+					srcZones.insert (sit->second);
+					srcStories.insert (se.header.floorInd);
+					if (!srcRec.count (sit->second)) {
+						const std::wstring number = otd::Trim (au::ToW (GS::UniString (el.zone.roomNoStr)));
+						const std::wstring name = otd::Trim (au::ToW (GS::UniString (el.zone.roomName)));
+						const int ri = zp::FindRec (recs, au::ToW (APIGuidToString (g)), el.header.floorInd, number, name, nullptr);
+						if (ri >= 0) srcRec[sit->second] = ri;
+					}
+				}
+			}
+			if (!isSrcHere) ++hotOutside;
+		}
+	}
+	// скрытые / заблокированные слои зон — на время восстановления включаются (иначе Archicad не даёт менять зоны)
+	std::vector<std::pair<API_AttributeIndex, short>> layerFlags;
+	auto hasLayer = [&] (const API_AttributeIndex& i) { for (const auto& kv : layerFlags) if (kv.first == i) return true; return false; };
+	for (const API_Guid& g : list) {
+		API_Elem_Head h = {};
+		h.guid = g;
+		if (ACAPI_Element_GetHeader (&h) != NoError || h.hotlinkGuid != APINULLGuid || hasLayer (h.layer)) continue;
+		API_Attribute a = {};
+		a.header.typeID = API_LayerID;
+		a.header.index = h.layer;
+		if (ACAPI_Attribute_Get (&a) == NoError && (a.header.flags & (APILay_Hidden | APILay_Locked)) != 0)
+			layerFlags.push_back ({ h.layer, a.header.flags });
+	}
+	auto setLayerFlags = [&] (bool open) {
+		for (const auto& kv : layerFlags) {
+			API_Attribute a = {};
+			a.header.typeID = API_LayerID;
+			a.header.index = kv.first;
+			if (ACAPI_Attribute_Get (&a) != NoError) continue;
+			a.header.flags = open ? (short) (kv.second & ~(APILay_Hidden | APILay_Locked)) : kv.second;
+			ACAPI_Attribute_Modify (&a, nullptr);
+		}
+	};
+
 	ACAPI_CallUndoableCommand (au::FromW (L"Восстановить параметры зон"), [&] () -> GSErrCode {
+		setLayerFlags (true);
 		for (const API_Guid& g : list) {
 			API_Element el = {};
 			el.header.guid = g;
@@ -2889,7 +2958,12 @@ void DoRestoreZoneParams ()
 			const std::wstring number = otd::Trim (au::ToW (GS::UniString (el.zone.roomNoStr)));
 			const std::wstring name = otd::Trim (au::ToW (GS::UniString (el.zone.roomName)));
 			bool g1 = false;
-			const int ri = zp::FindRec (recs, au::ToW (APIGuidToString (g)), el.header.floorInd, number, name, &g1);
+			int ri = zp::FindRec (recs, au::ToW (APIGuidToString (g)), el.header.floorInd, number, name, &g1);
+			bool fromModule = false;
+			if (ri < 0) {
+				const auto sr = srcRec.find (g);		// исходная зона модуля — по записи её копии
+				if (sr != srcRec.end ()) { ri = sr->second; fromModule = true; }
+			}
 			// секция — из файла (параметр зоны); свойство «Секция №» — только если параметр остался пустым
 			std::wstring sec;
 			if (secProp != APINULLGuid && ReadPropertyText (g, secProp, sec) && !otd::Trim (sec).empty ()) {
@@ -2902,7 +2976,7 @@ void DoRestoreZoneParams ()
 				if (missing.size () < 15) missing.push_back (number + L" " + name);
 				if (sec.empty ()) continue;
 			} else
-				(g1 ? byGuid : byNum) += 1;
+				(fromModule ? byModule : g1 ? byGuid : byNum) += 1;
 			// категория — по имени, иначе по коду (до замены категорий «По Индексу» зоны могли «переехать»)
 			if (ri >= 0 && (!recs[(size_t) ri].catName.empty () || !recs[(size_t) ri].catCode.empty ())) {
 				const zp::ZoneRec& rr = recs[(size_t) ri];
@@ -2941,12 +3015,14 @@ void DoRestoreZoneParams ()
 			}
 			ACAPI_DisposeElemMemoHdls (&memo);
 		}
+		setLayerFlags (false);
 		return NoError;
 	});
 	std::vector<std::wstring> lines;
 	lines.push_back (L"Восстановление параметров зон из " + PathOf (loc) + L".");
 	lines.push_back (L"Зон в проекте: " + std::to_wstring (zones) + L", в файле: " + std::to_wstring (recs.size ()) +
-					 L"; найдено по GUID: " + std::to_wstring (byGuid) + L", по этажу и номеру: " + std::to_wstring (byNum) + L".");
+					 L"; найдено по GUID: " + std::to_wstring (byGuid) + L", по этажу и номеру: " + std::to_wstring (byNum) +
+					 (byModule > 0 ? L", исходных зон модулей — по их копиям: " + std::to_wstring (byModule) : std::wstring ()) + L".");
 	lines.push_back (L"Изменено зон: " + std::to_wstring (changedZones) + L" (параметров: " + std::to_wstring (changedPars) + L"), остальные уже совпадали.");
 	if (recsWithCat == 0)
 		lines.push_back (L"Категорий зон в файле нет (файл сохранён старой версией) — категории не восстанавливались.");
@@ -2969,7 +3045,22 @@ void DoRestoreZoneParams ()
 		for (const auto& m : missing) s += (s.empty () ? L"" : L", ") + m;
 		lines.push_back (L"Нет в файле: " + std::to_wstring (notFound) + L" зон (" + s + (notFound > (int) missing.size () ? L"…" : L"") + L").");
 	}
-	if (hot > 0) lines.push_back (L"Зоны из модулей (hotlink) не меняются: " + std::to_wstring (hot) + L" — восстановите в файлах модулей.");
+	if (hot > 0) {
+		if (!srcZones.empty ()) {
+			std::map<int, std::wstring> sn;
+			for (const auto& sr : LoadStories ()) sn[sr.index] = sr.name;
+			std::wstring st;
+			for (int f : srcStories) st += (st.empty () ? L"«" : L", «") + (sn.count (f) ? sn[f] : std::to_wstring (f)) + L"»";
+			lines.push_back (L"Зоны модулей: " + std::to_wstring (hot) + L" копий. Их исходные зоны в этом проекте (" + st + L", " +
+							 std::to_wstring (srcZones.size ()) + L" зон) восстановлены вместе с остальными.");
+			lines.push_back (L"   Чтобы копии на этажах обновились: сохраните проект, затем Файл → Внешнее содержимое → Менеджер модулей → Обновить.");
+		}
+		if (hotOutside > 0)
+			lines.push_back (L"Зоны модулей из других файлов: " + std::to_wstring (hotOutside) + L" — восстановите в файлах этих модулей.");
+	}
+	if (!layerFlags.empty ())
+		lines.push_back (L"Зоны на скрытых / заблокированных слоях (" + std::to_wstring (layerFlags.size ()) +
+						 L" слоёв) тоже восстановлены: слои включались на время команды и вернулись как были.");
 	if (errs > 0) lines.push_back (L"Не удалось изменить: " + std::to_wstring (errs) + L" зон (код " + std::to_wstring (firstErr) + L").");
 	lines.push_back (L"Не восстанавливаются: A, B, ROOM_*, GLOB_*, вычисленные площади (asAddOn_CalcArea / FloorArea / FillArea) и массивы строк.");
 	lines.push_back (L"Отменить — Ctrl+Z.");
