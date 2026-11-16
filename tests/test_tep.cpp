@@ -71,7 +71,7 @@ int main (int argc, char** argv)
 	{	// файл данных версии 1 -> 2
 		std::wstring old = L"# Версия: 1\r\n[Категории]\r\nТехпомещения подвала = 4\r\nОбщедомовые помещения = 2, 6\r\n";
 		CHECK (MigrateConfigText (old));
-		CHECK (old.find (L"# Версия: 5") != std::wstring::npos && old.find (L"= 4\r") == std::wstring::npos);
+		CHECK (old.find (L"# Версия: 6") != std::wstring::npos && old.find (L"= 4\r") == std::wstring::npos);
 		std::wstring v3 = L"# Версия: 3\n[Категории]\nИндивидуальные кладовые = 5020\nНежилые помещения = 3060, 3061\nОбщедомовые помещения = 2, 6\n";
 		CHECK (MigrateConfigText (v3));
 		const Config m3 = ParseConfig (v3);
@@ -81,7 +81,9 @@ int main (int argc, char** argv)
 		const Config m = ParseConfig (old);
 		CHECK (m.tech.Has (L"3010") && !m.tech.Has (L"3030") && !m.tech.Has (L"4050") && m.basementRest.Has (L"3070"));
 		std::wstring v4 = L"# Версия: 4\n[Категории]\nИндивидуальные кладовые = 4\nНежилые помещения = 6\n";
-		CHECK (MigrateConfigText (v4) && v4.find (L"# Версия: 5") != std::wstring::npos);
+		CHECK (MigrateConfigText (v4) && v4.find (L"# Версия: 6") != std::wstring::npos);
+		std::wstring v5 = L"# Версия: 5\r\n[Площади]\r\nОбозначение студии = 1С\r\n";
+		CHECK (MigrateConfigText (v5) && ParseConfig (v5).studioLabel == L"С");
 		const Config m4 = ParseConfig (v4);
 		CHECK (m4.storage.Has (L"4010") && !m4.storage.Has (L"4020") && m4.nonResidential.Has (L"6010") && !m4.nonResidential.Has (L"6020"));
 		std::wstring cur = DefaultConfigText ();
