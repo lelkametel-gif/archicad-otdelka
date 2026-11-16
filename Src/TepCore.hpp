@@ -94,7 +94,7 @@ struct PsoRule { std::wstring rule, value; short pen = 0; std::wstring variant; 
 // (1-комнатная -> «1-комнатная (вариант 2)»); у остальных типов второго варианта нет — без изменений
 std::wstring			PsoVariant2 (const std::wstring& kind);
 // kPsoPensVersion — повышать при смене перьев по умолчанию: правила проекта со старой версией получат новые перья
-const int					kPsoPensVersion = 3;	// 3: второй цвет — по свойству-списку прямо в графзамене
+const int					kPsoPensVersion = 4;	// 3–4: второй цвет — по свойству-списку прямо в графзамене (4 — повтор после ложной проверки)
 const std::vector<PsoRule>&	PsoRules ();
 std::vector<std::wstring>	PsoKinds (const std::vector<Room>& rooms, const std::vector<Apartment>& apts, const Config& c);
 double					BuildingAngle (const std::vector<Room>& rooms);
