@@ -605,12 +605,13 @@ static std::wstring XmlEsc (const std::wstring& s)
 }
 
 
-std::wstring CriterionXml (const std::vector<std::pair<std::wstring, std::wstring>>& conds)
+std::wstring CriterionXml (const std::vector<CritCond>& conds)
 {
 	std::wstring props;
 	for (const auto& cv : conds) {
-		const std::wstring& prop = cv.first;
-		const std::wstring& value = cv.second;
+		const std::wstring& prop = cv.prop;
+		const std::wstring& value = cv.value;
+		const std::wstring variant = L"<Variant Type=\"StringVariant\"><Status>Normal</Status><Value>" + XmlEsc (value) + L"</Value></Variant>";
 		props +=
 				L"<ClassGuid>C6EBD1BD-7702-46FF-8ED9-9CC37648A7C7</ClassGuid>"
 				L"<CompositeCriterion Mv=\"2\" Sv=\"1\">"
@@ -633,13 +634,8 @@ std::wstring CriterionXml (const std::vector<std::pair<std::wstring, std::wstrin
 									L"<Name>" + XmlEsc (kPropGroup) + L"</Name>"
 								L"</PropertyDefinitionGroupUserId>"
 							L"</PropertyDefinitionUserId>"
-							L"<CriteriaOperatorEnum>6</CriteriaOperatorEnum>"
-							L"<Value>"
-								L"<Variant Type=\"StringVariant\">"
-									L"<Status>Normal</Status>"
-									L"<Value>" + XmlEsc (value) + L"</Value>"
-								L"</Variant>"
-							L"</Value>"
+							+ (cv.option ? L"<CriteriaOperatorEnum>0</CriteriaOperatorEnum>" + variant
+										 : L"<CriteriaOperatorEnum>6</CriteriaOperatorEnum><Value>" + variant + L"</Value>") +
 						L"</VBEF::ConditionIO>"
 					L"</PropertyCriterion>"
 				L"</CompositeCriterion>";
@@ -676,9 +672,17 @@ std::wstring CriterionXml (const std::vector<std::pair<std::wstring, std::wstrin
 }
 
 
+std::wstring CriterionXml (const std::vector<std::pair<std::wstring, std::wstring>>& conds)
+{
+	std::vector<CritCond> c;
+	for (const auto& p : conds) c.push_back ({ p.first, p.second, false });
+	return CriterionXml (c);
+}
+
+
 std::wstring CriterionXml (const std::wstring& prop, const std::wstring& value)
 {
-	return CriterionXml (std::vector<std::pair<std::wstring, std::wstring>> { { prop, value } });
+	return CriterionXml (std::vector<CritCond> { { prop, value, false } });
 }
 
 }	// namespace otd
