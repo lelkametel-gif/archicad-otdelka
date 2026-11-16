@@ -3771,7 +3771,7 @@ void DoArrangeStamps ()
 	}
 	double angle = tep::BuildingAngle (rr);
 	if (std::fabs (angle) < 1e-4) angle = 0;
-	int done = 0, hot = 0, notOur = 0, small = 0, errs = 0;
+	int done = 0, hot = 0, notOur = 0, tooSmall = 0, errs = 0;
 	GSErrCode firstErr = NoError;
 	ACAPI_CallUndoableCommand (au::FromW (L"Расставить маркеры зон"), [&] () -> GSErrCode {
 		for (size_t i = 0; i < zones.size (); ++i) {
@@ -3788,7 +3788,7 @@ void DoArrangeStamps ()
 			const bool summer = P.Real ("koeff", 1) < 0.999;
 			const double halfW = (summer ? 12 : 7) * 0.55 * basis / 2;		// «10,8 м²» / «0,7 (2,4) м²»
 			const tep::StampLayout L = tep::LayoutStamp (polys[i], angle, basis, halfW);
-			if (!L.ok) { ++small; ACAPI_DisposeElemMemoHdls (&memo); continue; }
+			if (!L.ok) { ++tooSmall; ACAPI_DisposeElemMemoHdls (&memo); continue; }
 			std::vector<double> ox = P.Vector ("compoffx"), oy = P.Vector ("compoffy");
 			if (ox.size () < 36 || oy.size () < 36) { ++notOur; ACAPI_DisposeElemMemoHdls (&memo); continue; }
 			// [комп][вид] построчно, 6×6; смещение во всех видах одинаковое
@@ -3821,7 +3821,7 @@ void DoArrangeStamps ()
 	lines.push_back (L"Расставить маркеры зон: выделено " + std::to_wstring (zones.size ()) + L", расставлено " + std::to_wstring (done) + L".");
 	lines.push_back (L"Имя — у верхней стены по центру, под ним номер пола в треугольнике, площадь — в правом нижнем углу." +
 					 (angle != 0 ? L" Поворот здания " + otd::FormatNum (angle * 180 / 3.14159265358979, 2) + L"° учтён." : std::wstring ()));
-	if (small > 0) lines.push_back (L"Слишком маленькие или узкие зоны — не тронуты: " + std::to_wstring (small) + L".");
+	if (tooSmall > 0) lines.push_back (L"Слишком маленькие или узкие зоны — не тронуты: " + std::to_wstring (tooSmall) + L".");
 	if (notOur > 0) lines.push_back (L"Зоны другого объекта или старой версии HimeraZone_АСП (нет параметра bFreeLayout — обновите объект): " + std::to_wstring (notOur) + L".");
 	if (hot > 0) lines.push_back (L"Копии зон из модулей не меняются: " + std::to_wstring (hot) + L" — расставьте маркеры в исходных зонах модуля.");
 	if (errs > 0) lines.push_back (L"Не удалось изменить: " + std::to_wstring (errs) + L" (код " + std::to_wstring ((int) firstErr) + L"; в Teamwork зоны должны быть зарезервированы).");
