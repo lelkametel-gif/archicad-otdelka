@@ -1913,6 +1913,67 @@ API_Property StringProp (const API_PropertyDefinition& d, const std::wstring& v)
 }
 
 
+// Свойство-список (один вариант из options, по умолчанию первый). Ключи вариантов — постоянные GUID из keys.
+// Если свойство с этим именем есть, но не список (старая версия надстройки), оно пересоздаётся.
+GSErrCode EnsureEnumProp (const API_Guid& group, const std::wstring& name, const std::wstring& descr,
+						  const std::vector<std::wstring>& options, const std::vector<const char*>& keys,
+						  const std::set<API_Guid>& avail, API_PropertyDefinition& out)
+{
+	GS::Array<API_PropertyDefinition> defs;
+	if (ACAPI_Property_GetPropertyDefinitions (group, defs) == NoError)
+		for (const API_PropertyDefinition& d : defs)
+			if (au::ToW (d.name) == name) {
+				if (d.collectionType != API_PropertySingleChoiceEnumerationCollectionType) {
+					ACAPI_Property_DeletePropertyDefinition (d.guid);
+					break;
+				}
+				out = d;
+				bool changed = false;
+				for (const API_Guid& a : avail)
+					if (!out.availability.Contains (a)) { out.availability.Push (a); changed = true; }
+				return changed ? ACAPI_Property_ChangePropertyDefinition (out) : NoError;
+			}
+	out = API_PropertyDefinition ();
+	out.definitionType = API_PropertyCustomDefinitionType;
+	out.groupGuid = group;
+	out.name = au::FromW (name);
+	out.description = au::FromW (descr);
+	out.collectionType = API_PropertySingleChoiceEnumerationCollectionType;
+	out.valueType = API_PropertyStringValueType;
+	out.measureType = API_PropertyDefaultMeasureType;
+	for (size_t i = 0; i < options.size () && i < keys.size (); ++i) {
+		API_SingleEnumerationVariant v;
+		v.keyVariant.type = API_PropertyGuidValueType;
+		v.keyVariant.guidValue = APIGuidFromString (keys[i]);
+		v.displayVariant.type = API_PropertyStringValueType;
+		v.displayVariant.uniStringValue = au::FromW (options[i]);
+		v.nonLocalizedValue = GS::NoValue;
+		out.possibleEnumValues.Push (v);
+		if (i == 0) out.defaultValue.basicValue.singleVariant.variant = v.keyVariant;
+	}
+	out.canValueBeEditable = true;
+	for (const API_Guid& a : avail)
+		out.availability.Push (a);
+	return ACAPI_Property_CreatePropertyDefinition (out);
+}
+
+
+// Выбранный вариант свойства-списка у элемента (имя варианта); пусто — не задано / нет свойства
+std::wstring EnumPropValue (const API_Guid& elem, const API_PropertyDefinition& def)
+{
+	GS::Array<API_PropertyDefinition> defs;
+	defs.Push (def);
+	GS::Array<API_Property> props;
+	if (ACAPI_Element_GetPropertyValues (elem, defs, props) != NoError || props.IsEmpty ()) return L"";
+	const API_Property& p = props[0];
+	if (p.status != API_Property_HasValue) return L"";
+	const API_Guid key = p.value.singleVariant.variant.guidValue;
+	for (const auto& v : def.possibleEnumValues)
+		if (v.keyVariant.guidValue == key) return au::ToW (v.displayVariant.uniStringValue);
+	return L"";
+}
+
+
 void EnsureOverrides (const otd::Rules& rules, MarkResult& mr)
 {
 	API_OverrideRuleGroup grp = { APINULLGuid, au::FromW (otd::kPropGroup) };
@@ -2065,7 +2126,9 @@ void MarkReport (const MarkResult& mr, std::vector<std::wstring>& lines)
 // ---- графическая замена «ПСО»: свойство «ПСО - тип» зонам + правила (перо фона штриховки) + комбинация «ПСО»
 const wchar_t*	kPsoProp = L"ПСО - тип";
 const wchar_t*	kPsoCombo = L"ПСО";
-const wchar_t*	kPsoVariant = L"ПСО - вариант цвета";		// ставит проектировщик вручную («2» — второй цвет), надстройка не меняет
+const wchar_t*	kPsoVariant = L"ПСО - вариант цвета";		// список «Вариант 1» (по умолчанию) / «Вариант 2» — выбирает проектировщик
+const char*		kPsoVarKey1 = "6F1C2B0A-4E71-4C5B-9C33-0A5D1E7B2101";
+const char*		kPsoVarKey2 = "6F1C2B0A-4E71-4C5B-9C33-0A5D1E7B2102";
 const char*		kPsoPensKey = "PsoPensVersion";		// версия перьев, уже записанных в правила проекта
 
 void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
@@ -2110,7 +2173,7 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 	int written = 0, noAvail = 0, failed = 0, rulesNew = 0, rulesFailed = 0;
 	GSErrCode err = NoError, ruleErr = NoError;
 	bool comboNew = false;
-	int rulesRepen = 0;
+	int rulesRepen = 0, variant2 = 0;
 	int pensVer = 0;
 	try { pensVer = std::stoi (LoadModulText (kPsoPensKey)); } catch (...) { pensVer = 0; }
 	const bool updatePens = pensVer < tep::kPsoPensVersion;	// перья по умолчанию сменились — переписать в существующих правилах
@@ -2122,17 +2185,22 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 		if (err == NoError)
 			err = EnsureStringProp (group, kPsoProp, L"Студия / N-комнатная / Кладовая / Общедомовое / Тех.подполье — для графической замены «ПСО»", avail, def);
 		if (err != NoError) return NoError;
-		{
-			API_PropertyDefinition defVar;
-			EnsureStringProp (group, kPsoVariant, L"Пусто — основной цвет; 2 — второй цвет (1-комнатные: перо 143). Ставится вручную всем зонам квартиры", avail, defVar);
-		}
+		API_PropertyDefinition defVar;
+		const bool hasVar = EnsureEnumProp (group, kPsoVariant,
+			L"Вариант 2 — второй цвет графзамены «ПСО» (1-комнатные: перо 143). Выбирается вручную всем зонам квартиры, применяется при запуске паспортов / ТЭП",
+			{ L"Вариант 1", L"Вариант 2" }, { kPsoVarKey1, kPsoVarKey2 }, avail, defVar) == NoError;
 		for (const auto& m : marks) {
 			if (!ACAPI_Element_IsPropertyDefinitionAvailable (m.first, def.guid)) { ++noAvail; continue; }
+			std::wstring kind = m.second;
+			if (hasVar && !kind.empty () && EnumPropValue (m.first, defVar) == L"Вариант 2") {
+				const std::wstring k2 = tep::PsoVariant2 (kind);
+				if (k2 != kind) { kind = k2; ++variant2; }
+			}
 			GS::Array<API_Property> props;
-			props.Push (StringProp (def, m.second));
+			props.Push (StringProp (def, kind));
 			if (ACAPI_Element_SetProperties (m.first, props) == NoError) {
 				++written;
-				if (!m.second.empty ()) byKind[m.second] += 1;
+				if (!kind.empty ()) byKind[kind] += 1;
 			} else
 				++failed;
 		}
@@ -2165,12 +2233,17 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 			rule.style.fillTypeBackgroundPen.overrideCoverFill = true;
 			rule.style.fillTypeBackgroundPen.overrideCutFill = false;
 			rule.style.fillTypeBackgroundPen.overrideDraftingFill = false;
-			std::vector<std::pair<std::wstring, std::wstring>> conds { { kPsoProp, pr.value } };
-			if (!pr.variant.empty ()) conds.push_back ({ kPsoVariant, pr.variant });
-			rule.criterionXML = au::FromW (otd::CriterionXml (conds));
+			rule.criterionXML = au::FromW (otd::CriterionXml (kPsoProp, pr.value));
 			const GSErrCode e = ACAPI_GraphicalOverride_CreateOverrideRule (rule, grp.guid);
 			if (e == NoError && rule.guid != APINULLGuid) { list.Push (rule.guid); ++rulesNew; }
 			else { ++rulesFailed; ruleErr = e; }
+		}
+		{	// правило прошлой версии (второй цвет по текстовому свойству) — больше не нужно
+			API_OverrideRule old;
+			old.guid = APINULLGuid;
+			old.name = au::FromW (L"ПСО - 1-комнатные (цвет 2)");
+			if (ACAPI_GraphicalOverride_GetOverrideRuleByName (old, grp.guid) == NoError && old.guid != APINULLGuid)
+				ACAPI_GraphicalOverride_DeleteOverrideRule (old.guid);
 		}
 		API_OverrideCombination cmb = { APINULLGuid, au::FromW (kPsoCombo) };
 		GS::Array<API_Guid> have;
@@ -2196,8 +2269,10 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 	for (const tep::PsoRule& pr : tep::PsoRules ())
 		if (byKind.count (pr.value)) cnt += (cnt.empty () ? L"" : L", ") + pr.value + L" — " + std::to_wstring (byKind[pr.value]);
 	lines.push_back (L"Графическая замена «" + std::wstring (kPsoCombo) + L"»: свойство «" + kPsoProp + L"» записано у " + std::to_wstring (written) +
-					 L" зон" + (cnt.empty () ? L"" : L" (" + cnt + L")") + L". Перья фона штриховки: студии 142, 1-комн. 144 (с «ПСО - вариант цвета» = 2 — 143), 2-комн. 141, 3-комн. 116, "
+					 L" зон" + (cnt.empty () ? L"" : L" (" + cnt + L")") + L". Перья фона штриховки: студии 142, 1-комн. 144 (Вариант 2 — 143), 2-комн. 141, 3-комн. 116, "
 					 L"кладовые 148, общедомовые 149, тех.подполье 150.");
+	if (variant2 > 0)
+		lines.push_back (L"   «ПСО - вариант цвета» = Вариант 2 у " + std::to_wstring (variant2) + L" зон 1-комнатных квартир — второй цвет (перо 143).");
 	if (rulesRepen > 0)
 		lines.push_back (L"   В существующих правилах «ПСО - …» перья заменены на новые: " + std::to_wstring (rulesRepen) + L" правил.");
 	if (rulesNew > 0 || comboNew)

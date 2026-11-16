@@ -88,8 +88,10 @@ std::vector<std::wstring>	NotApartmentRooms (const std::vector<Room>& rooms, con
 // Графическая замена «ПСО»: тип зоны для свойства «ПСО - тип» и перо фона штриховки.
 // Квартиры — по типу (Студия / 1-комнатная / 2-комнатная / 3-комнатная / 4-комнатная…), кладовые (storage),
 // общедомовые (common), тех. подполье (basement). Остальные — пусто.
-// variant — значение свойства «ПСО - вариант цвета», которое проектировщик ставит вручную (пусто — не важно)
-struct PsoRule { std::wstring rule, value; short pen = 0; std::wstring variant; };
+struct PsoRule { std::wstring rule, value; short pen = 0; };
+// «Вариант 2» свойства «ПСО - вариант цвета» (выбирает проектировщик): тип зоны -> тип для графзамены
+// (1-комнатная -> «1-комнатная (вариант 2)»); у остальных типов второго варианта нет — без изменений
+std::wstring			PsoVariant2 (const std::wstring& kind);
 // kPsoPensVersion — повышать при смене перьев по умолчанию: правила проекта со старой версией получат новые перья
 const int					kPsoPensVersion = 2;
 const std::vector<PsoRule>&	PsoRules ();
