@@ -300,6 +300,46 @@ std::vector<std::wstring> NotApartmentRooms (const std::vector<Room>& rooms, con
 }
 
 
+const std::vector<PsoRule>& PsoRules ()
+{
+	static const std::vector<PsoRule> r = {
+		{ L"ПСО - студии",			L"Студия",			144 },
+		{ L"ПСО - 1-комнатные",		L"1-комнатная",		110 },
+		{ L"ПСО - 2-комнатные",		L"2-комнатная",		119 },
+		{ L"ПСО - 3-комнатные",		L"3-комнатная",		96 },
+		{ L"ПСО - кладовые",		L"Кладовая",		99 },
+		{ L"ПСО - общедомовые",		L"Общедомовое",		91 },
+		{ L"ПСО - тех.подполье",	L"Тех.подполье",	181 },
+	};
+	return r;
+}
+
+
+std::vector<std::wstring> PsoKinds (const std::vector<Room>& rooms, const std::vector<Apartment>& apts, const Config& c)
+{
+	std::vector<std::wstring> res (rooms.size ());
+	for (size_t i = 0; i < rooms.size (); ++i) {
+		const Room& r = rooms[i];
+		if (c.excluded.Has (r.catCode)) continue;
+		if (c.storage.Has (r.catCode)) res[i] = L"Кладовая";
+		else if (c.common.Has (r.catCode)) res[i] = L"Общедомовое";
+		else if (c.basement.Has (r.catCode)) res[i] = L"Тех.подполье";
+	}
+	for (const Apartment& a : apts) {
+		std::wstring v;
+		if (a.label == c.studioLabel) v = L"Студия";
+		else {
+			int n = 0;
+			for (wchar_t ch : a.label) { if (ch >= L'0' && ch <= L'9') n = n * 10 + (ch - L'0'); else if (n > 0) break; }
+			if (n > 0) v = std::to_wstring (n) + L"-комнатная";
+		}
+		for (size_t i : a.rooms)
+			if (i < res.size ()) res[i] = v;
+	}
+	return res;
+}
+
+
 double BuildingAngle (const std::vector<Room>& rooms)
 {
 	// усреднение 4φ: стороны под 0° и 90° (и 180°, 270°) дают одно направление

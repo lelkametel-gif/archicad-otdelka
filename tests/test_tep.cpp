@@ -147,7 +147,15 @@ int main (int argc, char** argv)
 	for (const auto& w : warn) std::printf ("  %s\n", U (w).c_str ());
 	CHECK (apts.size () == 5);
 	CHECK (warn.size () == 1);		// зона без номера
-	CHECK (NotApartmentRooms (rooms, c).size () == 1);	// номер квартиры у МОП — отдельной строкой отчёта
+	CHECK (NotApartmentRooms (rooms, c).size () == 1);
+	{
+		const auto kinds = PsoKinds (rooms, apts, c);
+		CHECK (kinds.size () == rooms.size ());
+		int nApt = 0;
+		for (const auto& a : apts) for (size_t i : a.rooms) if (!kinds[i].empty () && kinds[i].find (L"комнатная") != std::wstring::npos) ++nApt;
+		CHECK (nApt > 0);
+		CHECK (PsoRules ().size () == 7 && PsoRules ()[0].pen == 144 && PsoRules ()[6].value == L"Тех.подполье");
+	}	// номер квартиры у МОП — отдельной строкой отчёта
 	const Apartment* a1 = nullptr; const Apartment* a2 = nullptr; const Apartment* a3 = nullptr;
 	for (const auto& a : apts) {
 		if (a.section == L"2" && a.code == L"1") a1 = &a;

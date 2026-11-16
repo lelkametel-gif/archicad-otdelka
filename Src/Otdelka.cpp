@@ -2062,6 +2062,138 @@ void MarkReport (const MarkResult& mr, std::vector<std::wstring>& lines)
 					 L"серые — не входят) или «Отделка - подкатегории» (свой цвет у каждой подкатегории).");
 }
 
+// ---- графическая замена «ПСО»: свойство «ПСО - тип» зонам + правила (перо фона штриховки) + комбинация «ПСО»
+const wchar_t*	kPsoProp = L"ПСО - тип";
+const wchar_t*	kPsoCombo = L"ПСО";
+
+void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
+{
+	const std::vector<std::wstring> kinds = tep::PsoKinds (d.rooms, d.apts, d.cfg);
+	// зона -> значение; копии зон модуля (hotlink) не меняются: пишем их исходной зоне, если она в этом проекте
+	std::map<API_Guid, std::wstring> marks;
+	std::map<API_Guid, std::map<API_Guid, API_Guid>> proxyToSrc;
+	int hotNoSrc = 0;
+	for (size_t i = 0; i < d.rooms.size (); ++i) {
+		API_Guid g = APIGuidFromString (otd::ToUtf8 (d.rooms[i].guid).c_str ());
+		API_Elem_Head h = {};
+		h.guid = g;
+		if (g == APINULLGuid || ACAPI_Element_GetHeader (&h) != NoError) continue;
+		if (h.hotlinkGuid != APINULLGuid) {
+			auto pit = proxyToSrc.find (h.hotlinkGuid);
+			if (pit == proxyToSrc.end ()) {
+				std::map<API_Guid, API_Guid> inv;
+				GS::HashTable<API_Guid, API_Guid> table;
+				API_Guid owner = h.hotlinkGuid;
+				if (ACAPI_Hotlink_GetHotlinkProxyElementTable (&owner, &table) == NoError)
+					for (auto it = table.Enumerate (); it != nullptr; ++it) inv[*it->value] = *it->key;
+				pit = proxyToSrc.emplace (h.hotlinkGuid, inv).first;
+			}
+			const auto sit = pit->second.find (g);
+			API_Elem_Head sh = {};
+			if (sit == pit->second.end () || (sh.guid = sit->second, ACAPI_Element_GetHeader (&sh) != NoError) || sh.hotlinkGuid != APINULLGuid) {
+				++hotNoSrc;
+				continue;
+			}
+			g = sit->second;
+			if (marks.count (g)) continue;			// исходная зона уже получила значение своей квартиры
+		}
+		marks[g] = kinds[i];
+	}
+	std::set<API_Guid> avail;
+	for (const auto& m : marks) {
+		GS::Array<GS::Pair<API_Guid, API_Guid>> items;
+		if (ACAPI_Element_GetClassificationItems (m.first, items) == NoError)
+			for (const auto& it : items) avail.insert (it.second);
+	}
+	int written = 0, noAvail = 0, failed = 0, rulesNew = 0, rulesFailed = 0;
+	GSErrCode err = NoError, ruleErr = NoError;
+	bool comboNew = false;
+	std::map<std::wstring, int> byKind;
+	ACAPI_CallUndoableCommand (au::FromW (L"ПСО: графическая замена"), [&] () -> GSErrCode {
+		API_Guid group = APINULLGuid;
+		API_PropertyDefinition def;
+		err = EnsurePropGroup (group);
+		if (err == NoError)
+			err = EnsureStringProp (group, kPsoProp, L"Студия / N-комнатная / Кладовая / Общедомовое / Тех.подполье — для графической замены «ПСО»", avail, def);
+		if (err != NoError) return NoError;
+		for (const auto& m : marks) {
+			if (!ACAPI_Element_IsPropertyDefinitionAvailable (m.first, def.guid)) { ++noAvail; continue; }
+			GS::Array<API_Property> props;
+			props.Push (StringProp (def, m.second));
+			if (ACAPI_Element_SetProperties (m.first, props) == NoError) {
+				++written;
+				if (!m.second.empty ()) byKind[m.second] += 1;
+			} else
+				++failed;
+		}
+		// правила (существующие не меняются) и комбинация «ПСО»
+		API_OverrideRuleGroup grp = { APINULLGuid, au::FromW (otd::kPropGroup) };
+		if (ACAPI_GraphicalOverride_GetOverrideRuleGroup (grp) != NoError) {
+			grp.guid = APINULLGuid;
+			ruleErr = ACAPI_GraphicalOverride_CreateOverrideRuleGroup (grp);
+			if (ruleErr != NoError) return NoError;
+		}
+		GS::Array<API_Guid> list;
+		for (const tep::PsoRule& pr : tep::PsoRules ()) {
+			API_OverrideRule rule;
+			rule.guid = APINULLGuid;
+			rule.name = au::FromW (pr.rule);
+			if (ACAPI_GraphicalOverride_GetOverrideRuleByName (rule, grp.guid) == NoError && rule.guid != APINULLGuid) {
+				list.Push (rule.guid);
+				continue;
+			}
+			rule = API_OverrideRule ();
+			rule.guid = APINULLGuid;
+			rule.name = au::FromW (pr.rule);
+			rule.style = API_OverrideRuleStyle ();
+			rule.style.fillBackgroundPenOverride = static_cast<short> (pr.pen);		// перо фона покрывающей штриховки зоны
+			rule.style.fillTypeBackgroundPen.overrideCoverFill = true;
+			rule.style.fillTypeBackgroundPen.overrideCutFill = false;
+			rule.style.fillTypeBackgroundPen.overrideDraftingFill = false;
+			rule.criterionXML = au::FromW (otd::CriterionXml (kPsoProp, pr.value));
+			const GSErrCode e = ACAPI_GraphicalOverride_CreateOverrideRule (rule, grp.guid);
+			if (e == NoError && rule.guid != APINULLGuid) { list.Push (rule.guid); ++rulesNew; }
+			else { ++rulesFailed; ruleErr = e; }
+		}
+		API_OverrideCombination cmb = { APINULLGuid, au::FromW (kPsoCombo) };
+		GS::Array<API_Guid> have;
+		if (ACAPI_GraphicalOverride_GetOverrideCombination (cmb, &have) == NoError && cmb.guid != APINULLGuid) {
+			GS::Array<API_Guid> merged = list;
+			bool missing = false;
+			for (const API_Guid& g : list) if (!have.Contains (g)) missing = true;
+			for (const API_Guid& g : have) if (!merged.Contains (g)) merged.Push (g);
+			if (missing) ACAPI_GraphicalOverride_ChangeOverrideCombination (cmb, &merged);
+		} else {
+			cmb.guid = APINULLGuid;
+			comboNew = ACAPI_GraphicalOverride_CreateOverrideCombination (cmb, list) == NoError;
+		}
+		return NoError;
+	});
+	if (err != NoError) {
+		lines.push_back (L"Графическая замена «ПСО»: не удалось создать свойство «" + std::wstring (kPsoProp) + L"» (код " + std::to_wstring (err) + L").");
+		return;
+	}
+	std::wstring cnt;
+	for (const tep::PsoRule& pr : tep::PsoRules ())
+		if (byKind.count (pr.value)) cnt += (cnt.empty () ? L"" : L", ") + pr.value + L" — " + std::to_wstring (byKind[pr.value]);
+	lines.push_back (L"Графическая замена «" + std::wstring (kPsoCombo) + L"»: свойство «" + kPsoProp + L"» записано у " + std::to_wstring (written) +
+					 L" зон" + (cnt.empty () ? L"" : L" (" + cnt + L")") + L". Перья фона штриховки: студии 144, 1-комн. 110, 2-комн. 119, 3-комн. 96, "
+					 L"кладовые 99, общедомовые 91, тех.подполье 181.");
+	if (rulesNew > 0 || comboNew)
+		lines.push_back (L"   Созданы правила: " + std::to_wstring (rulesNew) + (comboNew ? L", комбинация «ПСО»." : L".") +
+						 L" Существующие правила не меняются — перо, исправленное вручную, сохранится.");
+	if (rulesFailed > 0)
+		lines.push_back (L"   Не удалось создать правил: " + std::to_wstring (rulesFailed) + L" (код " + std::to_wstring (ruleErr) + L").");
+	if (noAvail > 0)
+		lines.push_back (L"   У " + std::to_wstring (noAvail) + L" зон нет классификации — свойство не записано.");
+	if (failed > 0)
+		lines.push_back (L"   Не записано у " + std::to_wstring (failed) + L" зон (зарезервированы другим пользователем).");
+	if (hotNoSrc > 0)
+		lines.push_back (L"   Копий зон из модулей других файлов: " + std::to_wstring (hotNoSrc) + L" — свойство пишется в файле модуля.");
+	else if (!proxyToSrc.empty ())
+		lines.push_back (L"   Зоны модулей получают свойство от исходных зон: сохраните проект и обновите модули (Менеджер модулей → Обновить).");
+}
+
 }	// namespace
 
 
@@ -2600,6 +2732,7 @@ void DoPassports ()
 					 L" знака и складывается.");
 	lines.push_back (L"Встроенные помещения (категории " + tep::CodesText (d.cfg.builtIn) + L") с номером в параметре «Квартира» (1005…) — паспорт «" +
 					 d.cfg.officeLabel + L"»: номер, площадь (сумма зон), высота самой большой зоны.");
+	MarkPso (d, lines);
 	AptFooter (d, lines);
 	ShowReport (lines);
 }
@@ -2644,6 +2777,7 @@ void DoTep ()
 	for (const auto& r : t.rows)
 		if (r.num == L"9" || r.num == L"10" || r.num == L"16")
 			lines.push_back (L"   " + r.num + L". " + r.name.substr (0, 40) + (r.name.size () > 40 ? L"…" : L"") + L" — " + r.total + L" " + r.unit);
+	MarkPso (d, lines);
 	lines.push_back (L"Этажность — надземные этажи с первого до последнего этажа с квартирами; количество этажей = этажность + подземные (подвал: отметка этажа ниже −0,5 м, отрицательный индекс или «подвал / подполье / подзем» в названии); этаж выше последнего жилого (только ЛК) не считается. Строку 18 и любые другие можно задать вручную в файле данных, раздел [Вручную].");
 	AptFooter (d, lines);
 	ShowReport (lines);

@@ -85,6 +85,12 @@ std::wstring			StoryKey (int story);
 // Зоны с заполненным «Квартира», но не квартирной категории (и не встроенные помещения) — в квартиры не входят.
 // Строки отчёта по этажам: «Этаж 2 (1): кв. 7 — 12 Комната (Балкон, 1060).». Пусто — таких нет.
 std::vector<std::wstring>	NotApartmentRooms (const std::vector<Room>& rooms, const Config& c);
+// Графическая замена «ПСО»: тип зоны для свойства «ПСО - тип» и перо фона штриховки.
+// Квартиры — по типу (Студия / 1-комнатная / 2-комнатная / 3-комнатная / 4-комнатная…), кладовые (storage),
+// общедомовые (common), тех. подполье (basement). Остальные — пусто.
+struct PsoRule { std::wstring rule, value; short pen = 0; };
+const std::vector<PsoRule>&	PsoRules ();
+std::vector<std::wstring>	PsoKinds (const std::vector<Room>& rooms, const std::vector<Apartment>& apts, const Config& c);
 double					BuildingAngle (const std::vector<Room>& rooms);
 // Повернуть контуры зон на угол ang (рад) вокруг начала координат и пересчитать габариты
 void					RotateRooms (std::vector<Room>& rooms, double ang);
