@@ -1914,7 +1914,7 @@ API_Property StringProp (const API_PropertyDefinition& d, const std::wstring& v)
 
 
 // Свойство-список (один вариант из options, по умолчанию первый). Ключи вариантов — постоянные GUID из keys.
-// Если свойство с этим именем есть, но не список (старая версия надстройки), оно пересоздаётся.
+// Если свойство с этим именем уже есть (любого вида), оно не меняется.
 GSErrCode EnsureEnumProp (const API_Guid& group, const std::wstring& name, const std::wstring& descr,
 						  const std::vector<std::wstring>& options, const std::vector<const char*>& keys,
 						  const std::set<API_Guid>& avail, API_PropertyDefinition& out)
@@ -1923,11 +1923,7 @@ GSErrCode EnsureEnumProp (const API_Guid& group, const std::wstring& name, const
 	if (ACAPI_Property_GetPropertyDefinitions (group, defs) == NoError)
 		for (const API_PropertyDefinition& d : defs)
 			if (au::ToW (d.name) == name) {
-				if (d.collectionType != API_PropertySingleChoiceEnumerationCollectionType) {
-					ACAPI_Property_DeletePropertyDefinition (d.guid);
-					break;
-				}
-				out = d;
+				out = d;		// уже есть (список или текст, заведённый вручную) — не пересоздаём, значения зон сохраняются
 				bool changed = false;
 				for (const API_Guid& a : avail)
 					if (!out.availability.Contains (a)) { out.availability.Push (a); changed = true; }
@@ -2186,7 +2182,6 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 	bool comboNew = false;
 	int rulesRepen = 0, variant2 = 0;
 	API_Guid varRule = APINULLGuid;
-	bool liveVariant = false;		// правило второго цвета работает прямо по свойству-списку
 	int pensVer = 0;
 	try { pensVer = std::stoi (LoadModulText (kPsoPensKey)); } catch (...) { pensVer = 0; }
 	const bool updatePens = pensVer < tep::kPsoPensVersion;	// перья по умолчанию сменились — переписать в существующих правилах
@@ -2214,9 +2209,9 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 			API_OverrideRule rule;
 			rule.guid = APINULLGuid;
 			rule.name = au::FromW (pr.rule);
-			std::vector<otd::CritCond> conds { { kPsoProp, pr.value, false } };
-			if (!pr.variant.empty ()) conds.push_back ({ kPsoVariant, pr.variant, true });
-			const GS::UniString crit = au::FromW (otd::CriterionXml (conds));
+			// второй цвет: только «ПСО - вариант цвета» содержит «2» — меняется сразу при смене варианта у зоны
+			const GS::UniString crit = au::FromW (pr.variant.empty () ? otd::CriterionXml (kPsoProp, pr.value)
+																	   : otd::CriterionXml (kPsoVariant, pr.variant));
 			if (ACAPI_GraphicalOverride_GetOverrideRuleByName (rule, grp.guid) == NoError && rule.guid != APINULLGuid) {
 				list.Push (rule.guid);
 				if (updatePens) {
@@ -2248,31 +2243,10 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 			if (ACAPI_GraphicalOverride_GetOverrideRuleByName (old, grp.guid) == NoError && old.guid != APINULLGuid)
 				ACAPI_GraphicalOverride_DeleteOverrideRule (old.guid);
 		}
-		// Archicad молча отбрасывает условие, которое не понял: проверяем, что в правиле второго цвета осталось
-		// условие по «ПСО - вариант цвета». Нет — запасной путь: правило по «ПСО - тип» = «1-комнатная (вариант 2)»,
-		// которое надстройка пишет зонам с Вариантом 2 (цвет меняется после запуска паспортов / ТЭП)
-		if (varRule != APINULLGuid) {
-			API_OverrideRule vr;
-			vr.guid = varRule;
-			if (ACAPI_GraphicalOverride_GetOverrideRuleById (vr) == NoError) {
-				// Archicad хранит ссылку на свойство уже по GUID, имени в XML может не быть — считаем условия по свойствам
-				const std::wstring x = au::ToW (vr.criterionXML);
-				int nProp = 0;
-				for (size_t pos = x.find (L"<PropertyCriterion"); pos != std::wstring::npos; pos = x.find (L"<PropertyCriterion", pos + 1)) ++nProp;
-				liveVariant = nProp >= 2 || x.find (L"Вариант 2") != std::wstring::npos;
-				if (!liveVariant) {
-					vr.criterionXML = au::FromW (otd::CriterionXml (kPsoProp, tep::PsoVariant2 (L"1-комнатная")));
-					ACAPI_GraphicalOverride_ChangeOverrideRule (vr);
-				}
-			}
-		}
 		for (const auto& m : marks) {
 			if (!ACAPI_Element_IsPropertyDefinitionAvailable (m.first, def.guid)) { ++noAvail; continue; }
 			std::wstring kind = m.second;
-			if (hasVar && !liveVariant && !kind.empty () && EnumPropValue (m.first, defVar) == L"Вариант 2") {
-				const std::wstring k2 = tep::PsoVariant2 (kind);
-				if (k2 != kind) { kind = k2; ++variant2; }
-			} else if (hasVar && liveVariant && kind == L"1-комнатная" && EnumPropValue (m.first, defVar) == L"Вариант 2")
+			if (hasVar && kind == L"1-комнатная" && EnumPropValue (m.first, defVar).find (L"2") != std::wstring::npos)
 				++variant2;
 			GS::Array<API_Property> props;
 			props.Push (StringProp (def, kind));
@@ -2285,15 +2259,17 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 		API_OverrideCombination cmb = { APINULLGuid, au::FromW (kPsoCombo) };
 		GS::Array<API_Guid> have;
 		if (ACAPI_GraphicalOverride_GetOverrideCombination (cmb, &have) == NoError && cmb.guid != APINULLGuid) {
-			// порядок важен: правило второго цвета — выше основного (верхнее правило главнее)
-			GS::Array<API_Guid> merged = list;
-			for (const API_Guid& g : have) if (!merged.Contains (g)) merged.Push (g);
-			bool same = merged.GetSize () == have.GetSize ();
-			for (UIndex i = 0; same && i < merged.GetSize (); ++i) same = merged[i] == have[i];
-			if (!same) ACAPI_GraphicalOverride_ChangeOverrideCombination (cmb, &merged);
+			// порядок, выставленный в проекте, не трогаем: недостающие правила — в конец
+			GS::Array<API_Guid> merged = have;
+			bool missing = false;
+			for (const API_Guid& g : list) if (!merged.Contains (g)) { merged.Push (g); missing = true; }
+			if (missing) ACAPI_GraphicalOverride_ChangeOverrideCombination (cmb, &merged);
 		} else {
 			cmb.guid = APINULLGuid;
-			comboNew = ACAPI_GraphicalOverride_CreateOverrideCombination (cmb, list) == NoError;
+			GS::Array<API_Guid> ordered;
+			for (const API_Guid& g : list) if (g != varRule) ordered.Push (g);
+			if (varRule != APINULLGuid) ordered.Push (varRule);
+			comboNew = ACAPI_GraphicalOverride_CreateOverrideCombination (cmb, ordered) == NoError;
 		}
 		if (updatePens && rulesFailed == 0)
 			StoreModulText (kPsoPensKey, std::to_wstring (tep::kPsoPensVersion));
@@ -2312,8 +2288,7 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 	if (variant2 > 0)
 		lines.push_back (L"   «ПСО - вариант цвета» = Вариант 2 у " + std::to_wstring (variant2) + L" зон 1-комнатных квартир — второй цвет (перо 143).");
 	if (varRule != APINULLGuid)
-		lines.push_back (liveVariant ? L"   Второй цвет 1-комнатных меняется сразу при выборе «ПСО - вариант цвета» (правило «ПСО - 1-комнатные (вариант 2)»)."
-									 : L"   Archicad не принял условие по списку «ПСО - вариант цвета» — второй цвет применяется при запуске паспортов / ТЭП.");
+		lines.push_back (L"   Второй цвет: правило «ПСО - 1-комнатные (вариант 2)» — «ПСО - вариант цвета» содержит 2, меняется сразу при выборе варианта у зоны.");
 	if (rulesRepen > 0)
 		lines.push_back (L"   В существующих правилах «ПСО - …» перья заменены на новые: " + std::to_wstring (rulesRepen) + L" правил.");
 	if (rulesNew > 0 || comboNew)

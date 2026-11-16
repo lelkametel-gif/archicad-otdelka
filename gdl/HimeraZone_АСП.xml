@@ -47,13 +47,19 @@ allMarkH = 0
 basis = TextSize * PTM
 dim drr[], dBasis[]
 curH = 0
+!!! порядок в столбике: номер, имя, тип пола (треугольник), площадь, категория, спец.
+dim ordComp[6]
+ordComp[1] = 1 : ordComp[2] = 2 : ordComp[3] = 4 : ordComp[4] = 3 : ordComp[5] = 5 : ordComp[6] = 6
 
-for comp=1 to 6  ! Подготовка текстовых блоков с вычислением их габаритов
+for iComp=1 to 6  ! Подготовка текстовых блоков с вычислением их габаритов
+	comp = ordComp[iComp]
 	rr=0
 	if bZone[comp] then 
 		pen pZone[comp]
 		styleName= "room" + dcomp[comp][2]
 		fontSize = TextSize
+		!!! номер пола в треугольнике — мельче основного текста (если размер не задан вручную)
+		if fZone[comp] = _triangle or fZone[comp] = _undotriangle then fontSize = TextSize * 0.75
 		if fsZone[comp] > EPS then fontSize = fsZone[comp]
 		basis = fontSize * PTM
 		dBasis[comp] = basis
@@ -107,13 +113,15 @@ for comp=1 to 6  ! Подготовка текстовых блоков с вы�
 			allMarkH = allMarkH + rr * 2 + basis / 2
 		endif
 	endif
-next comp
+next iComp
 
-for comp = 1 to 6
+for iComp = 1 to 6
+	comp = ordComp[iComp]
 	if bZone[comp] and szone[comp] <> "" then
 		basis = dBasis[comp]
 		styleName = "room" + dcomp[comp][2]
 		fontSize = TextSize
+		if fZone[comp] = _triangle or fZone[comp] = _undotriangle then fontSize = TextSize * 0.75
 		if fsZone[comp] > EPS then fontSize = fsZone[comp]
 
 		sss=request("Height_of_style", styleName, height, descent, leading)
@@ -281,7 +289,7 @@ for comp = 1 to 6
 		endif
 		if place0 then del top
 	endif
-next comp
+next iComp
 
 ]]>
 </Script_2D>

@@ -156,7 +156,7 @@ int main (int argc, char** argv)
 		int nApt = 0;
 		for (const auto& a : apts) for (size_t i : a.rooms) if (!kinds[i].empty () && kinds[i].find (L"комнатная") != std::wstring::npos) ++nApt;
 		CHECK (nApt > 0);
-		CHECK (PsoRules ().size () == 8 && PsoRules ()[0].pen == 142 && PsoRules ()[1].pen == 143 && PsoRules ()[1].value == L"1-комнатная" && PsoRules ()[1].variant == L"Вариант 2" && PsoVariant2 (L"Студия") == L"Студия" && PsoRules ()[2].pen == 144 && PsoRules ()[7].value == L"Тех.подполье");
+		CHECK (PsoRules ().size () == 8 && PsoRules ()[0].pen == 142 && PsoRules ()[1].pen == 143 && PsoRules ()[1].value == L"1-комнатная" && PsoRules ()[1].variant == L"2" && PsoVariant2 (L"Студия") == L"Студия" && PsoRules ()[2].pen == 144 && PsoRules ()[7].value == L"Тех.подполье");
 	}	// номер квартиры у МОП — отдельной строкой отчёта
 	const Apartment* a1 = nullptr; const Apartment* a2 = nullptr; const Apartment* a3 = nullptr;
 	for (const auto& a : apts) {
