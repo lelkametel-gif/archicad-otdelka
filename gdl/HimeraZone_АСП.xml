@@ -87,8 +87,8 @@ for comp=1 to 6  ! Подготовка текстовых блоков с вы�
 			if fZone[comp] = _hexagon		then rr = basis*0.8
 			if fZone[comp] = _circle 		then rr = basis*0.9
 			if fZone[comp] = _dcircle		then rr = basis*0.9
-			if fZone[comp] = _triangle		then rr = basis*0.5
-			if fZone[comp] = _undotriangle 	then rr = basis*0.5
+			if fZone[comp] = _triangle		then rr = basis*0.2	! треугольник компактнее (было 0.5)
+			if fZone[comp] = _undotriangle 	then rr = basis*0.2
 			if fZone[comp] = _triangle or fZone[comp] = _undotriangle then
 				if tbWidth > fontSize * 2 then rr = rr + (tbWidth-fontSize*2)*PTM/2
 			else
