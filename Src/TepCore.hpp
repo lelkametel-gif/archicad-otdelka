@@ -89,6 +89,8 @@ std::vector<std::wstring>	NotApartmentRooms (const std::vector<Room>& rooms, con
 // Квартиры — по типу (Студия / 1-комнатная / 2-комнатная / 3-комнатная / 4-комнатная…), кладовые (storage),
 // общедомовые (common), тех. подполье (basement). Остальные — пусто.
 struct PsoRule { std::wstring rule, value; short pen = 0; };
+// kPsoPensVersion — повышать при смене перьев по умолчанию: правила проекта со старой версией получат новые перья
+const int					kPsoPensVersion = 2;
 const std::vector<PsoRule>&	PsoRules ();
 std::vector<std::wstring>	PsoKinds (const std::vector<Room>& rooms, const std::vector<Apartment>& apts, const Config& c);
 double					BuildingAngle (const std::vector<Room>& rooms);

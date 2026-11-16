@@ -2065,6 +2065,7 @@ void MarkReport (const MarkResult& mr, std::vector<std::wstring>& lines)
 // ---- графическая замена «ПСО»: свойство «ПСО - тип» зонам + правила (перо фона штриховки) + комбинация «ПСО»
 const wchar_t*	kPsoProp = L"ПСО - тип";
 const wchar_t*	kPsoCombo = L"ПСО";
+const char*		kPsoPensKey = "PsoPensVersion";		// версия перьев, уже записанных в правила проекта
 
 void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 {
@@ -2108,6 +2109,10 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 	int written = 0, noAvail = 0, failed = 0, rulesNew = 0, rulesFailed = 0;
 	GSErrCode err = NoError, ruleErr = NoError;
 	bool comboNew = false;
+	int rulesRepen = 0;
+	int pensVer = 0;
+	try { pensVer = std::stoi (LoadModulText (kPsoPensKey)); } catch (...) { pensVer = 0; }
+	const bool updatePens = pensVer < tep::kPsoPensVersion;	// перья по умолчанию сменились — переписать в существующих правилах
 	std::map<std::wstring, int> byKind;
 	ACAPI_CallUndoableCommand (au::FromW (L"ПСО: графическая замена"), [&] () -> GSErrCode {
 		API_Guid group = APINULLGuid;
@@ -2140,6 +2145,11 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 			rule.name = au::FromW (pr.rule);
 			if (ACAPI_GraphicalOverride_GetOverrideRuleByName (rule, grp.guid) == NoError && rule.guid != APINULLGuid) {
 				list.Push (rule.guid);
+				if (updatePens) {
+					rule.style.fillBackgroundPenOverride = static_cast<short> (pr.pen);
+					rule.style.fillTypeBackgroundPen.overrideCoverFill = true;
+					if (ACAPI_GraphicalOverride_ChangeOverrideRule (rule) == NoError) ++rulesRepen;
+				}
 				continue;
 			}
 			rule = API_OverrideRule ();
@@ -2167,6 +2177,8 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 			cmb.guid = APINULLGuid;
 			comboNew = ACAPI_GraphicalOverride_CreateOverrideCombination (cmb, list) == NoError;
 		}
+		if (updatePens && rulesFailed == 0)
+			StoreModulText (kPsoPensKey, std::to_wstring (tep::kPsoPensVersion));
 		return NoError;
 	});
 	if (err != NoError) {
@@ -2177,11 +2189,13 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 	for (const tep::PsoRule& pr : tep::PsoRules ())
 		if (byKind.count (pr.value)) cnt += (cnt.empty () ? L"" : L", ") + pr.value + L" — " + std::to_wstring (byKind[pr.value]);
 	lines.push_back (L"Графическая замена «" + std::wstring (kPsoCombo) + L"»: свойство «" + kPsoProp + L"» записано у " + std::to_wstring (written) +
-					 L" зон" + (cnt.empty () ? L"" : L" (" + cnt + L")") + L". Перья фона штриховки: студии 144, 1-комн. 110, 2-комн. 119, 3-комн. 96, "
-					 L"кладовые 99, общедомовые 91, тех.подполье 181.");
+					 L" зон" + (cnt.empty () ? L"" : L" (" + cnt + L")") + L". Перья фона штриховки: студии 142, 1-комн. 144, 2-комн. 141, 3-комн. 116, "
+					 L"кладовые 148, общедомовые 149, тех.подполье 150.");
+	if (rulesRepen > 0)
+		lines.push_back (L"   В существующих правилах «ПСО - …» перья заменены на новые: " + std::to_wstring (rulesRepen) + L" правил.");
 	if (rulesNew > 0 || comboNew)
 		lines.push_back (L"   Созданы правила: " + std::to_wstring (rulesNew) + (comboNew ? L", комбинация «ПСО»." : L".") +
-						 L" Существующие правила не меняются — перо, исправленное вручную, сохранится.");
+						 L" Перо, исправленное в правиле вручную, сохранится (до следующей смены перьев в надстройке).");
 	if (rulesFailed > 0)
 		lines.push_back (L"   Не удалось создать правил: " + std::to_wstring (rulesFailed) + L" (код " + std::to_wstring (ruleErr) + L").");
 	if (noAvail > 0)
