@@ -2137,7 +2137,7 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 	// зона -> значение; копии зон модуля (hotlink) не меняются: пишем их исходной зоне, если она в этом проекте
 	std::map<API_Guid, std::wstring> marks;
 	std::map<API_Guid, std::map<API_Guid, API_Guid>> proxyToSrc;
-	int hotNoSrc = 0;
+	int hotNoSrc = 0, hotNoTable = 0, hotNotInTable = 0, hotSrcMissing = 0;
 	for (size_t i = 0; i < d.rooms.size (); ++i) {
 		API_Guid g = APIGuidFromString (otd::ToUtf8 (d.rooms[i].guid).c_str ());
 		API_Elem_Head h = {};
@@ -2150,12 +2150,23 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 				GS::HashTable<API_Guid, API_Guid> table;
 				API_Guid owner = h.hotlinkGuid;
 				if (ACAPI_Hotlink_GetHotlinkProxyElementTable (&owner, &table) == NoError)
-					for (auto it = table.Enumerate (); it != nullptr; ++it) inv[*it->value] = *it->key;
+					for (auto it = table.Enumerate (); it != nullptr; ++it) {
+						inv[*it->value] = *it->key;		// копия -> исходная (таблица: исходная -> копия)
+						if (!inv.count (*it->key)) inv[*it->key] = *it->value;	// на случай обратного порядка
+					}
+				if (inv.empty ()) ++hotNoTable;
 				pit = proxyToSrc.emplace (h.hotlinkGuid, inv).first;
 			}
 			const auto sit = pit->second.find (g);
 			API_Elem_Head sh = {};
-			if (sit == pit->second.end () || (sh.guid = sit->second, ACAPI_Element_GetHeader (&sh) != NoError) || sh.hotlinkGuid != APINULLGuid) {
+			bool ok = sit != pit->second.end ();
+			if (!ok) ++hotNotInTable;
+			else {
+				sh.guid = sit->second;
+				ok = ACAPI_Element_GetHeader (&sh) == NoError && sh.hotlinkGuid == APINULLGuid && sh.guid != g;
+				if (!ok) ++hotSrcMissing;
+			}
+			if (!ok) {
 				++hotNoSrc;
 				continue;
 			}
@@ -2244,7 +2255,11 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 			API_OverrideRule vr;
 			vr.guid = varRule;
 			if (ACAPI_GraphicalOverride_GetOverrideRuleById (vr) == NoError) {
-				liveVariant = au::ToW (vr.criterionXML).find (kPsoVariant) != std::wstring::npos;
+				// Archicad хранит ссылку на свойство уже по GUID, имени в XML может не быть — считаем условия по свойствам
+				const std::wstring x = au::ToW (vr.criterionXML);
+				int nProp = 0;
+				for (size_t pos = x.find (L"<PropertyCriterion"); pos != std::wstring::npos; pos = x.find (L"<PropertyCriterion", pos + 1)) ++nProp;
+				liveVariant = nProp >= 2 || x.find (L"Вариант 2") != std::wstring::npos;
 				if (!liveVariant) {
 					vr.criterionXML = au::FromW (otd::CriterionXml (kPsoProp, tep::PsoVariant2 (L"1-комнатная")));
 					ACAPI_GraphicalOverride_ChangeOverrideRule (vr);
@@ -2311,7 +2326,9 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 	if (failed > 0)
 		lines.push_back (L"   Не записано у " + std::to_wstring (failed) + L" зон (зарезервированы другим пользователем).");
 	if (hotNoSrc > 0)
-		lines.push_back (L"   Копий зон из модулей других файлов: " + std::to_wstring (hotNoSrc) + L" — свойство пишется в файле модуля.");
+		lines.push_back (L"   Копий зон из модулей, для которых не найдена исходная зона в этом проекте: " + std::to_wstring (hotNoSrc) +
+						 L" (модулей без таблицы копий: " + std::to_wstring (hotNoTable) + L"; копия не в таблице: " + std::to_wstring (hotNotInTable) +
+						 L"; исходной зоны нет в проекте: " + std::to_wstring (hotSrcMissing) + L") — свойство пишется в файле модуля.");
 	else if (!proxyToSrc.empty ())
 		lines.push_back (L"   Зоны модулей получают свойство от исходных зон: сохраните проект и обновите модули (Менеджер модулей → Обновить).");
 }
