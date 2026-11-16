@@ -128,11 +128,16 @@ for iComp = 1 to 6
 
 		pen pZone[comp]
 		rr = drr[comp]
-		place0 = 1
+		place0 = not(bFreeLayout)
 		if place0 then
 			rot2 -SYMB_ROTANGLE
 			add2 0, curH - rr - basis / 2 + rr / 3 *((fZone[comp] = _undotriangle) - (fZone[comp] = _triangle) )
 			curH = curH - rr * 2 - basis / 2
+			rot2 SYMB_ROTANGLE
+		else
+			!!! свободная раскладка (команда «Расставить маркеры зон»): компонент — в точке маркера + своё смещение
+			rot2 -SYMB_ROTANGLE
+			add2 0, rr / 3 *((fZone[comp] = _undotriangle) - (fZone[comp] = _triangle) )
 			rot2 SYMB_ROTANGLE
 		endif
 		rot2 -SYMB_ROTANGLE ! -----------------Вначале поворачиваем-----------------
@@ -1193,6 +1198,13 @@ values "WallDownHighWindow" RANGE [0,ROOM_HEIGHT]
 				<AVal Row="6">0</AVal>
 			</ArrayValues>
 		</Length>
+		<Boolean Name="bFreeLayout">
+			<Description><![CDATA["Надписи расставлены по местам (имя, номер пола, площадь — каждая на своём смещении)"]]></Description>
+			<Flags>
+				<ParFlg_Child/>
+			</Flags>
+			<Value>0</Value>
+		</Boolean>
 		<Boolean Name="bNameWrap">
 			<Description><![CDATA["Переносить длинные названия по словам (если ширина текста не задана)"]]></Description>
 			<Flags>

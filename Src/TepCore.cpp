@@ -355,6 +355,61 @@ std::vector<std::wstring> PsoKinds (const std::vector<Room>& rooms, const std::v
 }
 
 
+StampLayout LayoutStamp (const otd::Polys& polys, double angle, double basis, double areaHalfW)
+{
+	StampLayout L;
+	if (polys.empty () || basis <= 0) return L;
+	const double c = std::cos (angle), s = std::sin (angle);
+	otd::Polys fr;			// контур в осях здания
+	double x1 = 1e30, y1 = 1e30, x2 = -1e30, y2 = -1e30;
+	for (const auto& poly : polys) {
+		std::vector<otd::Pt> q;
+		for (const auto& p : poly) {
+			const double x = p.first * c + p.second * s, y = -p.first * s + p.second * c;
+			q.push_back ({ x, y });
+			x1 = std::min (x1, x); y1 = std::min (y1, y); x2 = std::max (x2, x); y2 = std::max (y2, y);
+		}
+		fr.push_back (q);
+	}
+	if (x2 - x1 < 4 * basis || y2 - y1 < 4 * basis) return L;
+	// отрезок внутри зоны на высоте y: ближайший к xc (или самый широкий)
+	auto span = [&] (double y, double xc, double& a, double& b) {
+		const int n = 200;
+		const double step = (x2 - x1) / n;
+		double bestA = 0, bestB = -1, bestScore = -1e30;
+		for (int i = 0; i <= n; ) {
+			const double x = x1 + i * step;
+			if (!otd::PointInPolys (fr, x, y)) { ++i; continue; }
+			int j = i;
+			while (j + 1 <= n && otd::PointInPolys (fr, x1 + (j + 1) * step, y)) ++j;
+			const double sa = x1 + i * step, sb = x1 + j * step;
+			const double score = (xc >= sa && xc <= sb ? 1e6 : 0) + (sb - sa);
+			if (score > bestScore) { bestScore = score; bestA = sa; bestB = sb; }
+			i = j + 1;
+		}
+		a = bestA; b = bestB;
+		return bestB > bestA;
+	};
+	const double yName = y2 - 2.5 * basis;
+	double a = 0, b = 0;
+	if (!span (yName, (x1 + x2) / 2, a, b)) return L;
+	double nx = (a + b) / 2;
+	const double yArea = y1 + 1.3 * basis;
+	double aa = 0, ab = 0;
+	double ax = nx, ay = yArea;
+	if (span (yArea, x2, aa, ab))
+		ax = std::max (aa + areaHalfW, ab - 0.8 * basis - areaHalfW);
+	// назад в оси модели
+	L.px = nx * c - yName * s;
+	L.py = nx * s + yName * c;
+	auto rot = [&] (double dx, double dy, double& ox, double& oy) { ox = dx * c - dy * s; oy = dx * s + dy * c; };
+	rot (0, -2.1 * basis, L.triDx, L.triDy);
+	rot (ax - nx, ay - yName, L.areaDx, L.areaDy);
+	L.ok = true;
+	return L;
+}
+
+
 double BuildingAngle (const std::vector<Room>& rooms)
 {
 	// усреднение 4φ: стороны под 0° и 90° (и 180°, 270°) дают одно направление

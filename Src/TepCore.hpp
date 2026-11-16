@@ -98,6 +98,12 @@ std::wstring			PsoVariant2 (const std::wstring& kind);
 const int					kPsoPensVersion = 5;	// 3–4: второй цвет — по свойству-списку прямо в графзамене (4 — повтор после ложной проверки)
 const std::vector<PsoRule>&	PsoRules ();
 std::vector<std::wstring>	PsoKinds (const std::vector<Room>& rooms, const std::vector<Apartment>& apts, const Config& c);
+// Раскладка маркера зоны как в томе АР: имя у верхней стены по центру, под ним треугольник номера пола,
+// площадь — в правом нижнем углу. polys — контур зоны, angle — поворот здания (рад), basis — высота текста, м
+// (TextSize мм × масштаб / 1000), areaHalfW — половина ширины текста площади, м.
+// pos — точка маркера (имя); tri / area — смещения треугольника и площади от pos (в осях модели).
+struct StampLayout { bool ok = false; double px = 0, py = 0, triDx = 0, triDy = 0, areaDx = 0, areaDy = 0; };
+StampLayout				LayoutStamp (const otd::Polys& polys, double angle, double basis, double areaHalfW);
 double					BuildingAngle (const std::vector<Room>& rooms);
 // Повернуть контуры зон на угол ang (рад) вокруг начала координат и пересчитать габариты
 void					RotateRooms (std::vector<Room>& rooms, double ang);

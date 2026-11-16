@@ -3732,3 +3732,99 @@ void DoPremisesReport ()
 	AptFooter (d, lines);
 	ShowReport (lines);
 }
+
+
+// ============================================================================= расстановка маркеров зон
+// Выделенные зоны HimeraZone_АСП: имя у верхней стены по центру, под ним треугольник номера пола, площадь — в правом
+// нижнем углу (как в томе АР). Маркеры зон вдоль одной стены оказываются на одной высоте. Поворот здания учитывается.
+
+void DoArrangeStamps ()
+{
+	std::vector<API_Guid> zones;
+	{
+		API_SelectionInfo selInfo = {};
+		GS::Array<API_Neig> sel;
+		ACAPI_Selection_Get (&selInfo, &sel, false);
+		BMKillHandle ((GSHandle*) &selInfo.marquee.coords);
+		for (const API_Neig& n : sel) {
+			API_Elem_Head h = {};
+			h.guid = n.guid;
+			if (ACAPI_Element_GetHeader (&h) == NoError && h.type.typeID == API_ZoneID) zones.push_back (n.guid);
+		}
+	}
+	if (zones.empty ()) {
+		ShowReport ({ L"Выделите на плане зоны (рамкой или Ctrl+A при инструменте «Зона») и снова запустите «Расставить маркеры зон»." });
+		return;
+	}
+	double scale = 100;
+	if (ACAPI_Drawing_GetDrawingScale (&scale) != NoError || scale <= 0) scale = 100;
+	// поворот здания — по выделенным зонам
+	std::vector<tep::Room> rr;
+	std::vector<otd::Polys> polys (zones.size ());
+	for (size_t i = 0; i < zones.size (); ++i) {
+		API_ElementMemo memo = {};
+		if (ACAPI_Element_GetMemo (zones[i], &memo, APIMemoMask_Polygon) == NoError) polys[i] = ZonePolys (memo);
+		ACAPI_DisposeElemMemoHdls (&memo);
+		tep::Room r;
+		r.polys = polys[i];
+		rr.push_back (r);
+	}
+	double angle = tep::BuildingAngle (rr);
+	if (std::fabs (angle) < 1e-4) angle = 0;
+	int done = 0, hot = 0, notOur = 0, small = 0, errs = 0;
+	GSErrCode firstErr = NoError;
+	ACAPI_CallUndoableCommand (au::FromW (L"Расставить маркеры зон"), [&] () -> GSErrCode {
+		for (size_t i = 0; i < zones.size (); ++i) {
+			API_Element el = {};
+			el.header.guid = zones[i];
+			if (ACAPI_Element_Get (&el) != NoError) continue;
+			if (el.header.hotlinkGuid != APINULLGuid) { ++hot; continue; }
+			API_ElementMemo memo = {};
+			if (ACAPI_Element_GetMemo (zones[i], &memo, APIMemoMask_AddPars) != NoError) continue;
+			au::Params P (memo.params);
+			if (!P.Has ("bFreeLayout") || !P.Has ("compoffx") || !P.Has ("compoffy")) { ++notOur; ACAPI_DisposeElemMemoHdls (&memo); continue; }
+			const double textSize = P.Real ("TextSize", 2.3);
+			const double basis = textSize * scale / 1000;
+			const bool summer = P.Real ("koeff", 1) < 0.999;
+			const double halfW = (summer ? 12 : 7) * 0.55 * basis / 2;		// «10,8 м²» / «0,7 (2,4) м²»
+			const tep::StampLayout L = tep::LayoutStamp (polys[i], angle, basis, halfW);
+			if (!L.ok) { ++small; ACAPI_DisposeElemMemoHdls (&memo); continue; }
+			std::vector<double> ox = P.Vector ("compoffx"), oy = P.Vector ("compoffy");
+			if (ox.size () < 36 || oy.size () < 36) { ++notOur; ACAPI_DisposeElemMemoHdls (&memo); continue; }
+			// [комп][вид] построчно, 6×6; смещение во всех видах одинаковое
+			auto set = [&] (int comp, double dx, double dy) {
+				for (int v = 0; v < 6; ++v) { ox[(size_t) ((comp - 1) * 6 + v)] = dx; oy[(size_t) ((comp - 1) * 6 + v)] = dy; }
+			};
+			const double ca = std::cos (angle), sa = std::sin (angle);
+			auto up = [&] (int comp, double d) { set (comp, -d * sa, d * ca); };		// вдоль оси здания «вверх»
+			up (1, 1.9 * basis);				// номер помещения (если включён) — над именем
+			set (2, 0, 0);						// имя
+			set (4, L.triDx, L.triDy);			// номер пола в треугольнике
+			set (3, L.areaDx, L.areaDy);		// площадь
+			up (5, -4.2 * basis);				// категория, спец. — ниже треугольника
+			up (6, -5.6 * basis);
+			P.SetRealArray ("compoffx", ox, 6, 6);
+			P.SetRealArray ("compoffy", oy, 6, 6);
+			P.SetReal ("bFreeLayout", 1);
+			el.zone.pos.x = L.px;
+			el.zone.pos.y = L.py;
+			API_Element mask;
+			ACAPI_ELEMENT_MASK_CLEAR (mask);
+			ACAPI_ELEMENT_MASK_SET (mask, API_ZoneType, pos);
+			const GSErrCode e = ACAPI_Element_Change (&el, &mask, &memo, APIMemoMask_AddPars, true);
+			if (e == NoError) ++done; else if (errs++ == 0) firstErr = e;
+			ACAPI_DisposeElemMemoHdls (&memo);
+		}
+		return NoError;
+	});
+	std::vector<std::wstring> lines;
+	lines.push_back (L"Расставить маркеры зон: выделено " + std::to_wstring (zones.size ()) + L", расставлено " + std::to_wstring (done) + L".");
+	lines.push_back (L"Имя — у верхней стены по центру, под ним номер пола в треугольнике, площадь — в правом нижнем углу." +
+					 (angle != 0 ? L" Поворот здания " + otd::FormatNum (angle * 180 / 3.14159265358979, 2) + L"° учтён." : std::wstring ()));
+	if (small > 0) lines.push_back (L"Слишком маленькие или узкие зоны — не тронуты: " + std::to_wstring (small) + L".");
+	if (notOur > 0) lines.push_back (L"Зоны другого объекта или старой версии HimeraZone_АСП (нет параметра bFreeLayout — обновите объект): " + std::to_wstring (notOur) + L".");
+	if (hot > 0) lines.push_back (L"Копии зон из модулей не меняются: " + std::to_wstring (hot) + L" — расставьте маркеры в исходных зонах модуля.");
+	if (errs > 0) lines.push_back (L"Не удалось изменить: " + std::to_wstring (errs) + L" (код " + std::to_wstring ((int) firstErr) + L"; в Teamwork зоны должны быть зарезервированы).");
+	lines.push_back (L"Надписи можно поправить ручками. Вернуть обычный столбик — в параметрах маркера снять «Надписи расставлены по местам» и нажать сброс положения надписей. Отменить — Ctrl+Z.");
+	ShowReport (lines);
+}

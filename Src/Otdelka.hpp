@@ -19,5 +19,7 @@ void DoRestoreZoneParams ();
 void DoPylonFinish ();
 // Ведомость помещений в Excel: квартиры с площадями, общедомовые по секциям, нежилые
 void DoPremisesReport ();
+// Выделенные зоны: имя у верхней стены, под ним номер пола, площадь в правом нижнем углу
+void DoArrangeStamps ();
 
 #endif

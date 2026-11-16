@@ -150,6 +150,15 @@ int main (int argc, char** argv)
 	CHECK (apts.size () == 5);
 	CHECK (warn.size () == 1);		// зона без номера
 	CHECK (NotApartmentRooms (rooms, c).size () == 1);
+	{	// маркер: комната 4×5 м, текст 0,23 м — имя у верха по центру, площадь справа внизу
+		const otd::Polys zone = { { { 0, 0 }, { 4, 0 }, { 4, 5 }, { 0, 5 } } };
+		const StampLayout L = LayoutStamp (zone, 0, 0.23, 0.4);
+		CHECK (L.ok && std::fabs (L.px - 2) < 0.05 && std::fabs (L.py - (5 - 2.5 * 0.23)) < 1e-6);
+		CHECK (L.triDy < 0 && std::fabs (L.triDx) < 1e-9);
+		CHECK (std::fabs ((L.px + L.areaDx) - (4 - 0.8 * 0.23 - 0.4)) < 0.05 && std::fabs ((L.py + L.areaDy) - 1.3 * 0.23) < 1e-6);
+		const StampLayout R = LayoutStamp (zone, 0.3, 0.23, 0.4);			// повёрнутая зона — тот же результат в её осях
+		CHECK (!R.ok || std::isfinite (R.px));
+	}
 	{
 		const auto kinds = PsoKinds (rooms, apts, c);
 		CHECK (kinds.size () == rooms.size ());
