@@ -605,34 +605,13 @@ static std::wstring XmlEsc (const std::wstring& s)
 }
 
 
-std::wstring CriterionXml (const std::wstring& prop, const std::wstring& value)
+std::wstring CriterionXml (const std::vector<std::pair<std::wstring, std::wstring>>& conds)
 {
-	// как в файле графической замены, сохранённом из Archicad 27 (тип элемента «Зона» + свойство «равно»)
-	return
-		L"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>"
-		L"<CriterionExpression Mv=\"2\" Sv=\"1\">"
-			L"<TextMatchType>1</TextMatchType>"
-			L"<Size>1</Size>"
-			L"<ClassGuid>C6EBD1BD-7702-46FF-8ED9-9CC37648A7C7</ClassGuid>"
-			L"<CompositeCriterion Mv=\"2\" Sv=\"1\">"
-				L"<LogicalOperator>2</LogicalOperator>"
-				L"<CriteriaCount>2</CriteriaCount>"
-				L"<ClassGuid>C6EBD1BD-7702-46FF-8ED9-9CC37648A7C7</ClassGuid>"
-				L"<CompositeCriterion Mv=\"2\" Sv=\"1\">"
-					L"<LogicalOperator>1</LogicalOperator>"
-					L"<CriteriaCount>1</CriteriaCount>"
-					L"<ClassGuid>B4B7B134-EC56-4D40-8D4C-71D7C5A2493A</ClassGuid>"
-					L"<ElemTypeCriterion Mv=\"2\" Sv=\"3\">"
-						L"<VBEF::CritToolType Mv=\"1\" Sv=\"0\">"
-							L"<ElemRegistryRefId>1380929357</ElemRegistryRefId>"
-							L"<ElemCreatorToolUnID>"
-								L"<MainGuid>A73622DE-E40A-4E63-ADB7-52D13422BD06</MainGuid>"
-								L"<RevGuid>C2FE0BB3-ACF0-41F9-80ED-F98DDAEEA090</RevGuid>"
-							L"</ElemCreatorToolUnID>"
-						L"</VBEF::CritToolType>"
-						L"<LogicalOperator>1</LogicalOperator>"
-					L"</ElemTypeCriterion>"
-				L"</CompositeCriterion>"
+	std::wstring props;
+	for (const auto& cv : conds) {
+		const std::wstring& prop = cv.first;
+		const std::wstring& value = cv.second;
+		props +=
 				L"<ClassGuid>C6EBD1BD-7702-46FF-8ED9-9CC37648A7C7</ClassGuid>"
 				L"<CompositeCriterion Mv=\"2\" Sv=\"1\">"
 					L"<LogicalOperator>1</LogicalOperator>"
@@ -663,9 +642,43 @@ std::wstring CriterionXml (const std::wstring& prop, const std::wstring& value)
 							L"</Value>"
 						L"</VBEF::ConditionIO>"
 					L"</PropertyCriterion>"
+				L"</CompositeCriterion>";
+	}
+	// как в файле графической замены, сохранённом из Archicad 27 (тип элемента «Зона» + свойство «равно»)
+	return
+		L"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>"
+		L"<CriterionExpression Mv=\"2\" Sv=\"1\">"
+			L"<TextMatchType>1</TextMatchType>"
+			L"<Size>1</Size>"
+			L"<ClassGuid>C6EBD1BD-7702-46FF-8ED9-9CC37648A7C7</ClassGuid>"
+			L"<CompositeCriterion Mv=\"2\" Sv=\"1\">"
+				L"<LogicalOperator>2</LogicalOperator>"
+				L"<CriteriaCount>" + std::to_wstring (conds.size () + 1) + L"</CriteriaCount>"
+				L"<ClassGuid>C6EBD1BD-7702-46FF-8ED9-9CC37648A7C7</ClassGuid>"
+				L"<CompositeCriterion Mv=\"2\" Sv=\"1\">"
+					L"<LogicalOperator>1</LogicalOperator>"
+					L"<CriteriaCount>1</CriteriaCount>"
+					L"<ClassGuid>B4B7B134-EC56-4D40-8D4C-71D7C5A2493A</ClassGuid>"
+					L"<ElemTypeCriterion Mv=\"2\" Sv=\"3\">"
+						L"<VBEF::CritToolType Mv=\"1\" Sv=\"0\">"
+							L"<ElemRegistryRefId>1380929357</ElemRegistryRefId>"
+							L"<ElemCreatorToolUnID>"
+								L"<MainGuid>A73622DE-E40A-4E63-ADB7-52D13422BD06</MainGuid>"
+								L"<RevGuid>C2FE0BB3-ACF0-41F9-80ED-F98DDAEEA090</RevGuid>"
+							L"</ElemCreatorToolUnID>"
+						L"</VBEF::CritToolType>"
+						L"<LogicalOperator>1</LogicalOperator>"
+					L"</ElemTypeCriterion>"
 				L"</CompositeCriterion>"
+				+ props +
 			L"</CompositeCriterion>"
 		L"</CriterionExpression>";
+}
+
+
+std::wstring CriterionXml (const std::wstring& prop, const std::wstring& value)
+{
+	return CriterionXml (std::vector<std::pair<std::wstring, std::wstring>> { { prop, value } });
 }
 
 }	// namespace otd

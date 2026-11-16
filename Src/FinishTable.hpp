@@ -108,6 +108,8 @@ std::vector<OverrideRuleDef>	OverrideRules (const Rules& r);
 std::vector<OverrideComboDef>	OverrideCombos (const Rules& r);
 // Критерий правила: «Тип элемента = Зона» И «свойство prop (группа kPropGroup) = value» (формат Archicad 27)
 std::wstring	CriterionXml (const std::wstring& prop, const std::wstring& value);
+// несколько условий «свойство = значение» (И) для зон
+std::wstring	CriterionXml (const std::vector<std::pair<std::wstring, std::wstring>>& conds);
 
 // SVG для проверки на Linux
 std::string		LayoutSvg (const TableLayout& t);

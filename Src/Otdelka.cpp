@@ -2065,6 +2065,7 @@ void MarkReport (const MarkResult& mr, std::vector<std::wstring>& lines)
 // ---- графическая замена «ПСО»: свойство «ПСО - тип» зонам + правила (перо фона штриховки) + комбинация «ПСО»
 const wchar_t*	kPsoProp = L"ПСО - тип";
 const wchar_t*	kPsoCombo = L"ПСО";
+const wchar_t*	kPsoVariant = L"ПСО - вариант цвета";		// ставит проектировщик вручную («2» — второй цвет), надстройка не меняет
 const char*		kPsoPensKey = "PsoPensVersion";		// версия перьев, уже записанных в правила проекта
 
 void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
@@ -2121,6 +2122,10 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 		if (err == NoError)
 			err = EnsureStringProp (group, kPsoProp, L"Студия / N-комнатная / Кладовая / Общедомовое / Тех.подполье — для графической замены «ПСО»", avail, def);
 		if (err != NoError) return NoError;
+		{
+			API_PropertyDefinition defVar;
+			EnsureStringProp (group, kPsoVariant, L"Пусто — основной цвет; 2 — второй цвет (1-комнатные: перо 143). Ставится вручную всем зонам квартиры", avail, defVar);
+		}
 		for (const auto& m : marks) {
 			if (!ACAPI_Element_IsPropertyDefinitionAvailable (m.first, def.guid)) { ++noAvail; continue; }
 			GS::Array<API_Property> props;
@@ -2160,7 +2165,9 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 			rule.style.fillTypeBackgroundPen.overrideCoverFill = true;
 			rule.style.fillTypeBackgroundPen.overrideCutFill = false;
 			rule.style.fillTypeBackgroundPen.overrideDraftingFill = false;
-			rule.criterionXML = au::FromW (otd::CriterionXml (kPsoProp, pr.value));
+			std::vector<std::pair<std::wstring, std::wstring>> conds { { kPsoProp, pr.value } };
+			if (!pr.variant.empty ()) conds.push_back ({ kPsoVariant, pr.variant });
+			rule.criterionXML = au::FromW (otd::CriterionXml (conds));
 			const GSErrCode e = ACAPI_GraphicalOverride_CreateOverrideRule (rule, grp.guid);
 			if (e == NoError && rule.guid != APINULLGuid) { list.Push (rule.guid); ++rulesNew; }
 			else { ++rulesFailed; ruleErr = e; }
@@ -2189,7 +2196,7 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 	for (const tep::PsoRule& pr : tep::PsoRules ())
 		if (byKind.count (pr.value)) cnt += (cnt.empty () ? L"" : L", ") + pr.value + L" — " + std::to_wstring (byKind[pr.value]);
 	lines.push_back (L"Графическая замена «" + std::wstring (kPsoCombo) + L"»: свойство «" + kPsoProp + L"» записано у " + std::to_wstring (written) +
-					 L" зон" + (cnt.empty () ? L"" : L" (" + cnt + L")") + L". Перья фона штриховки: студии 142, 1-комн. 144, 2-комн. 141, 3-комн. 116, "
+					 L" зон" + (cnt.empty () ? L"" : L" (" + cnt + L")") + L". Перья фона штриховки: студии 142, 1-комн. 144 (с «ПСО - вариант цвета» = 2 — 143), 2-комн. 141, 3-комн. 116, "
 					 L"кладовые 148, общедомовые 149, тех.подполье 150.");
 	if (rulesRepen > 0)
 		lines.push_back (L"   В существующих правилах «ПСО - …» перья заменены на новые: " + std::to_wstring (rulesRepen) + L" правил.");

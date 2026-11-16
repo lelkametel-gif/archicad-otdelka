@@ -855,7 +855,7 @@ values "WallDownHighWindow" RANGE [0,ROOM_HEIGHT]
 			<Flags>
 				<ParFlg_Child/>
 			</Flags>
-			<Value>2</Value>
+			<Value>0</Value>
 		</Integer>
 		<String Name="areaunit">
 			<Description><![CDATA["Единицы площади"]]></Description>
