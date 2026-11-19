@@ -1863,7 +1863,9 @@ struct ZoneCtx {
 
 struct OvStats {
 	int rulesNew = 0, rulesUpd = 0, rulesFailed = 0, combosNew = 0, combosFixed = 0;
-	GSErrCode ruleErr = NoError, comboErr = NoError;
+	int updFailed = 0, updIgnored = 0;		// изменение условия: ошибка (Teamwork — не зарезервировано) / Archicad оставил старое
+	GSErrCode ruleErr = NoError, comboErr = NoError, updErr = NoError;
+	std::wstring updFailedNames;
 };
 
 
@@ -2111,6 +2113,18 @@ GSErrCode EnsureRuleGroup (API_Guid& out)
 // (если оно задано и не keepCrit), цвет, исправленный вручную, остаётся
 void EnsureRules (const API_Guid& grp, const std::vector<otd::OverrideRuleDef>& defs, std::map<std::wstring, API_Guid>& ids, OvStats& st)
 {
+	// комбинации проекта до изменений — чтобы пересозданные правила встали на свои места
+	std::vector<std::pair<API_OverrideCombination, GS::Array<API_Guid>>> combos;
+	{
+		GS::Array<API_Guid> cl;
+		if (ACAPI_GraphicalOverride_GetOverrideCombinationList (cl) == NoError)
+			for (const API_Guid& g : cl) {
+				API_OverrideCombination cmb = { g, GS::UniString () };
+				GS::Array<API_Guid> rl;
+				if (ACAPI_GraphicalOverride_GetOverrideCombination (cmb, &rl) == NoError) combos.push_back ({ cmb, rl });
+			}
+	}
+	std::map<API_Guid, API_Guid> replaced;
 	for (const otd::OverrideRuleDef& d : defs) {
 		const GS::UniString crit = au::FromW (d.crit.empty () ? otd::CriterionXml (d.prop, d.value) : d.crit);
 		API_OverrideRule rule;
@@ -2120,7 +2134,36 @@ void EnsureRules (const API_Guid& grp, const std::vector<otd::OverrideRuleDef>& 
 			ids[d.name] = rule.guid;
 			if (!d.crit.empty () && !d.keepCrit) {
 				rule.criterionXML = crit;
-				if (ACAPI_GraphicalOverride_ChangeOverrideRule (rule) == NoError) ++st.rulesUpd;
+				const GSErrCode e = ACAPI_GraphicalOverride_ChangeOverrideRule (rule);
+				if (e != NoError) {
+					++st.updFailed; st.updErr = e;
+					if (st.updFailed <= 3) st.updFailedNames += (st.updFailedNames.empty () ? L"" : L", ") + std::wstring (L"«") + d.name + L"»";
+					continue;
+				}
+				// проверка: условие действительно сменилось (оператор и значение из нового условия)
+				API_OverrideRule chk;
+				chk.guid = rule.guid;
+				bool same = true;
+				if (ACAPI_GraphicalOverride_GetOverrideRuleById (chk) == NoError) {
+					const std::wstring got = au::ToW (chk.criterionXML), want = d.crit;
+					for (const wchar_t* tag : { L"<CriteriaOperatorEnum>" }) {
+						const size_t a = want.find (tag), b = got.find (tag);
+						if (a != std::wstring::npos && (b == std::wstring::npos || want.substr (a, 30) != got.substr (b, 30))) same = false;
+					}
+				}
+				if (same) { ++st.rulesUpd; continue; }
+				// Archicad не сменил условие — правило создаётся заново с тем же оформлением, место в комбинациях сохраняется
+				API_OverrideRule nr = chk;
+				nr.guid = APINULLGuid;
+				nr.criterionXML = crit;
+				const API_Guid oldGuid = rule.guid;
+				if (ACAPI_GraphicalOverride_DeleteOverrideRule (oldGuid) == NoError &&
+					ACAPI_GraphicalOverride_CreateOverrideRule (nr, grp) == NoError && nr.guid != APINULLGuid) {
+					ids[d.name] = nr.guid;
+					replaced[oldGuid] = nr.guid;
+					++st.rulesUpd;
+				} else
+					++st.updIgnored;
 			}
 			continue;
 		}
@@ -2136,6 +2179,15 @@ void EnsureRules (const API_Guid& grp, const std::vector<otd::OverrideRuleDef>& 
 		const GSErrCode err = ACAPI_GraphicalOverride_CreateOverrideRule (rule, grp);
 		if (err == NoError && rule.guid != APINULLGuid) { ids[d.name] = rule.guid; ++st.rulesNew; }
 		else { ++st.rulesFailed; st.ruleErr = err; }
+	}
+	for (auto& c : combos) {
+		bool hit = false;
+		GS::Array<API_Guid> nl;
+		for (const API_Guid& g : c.second) {
+			const auto it = replaced.find (g);
+			if (it != replaced.end ()) { nl.Push (it->second); hit = true; } else nl.Push (g);
+		}
+		if (hit) ACAPI_GraphicalOverride_ChangeOverrideCombination (c.first, &nl);
 	}
 }
 
@@ -2208,6 +2260,12 @@ void OvStatsReport (const OvStats& st, std::vector<std::wstring>& lines)
 		lines.push_back (L"   Созданы правила графической замены: " + std::to_wstring (st.rulesNew) + L", комбинации: " + std::to_wstring (st.combosNew) + L".");
 	if (st.rulesUpd > 0)
 		lines.push_back (L"   Обновлены условия правил («код категории начинается с …», номер пола): " + std::to_wstring (st.rulesUpd) + L".");
+	if (st.updFailed > 0)
+		lines.push_back (L"   НЕ удалось изменить условия правил: " + std::to_wstring (st.updFailed) + L" (" + st.updFailedNames + (st.updFailed > 3 ? L"…" : L"") +
+						 L"; код " + std::to_wstring (st.updErr) + L"). В Teamwork правила графической замены должны быть зарезервированы: "
+						 L"Документ → Графическая замена → Правила графической замены → «Резервировать», затем снова «Обновить графзамены».");
+	if (st.updIgnored > 0)
+		lines.push_back (L"   Не удалось сменить условие (и пересоздать правило) у " + std::to_wstring (st.updIgnored) + L" правил — удалите их вручную и запустите «Обновить графзамены».");
 	if (st.combosFixed > 0)
 		lines.push_back (L"   В комбинации добавлены недостающие правила: " + std::to_wstring (st.combosFixed) + L".");
 	if (st.rulesFailed > 0 || st.ruleErr != NoError)
