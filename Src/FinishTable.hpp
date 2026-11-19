@@ -111,12 +111,14 @@ std::vector<OverrideComboDef>	OverrideCombos (const Rules& r);
 // Критерий правила: «Тип элемента = Зона» И «свойство prop (группа kPropGroup) = value» (формат Archicad 27)
 std::wstring	CriterionXml (const std::wstring& prop, const std::wstring& value);
 // несколько условий (И) для зон. option = свойство-список (вариант по имени), иначе текстовое свойство
-struct CritCond { std::wstring prop, value; bool option = false; int op = 6; };	// op: 6 — равно, 8 — начинается с (из экспорта AC27)
-const int kOpEquals = 6, kOpStartsWith = 8;
+// Операторы в XML — по порядку меню Archicad 27: 4 совпадает с, 5 не совпадает с, 6 содержит, 7 не содержит, 8 начинается с, 9 заканчивается на
+// (6 и 8 — из правил пользователя 19.11.2026; до этого «равно» ошибочно писалось как 6 = «содержит»)
+const int kOpEquals = 4, kOpContains = 6, kOpStartsWith = 8;
+struct CritCond { std::wstring prop, value; bool option = false; int op = kOpEquals; };
 std::wstring	CriterionXml (const std::vector<CritCond>& conds);
 std::wstring	CriterionXml (const std::vector<std::pair<std::wstring, std::wstring>>& conds);
-// «Тип элемента = Зона» И (prop = values[0] ИЛИ prop = values[1] …); пусто — только «Зона»
-std::wstring	CriterionAnyXml (const std::wstring& prop, const std::vector<std::wstring>& values, int op = 6);
+// «Тип элемента = Зона» И (prop op values[0] ИЛИ prop op values[1] …); пусто — только «Зона»
+std::wstring	CriterionAnyXml (const std::wstring& prop, const std::vector<std::wstring>& values, int op = kOpEquals);
 
 // ---- Графзамены по свойствам-формулам зоны (код категории, номер пола): цвет меняется сразу, без запуска надстройки.
 // Условия — «код категории начинается с» (как в правилах, сделанных вручную в Archicad 27).

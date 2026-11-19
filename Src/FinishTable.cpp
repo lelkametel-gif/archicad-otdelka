@@ -614,7 +614,7 @@ static std::wstring XmlEsc (const std::wstring& s)
 static std::wstring PropCritXml (const CritCond& cv)
 {
 	const std::wstring variant = L"<Variant Type=\"StringVariant\"><Status>Normal</Status><Value>" + XmlEsc (cv.value) + L"</Value></Variant>";
-	const bool v6 = !cv.option && cv.op != kOpEquals;	// «начинается с» — как в экспорте правила из Archicad 27
+	const bool v6 = !cv.option;		// текстовое условие — как в экспорте правил из Archicad 27
 	return
 		L"<ClassGuid>58E4905F-AD57-45F5-8D26-0100000F60BF</ClassGuid>"
 		+ std::wstring (v6 ? L"<PropertyCriterion Mv=\"6\" Sv=\"0\"><VBEF::ConditionIO Mv=\"2\" Sv=\"0\">"
@@ -707,14 +707,14 @@ std::wstring CriterionAnyXml (const std::wstring& prop, const std::vector<std::w
 std::wstring CriterionXml (const std::vector<std::pair<std::wstring, std::wstring>>& conds)
 {
 	std::vector<CritCond> c;
-	for (const auto& p : conds) c.push_back ({ p.first, p.second, false });
+	for (const auto& p : conds) c.push_back ({ p.first, p.second, false, kOpEquals });
 	return CriterionXml (c);
 }
 
 
 std::wstring CriterionXml (const std::wstring& prop, const std::wstring& value)
 {
-	return CriterionXml (std::vector<CritCond> { { prop, value, false } });
+	return CriterionXml (std::vector<CritCond> { { prop, value, false, kOpEquals } });
 }
 
 // ---- графзамены по свойствам-формулам зоны

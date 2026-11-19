@@ -2336,7 +2336,7 @@ void SyncPsoOverrides (const tep::Config& cfg, const ZoneCtx& c, PsoOv& r)
 		rule.guid = APINULLGuid;
 		rule.name = au::FromW (pr.rule);
 		bool byCode = false;
-		std::wstring critW = pr.variant.empty () ? otd::CriterionXml (kPsoProp, pr.value) : otd::CriterionXml (kPsoVariant, pr.variant);
+		std::wstring critW = pr.variant.empty () ? otd::CriterionXml (kPsoProp, pr.value) : otd::CriterionXml (std::vector<otd::CritCond> { { kPsoVariant, pr.variant, false, otd::kOpContains } });	// «содержит 2»
 		if (pr.byCode && c.code.ok) {
 			const std::vector<std::wstring> pre = tep::PsoPrefixes (cfg, pr.value);	// «начинается с» — новые категории сами
 			const std::vector<std::wstring> codes = tep::PsoCodes (cfg, c.codes, pr.value);
