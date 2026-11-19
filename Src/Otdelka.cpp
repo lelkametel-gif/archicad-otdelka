@@ -2175,7 +2175,7 @@ void SyncFinishOverrides (const otd::Rules& rules, const ZoneCtx& c, OvStats& st
 	if (st.ruleErr != NoError) return;
 	std::vector<otd::OverrideRuleDef> defs = otd::OverrideRules (rules);
 	if (c.code.ok) {
-		const std::vector<otd::OverrideRuleDef> cat = otd::CategoryRules (rules, c.codes, au::ToW (c.code.def.name));
+		const std::vector<otd::OverrideRuleDef> cat = otd::CategoryRules (rules, au::ToW (c.code.def.name));
 		std::map<std::wstring, size_t> pos;
 		for (size_t i = 0; i < defs.size (); ++i) pos[defs[i].name] = i;
 		for (const auto& d : cat) {
@@ -2207,7 +2207,7 @@ void OvStatsReport (const OvStats& st, std::vector<std::wstring>& lines)
 	if (st.rulesNew > 0 || st.combosNew > 0)
 		lines.push_back (L"   Созданы правила графической замены: " + std::to_wstring (st.rulesNew) + L", комбинации: " + std::to_wstring (st.combosNew) + L".");
 	if (st.rulesUpd > 0)
-		lines.push_back (L"   Обновлены условия правил (коды категорий / номер пола): " + std::to_wstring (st.rulesUpd) + L".");
+		lines.push_back (L"   Обновлены условия правил («код категории начинается с …», номер пола): " + std::to_wstring (st.rulesUpd) + L".");
 	if (st.combosFixed > 0)
 		lines.push_back (L"   В комбинации добавлены недостающие правила: " + std::to_wstring (st.combosFixed) + L".");
 	if (st.rulesFailed > 0 || st.ruleErr != NoError)
@@ -2338,8 +2338,10 @@ void SyncPsoOverrides (const tep::Config& cfg, const ZoneCtx& c, PsoOv& r)
 		bool byCode = false;
 		std::wstring critW = pr.variant.empty () ? otd::CriterionXml (kPsoProp, pr.value) : otd::CriterionXml (kPsoVariant, pr.variant);
 		if (pr.byCode && c.code.ok) {
+			const std::vector<std::wstring> pre = tep::PsoPrefixes (cfg, pr.value);	// «начинается с» — новые категории сами
 			const std::vector<std::wstring> codes = tep::PsoCodes (cfg, c.codes, pr.value);
-			if (!codes.empty ()) { critW = otd::CriterionAnyXml (au::ToW (c.code.def.name), codes); byCode = true; }
+			if (!pre.empty ()) { critW = otd::CriterionAnyXml (au::ToW (c.code.def.name), pre, otd::kOpStartsWith); byCode = true; }
+			else if (!codes.empty ()) { critW = otd::CriterionAnyXml (au::ToW (c.code.def.name), codes); byCode = true; }
 		}
 		const GS::UniString crit = au::FromW (critW);
 		if (ACAPI_GraphicalOverride_GetOverrideRuleByName (rule, grp) == NoError && rule.guid != APINULLGuid) {
@@ -4076,7 +4078,6 @@ void DoUpdateOverrides ()
 	lines.push_back (L"   «Отделка - подкатегории» — подкатегории тоже по коду категории (сразу); ошибки и замечания — после расчёта ведомости.");
 	lines.push_back (L"   «Отделка - проверка зон» — после расчёта ведомости.");
 	lines.push_back (L"   «ПСО» — кладовые, общедомовые, тех.подполье сразу; квартиры (студии, 1–3-комнатные) — после «Паспорта квартир» или «ТЭП по дому».");
-	lines.push_back (L"После добавления новых категорий зон запустите команду ещё раз — коды допишутся в условия.");
 	for (const auto& w : warn) lines.push_back (w);
 	ShowReport (lines);
 }

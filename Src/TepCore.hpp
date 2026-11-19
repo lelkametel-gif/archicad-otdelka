@@ -99,6 +99,8 @@ const int					kPsoPensVersion = 5;	// 3–4: второй цвет — по св
 const std::vector<PsoRule>&	PsoRules ();
 // Коды категорий проекта, которым PsoKinds даёт вид kind по коду (Кладовая / Общедомовое / Тех.подполье)
 std::vector<std::wstring>	PsoCodes (const Config& c, const std::vector<std::wstring>& codes, const std::wstring& kind);
+// Начала кодов для условия «начинается с» (набор без исключений «-…»); пусто — нужны точные коды PsoCodes
+std::vector<std::wstring>	PsoPrefixes (const Config& c, const std::wstring& kind);
 std::vector<std::wstring>	PsoKinds (const std::vector<Room>& rooms, const std::vector<Apartment>& apts, const Config& c);
 // Раскладка маркера зоны как в томе АР: имя у верхней стены по центру, под ним треугольник номера пола,
 // площадь — в правом нижнем углу. polys — контур зоны, angle — поворот здания (рад), basis — высота текста, м

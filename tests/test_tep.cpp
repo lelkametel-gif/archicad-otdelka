@@ -170,6 +170,7 @@ int main (int argc, char** argv)
 		CHECK (PsoCodes (c, pc, L"Кладовая") == std::vector<std::wstring> ({ L"4010" }));
 		CHECK (PsoCodes (c, pc, L"Общедомовое") == std::vector<std::wstring> ({ L"2010", L"2110" }));
 		CHECK (PsoCodes (c, pc, L"Тех.подполье").size () >= 1 && PsoCodes (c, pc, L"Тех.подполье")[0] == L"3010");
+		CHECK (PsoPrefixes (c, L"Кладовая") == std::vector<std::wstring> ({ L"4010" }) && PsoPrefixes (c, L"Общедомовое") == std::vector<std::wstring> ({ L"2" }) && PsoPrefixes (c, L"Тех.подполье") == std::vector<std::wstring> ({ L"3" }));
 		CHECK (PsoRules ()[5].byCode && PsoRules ()[6].byCode && PsoRules ()[7].byCode && !PsoRules ()[0].byCode);
 	}	// номер квартиры у МОП — отдельной строкой отчёта
 	const Apartment* a1 = nullptr; const Apartment* a2 = nullptr; const Apartment* a3 = nullptr;

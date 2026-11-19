@@ -111,14 +111,15 @@ std::vector<OverrideComboDef>	OverrideCombos (const Rules& r);
 // Критерий правила: «Тип элемента = Зона» И «свойство prop (группа kPropGroup) = value» (формат Archicad 27)
 std::wstring	CriterionXml (const std::wstring& prop, const std::wstring& value);
 // несколько условий (И) для зон. option = свойство-список (вариант по имени), иначе текстовое свойство
-struct CritCond { std::wstring prop, value; bool option = false; };
+struct CritCond { std::wstring prop, value; bool option = false; int op = 6; };	// op: 6 — равно, 8 — начинается с (из экспорта AC27)
+const int kOpEquals = 6, kOpStartsWith = 8;
 std::wstring	CriterionXml (const std::vector<CritCond>& conds);
 std::wstring	CriterionXml (const std::vector<std::pair<std::wstring, std::wstring>>& conds);
 // «Тип элемента = Зона» И (prop = values[0] ИЛИ prop = values[1] …); пусто — только «Зона»
-std::wstring	CriterionAnyXml (const std::wstring& prop, const std::vector<std::wstring>& values);
+std::wstring	CriterionAnyXml (const std::wstring& prop, const std::vector<std::wstring>& values, int op = 6);
 
 // ---- Графзамены по свойствам-формулам зоны (код категории, номер пола): цвет меняется сразу, без запуска надстройки.
-// Условия — точные коды категорий проекта («Обновить графзамены» после добавления категорий).
+// Условия — «код категории начинается с» (как в правилах, сделанных вручную в Archicad 27).
 extern const wchar_t* const kPropCatCode;		// «Код категории зоны» (формула: код категории)
 extern const wchar_t* const kPropCatName;		// «Категория зоны» (формула: имя категории)
 extern const wchar_t* const kPropFloorNo;		// «Номер пола зоны» (формула)
@@ -127,8 +128,8 @@ extern const wchar_t* const kComboByFloor;		// «Зоны по типам пол
 extern const wchar_t* const kRuleOtherCats;		// «Категории зон прочие» — все остальные зоны
 const int		kFloorTypes = 20;
 std::wstring	GroupOfCode (const std::wstring& code, const Rules& r);	// по началу кода; kExcludedGroup / r.otherGroup
-// подкатегории (как «Отделка подкатегория - …») по коду категории; codes — коды категорий проекта
-std::vector<OverrideRuleDef>	CategoryRules (const Rules& r, const std::vector<std::wstring>& codes, const std::wstring& codeProp);
+// подкатегории (как «Отделка подкатегория - …»): код категории начинается с начал из [Группы]
+std::vector<OverrideRuleDef>	CategoryRules (const Rules& r, const std::wstring& codeProp);
 OverrideComboDef				CategoryCombo (const Rules& r);
 std::wstring					FloorRuleName (int n);
 std::vector<OverrideRuleDef>	FloorRules (const std::wstring& floorProp);

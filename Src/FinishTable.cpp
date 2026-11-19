@@ -614,10 +614,11 @@ static std::wstring XmlEsc (const std::wstring& s)
 static std::wstring PropCritXml (const CritCond& cv)
 {
 	const std::wstring variant = L"<Variant Type=\"StringVariant\"><Status>Normal</Status><Value>" + XmlEsc (cv.value) + L"</Value></Variant>";
+	const bool v6 = !cv.option && cv.op != kOpEquals;	// «начинается с» — как в экспорте правила из Archicad 27
 	return
 		L"<ClassGuid>58E4905F-AD57-45F5-8D26-0100000F60BF</ClassGuid>"
-		L"<PropertyCriterion Mv=\"5\" Sv=\"0\">"
-			L"<VBEF::ConditionIO Mv=\"1\" Sv=\"0\">"
+		+ std::wstring (v6 ? L"<PropertyCriterion Mv=\"6\" Sv=\"0\"><VBEF::ConditionIO Mv=\"2\" Sv=\"0\">"
+						   : L"<PropertyCriterion Mv=\"5\" Sv=\"0\"><VBEF::ConditionIO Mv=\"1\" Sv=\"0\">") +
 				L"<PropertyDefinitionUserId Version=\"2\">"
 					L"<PrimaryId>1</PrimaryId>"
 					L"<HasGuidId>false</HasGuidId>"
@@ -633,7 +634,7 @@ static std::wstring PropCritXml (const CritCond& cv)
 					L"</PropertyDefinitionGroupUserId>"
 				L"</PropertyDefinitionUserId>"
 				+ (cv.option ? L"<CriteriaOperatorEnum>0</CriteriaOperatorEnum>" + variant
-							 : L"<CriteriaOperatorEnum>6</CriteriaOperatorEnum><Value>" + variant + L"</Value>") +
+							 : L"<CriteriaOperatorEnum>" + std::to_wstring (cv.op) + L"</CriteriaOperatorEnum><Value>" + variant + L"</Value>") +
 			L"</VBEF::ConditionIO>"
 		L"</PropertyCriterion>";
 }
@@ -695,10 +696,10 @@ std::wstring CriterionXml (const std::vector<CritCond>& conds)
 }
 
 
-std::wstring CriterionAnyXml (const std::wstring& prop, const std::vector<std::wstring>& values)
+std::wstring CriterionAnyXml (const std::wstring& prop, const std::vector<std::wstring>& values, int op)
 {
 	std::vector<CritCond> any;
-	for (const auto& v : values) any.push_back ({ prop, v, false });
+	for (const auto& v : values) any.push_back ({ prop, v, false, op });
 	return CriterionGroupsXml ({ any });
 }
 
@@ -741,16 +742,14 @@ std::wstring GroupOfCode (const std::wstring& code, const Rules& r)
 }
 
 
-std::vector<OverrideRuleDef> CategoryRules (const Rules& r, const std::vector<std::wstring>& codesIn, const std::wstring& codeProp)
+std::vector<OverrideRuleDef> CategoryRules (const Rules& r, const std::wstring& codeProp)
 {
-	std::set<std::wstring> codes;
-	for (const auto& c : codesIn) if (!Trim (c).empty ()) codes.insert (Trim (c));
 	std::vector<OverrideRuleDef> res;
 	auto add = [&] (const std::wstring& name, const std::vector<std::wstring>& vals, const double* rgb) {
 		OverrideRuleDef d;
 		d.name = name;
 		d.rgb[0] = rgb[0]; d.rgb[1] = rgb[1]; d.rgb[2] = rgb[2];
-		d.crit = CriterionAnyXml (codeProp, vals);
+		d.crit = CriterionAnyXml (codeProp, vals, kOpStartsWith);
 		res.push_back (d);
 	};
 	auto prefixesOf = [&r] (const std::wstring& g) {
@@ -758,22 +757,16 @@ std::vector<OverrideRuleDef> CategoryRules (const Rules& r, const std::vector<st
 		for (const auto& kv : r.groupByCode) if (kv.second == g) p.push_back (Trim (kv.first));
 		return p;
 	};
+	// «код начинается с» начала из [Группы] (как сделано вручную в проекте): новые категории попадают сами
 	size_t i = 0;
 	for (const auto& g : r.groupOrder) {
 		if (g.empty () || g == kExcludedGroup || g == r.otherGroup) { if (g == r.otherGroup) ++i; continue; }
-		std::vector<std::wstring> vals;
-		for (const auto& c : codes) if (GroupOfCode (c, r) == g) vals.push_back (c);
-		if (vals.empty ()) vals = prefixesOf (g);		// кодов нет — заведомо не совпадёт (код из 1 цифры)
+		std::vector<std::wstring> vals = prefixesOf (g);
 		if (vals.empty ()) vals.push_back (L"-");
 		add (SubcatRuleName (g), vals, SubcatRgb (i++));
 	}
-	{	// не входят в ведомость (8, 9) и без подкатегории
-		std::vector<std::wstring> vals;
-		for (const auto& c : codes) {
-			const std::wstring g = GroupOfCode (c, r);
-			if (g == kExcludedGroup || g == r.otherGroup) vals.push_back (c);
-		}
-		if (vals.empty ()) vals = prefixesOf (kExcludedGroup);
+	{	// не входят в ведомость (8, 9)
+		std::vector<std::wstring> vals = prefixesOf (kExcludedGroup);
 		if (vals.empty ()) vals.push_back (L"-");
 		static const double pink[3] = { 1.00, 0.74, 0.84 };
 		add (SubcatRuleName (r.otherGroup), vals, pink);

@@ -341,6 +341,22 @@ std::vector<std::wstring> PsoCodes (const Config& c, const std::vector<std::wstr
 }
 
 
+std::vector<std::wstring> PsoPrefixes (const Config& c, const std::wstring& kind)
+{
+	const CodeSet* s = kind == L"Кладовая" ? &c.storage : kind == L"Общедомовое" ? &c.common : kind == L"Тех.подполье" ? &c.basement : nullptr;
+	if (s == nullptr || !s->exc.empty () || !c.excluded.exc.empty ()) return {};
+	// начало не должно задевать наборы, которые в PsoKinds проверяются раньше (excluded, storage перед common/basement)
+	std::vector<const CodeSet*> before = { &c.excluded };
+	if (kind != L"Кладовая") before.push_back (&c.storage);
+	if (kind == L"Тех.подполье") before.push_back (&c.common);
+	for (const auto& p : s->inc)
+		for (const CodeSet* b : before)
+			for (const auto& q : b->inc)
+				if (q.compare (0, p.size (), p) == 0 || p.compare (0, q.size (), q) == 0) return {};
+	return s->inc;
+}
+
+
 std::wstring PsoVariant2 (const std::wstring& kind)
 {
 	return kind == L"1-комнатная" ? kind + L" (вариант 2)" : kind;
