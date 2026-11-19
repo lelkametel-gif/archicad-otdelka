@@ -1,6 +1,6 @@
 ﻿---
 name: "archicad-otdelka-dev"
-description: "Продолжение работы над надстройкой Archicad 27 «Ведомость отделки» (lelkametel-gif/archicad-otdelka), объектом зоны HimeraZone_АСП, ZoneSum и будущей ведомостью помещений."
+description: "Продолжение работы над надстройкой Archicad 27 «ПСО и отделка» (lelkametel-gif/archicad-otdelka): ведомость отделки, паспорта квартир, ТЭП, ведомость помещений, графзамена ПСО, отделка пилонов, объект зоны HimeraZone_АСП."
 ---
 
 # Ведомость отделки / зоны HimeraZone_АСП (Archicad 27)
