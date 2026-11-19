@@ -1846,13 +1846,36 @@ void DrawReport (const std::wstring& name, GSErrCode err, bool existed, const Dr
 
 namespace {
 
+// ---- свойства-формулы зоны (код и имя категории, номер пола): значения считает сам Archicad, графзамена по ним — сразу
+struct FormulaProp {
+	API_PropertyDefinition	def;
+	bool					ok = false;
+	bool					created = false;
+	std::wstring			note;		// почему нет
+};
+
+struct ZoneCtx {
+	API_Guid					group = APINULLGuid;
+	std::set<API_Guid>			avail;			// классификации зон проекта
+	std::vector<std::wstring>	codes;			// коды категорий зон проекта
+	FormulaProp					code, name, floor;
+};
+
+struct OvStats {
+	int rulesNew = 0, rulesUpd = 0, rulesFailed = 0, combosNew = 0, combosFixed = 0;
+	GSErrCode ruleErr = NoError, comboErr = NoError;
+};
+
+
 struct MarkResult {
 	int written = 0, failed = 0, noAvail = 0;
-	int rulesNew = 0, rulesFailed = 0, combosNew = 0, combosFixed = 0;
-	GSErrCode propErr = NoError, ruleErr = NoError, comboErr = NoError;
+	GSErrCode propErr = NoError;
 	std::wstring propStep;
 	std::map<std::wstring, int> byCheck;		// значение «проверка» -> зон
+	ZoneCtx ctx;
+	OvStats ov;
 };
+
 
 
 GSErrCode EnsurePropGroup (API_Guid& out)
@@ -1970,67 +1993,227 @@ std::wstring EnumPropValue (const API_Guid& elem, const API_PropertyDefinition& 
 }
 
 
-void EnsureOverrides (const otd::Rules& rules, MarkResult& mr)
+// Встроенное свойство Archicad по имени (без регистра), например «Код Категории Зоны»
+bool FindBuiltInProp (const std::vector<std::wstring>& names, API_PropertyDefinition& out)
+{
+	GS::Array<API_PropertyDefinition> defs;
+	if (ACAPI_Property_GetPropertyDefinitions (APINULLGuid, defs) != NoError) return false;
+	for (const std::wstring& n : names)
+		for (const API_PropertyDefinition& d : defs)
+			if (d.definitionType != API_PropertyCustomDefinitionType && otd::SameText (au::ToW (d.name), n)) { out = d; return true; }
+	return false;
+}
+
+
+// Свойство группы «ПСО и отделка» с формулой: имя base (или base + «_…», заведённое вручную); формула — главнее.
+// Нет — создаётся «base» (если имя занято обычным свойством — «base_новый») = встроенное свойство builtIn.
+void EnsureFormulaProp (ZoneCtx& c, const std::wstring& base, const std::vector<std::wstring>& builtIn, FormulaProp& out)
+{
+	GS::Array<API_PropertyDefinition> defs;
+	ACAPI_Property_GetPropertyDefinitions (c.group, defs);
+	const API_PropertyDefinition* exact = nullptr;
+	const API_PropertyDefinition* formula = nullptr;
+	for (const API_PropertyDefinition& d : defs) {
+		const std::wstring n = au::ToW (d.name);
+		if (n.compare (0, base.size (), base) != 0) continue;
+		if (n == base) exact = &d;
+		if (d.defaultValue.hasExpression && (formula == nullptr || n == base)) formula = &d;
+	}
+	if (formula != nullptr) {
+		out.def = *formula;
+		out.ok = true;
+		bool changed = false;
+		for (const API_Guid& a : c.avail)
+			if (!out.def.availability.Contains (a)) { out.def.availability.Push (a); changed = true; }
+		if (changed) ACAPI_Property_ChangePropertyDefinition (out.def);
+		return;
+	}
+	API_PropertyDefinition bi;
+	if (!FindBuiltInProp (builtIn, bi)) {
+		out.note = L"нет свойства «" + base + L"» с формулой, а встроенное свойство «" + builtIn[0] + L"» не найдено — создайте его вручную (Менеджер свойств, группа «" +
+				   otd::kPropGroup + L"», формула)";
+		return;
+	}
+	API_PropertyDefinition d;
+	d.definitionType = API_PropertyCustomDefinitionType;
+	d.groupGuid = c.group;
+	d.name = au::FromW (exact != nullptr ? base + L"_новый" : base);
+	d.description = au::FromW (L"Формула: встроенное свойство «" + au::ToW (bi.name) + L"». Для графзамен «Зоны по …» (надстройка «ПСО и отделка»)");
+	d.collectionType = API_PropertySingleCollectionType;
+	d.valueType = API_PropertyStringValueType;
+	d.measureType = API_PropertyDefaultMeasureType;
+	d.defaultValue.basicValue.singleVariant.variant.type = API_PropertyStringValueType;
+	d.defaultValue.hasExpression = true;
+	d.canValueBeEditable = false;
+	for (const API_Guid& a : c.avail) d.availability.Push (a);
+	const GS::UniString g = APIGuidToString (bi.guid);
+	GSErrCode err = APIERR_GENERAL;
+	GS::Array<GS::UniString> exprs;
+	exprs.Push (GS::UniString ("###Property:") + g + GS::UniString ("###"));		// так Archicad хранит ссылку на свойство
+	exprs.Push (GS::UniString ("{Property:") + g + GS::UniString ("}"));
+	for (const GS::UniString& expr : exprs) {
+		d.guid = APINULLGuid;
+		d.defaultValue.propertyExpressions.Clear ();
+		d.defaultValue.propertyExpressions.Push (expr);
+		err = ACAPI_Property_CreatePropertyDefinition (d);
+		if (err == NoError) break;
+	}
+	if (err != NoError) {
+		out.note = L"не удалось создать свойство «" + au::ToW (d.name) + L"» с формулой (код " + std::to_wstring (err) + L") — создайте его вручную";
+		return;
+	}
+	out.def = d;
+	out.ok = out.created = true;
+}
+
+
+// Группа свойств, классификации всех зон, коды категорий и свойства-формулы
+ZoneCtx PrepareZoneCtx (const std::set<API_Guid>& extraAvail)
+{
+	ZoneCtx c;
+	c.avail = extraAvail;
+	GS::Array<API_Guid> zl;
+	if (ACAPI_Element_GetElemList (API_ElemType (API_ZoneID), &zl) == NoError)
+		for (const API_Guid& z : zl) {
+			GS::Array<GS::Pair<API_Guid, API_Guid>> items;
+			if (ACAPI_Element_GetClassificationItems (z, items) == NoError)
+				for (const auto& it : items) c.avail.insert (it.second);
+		}
+	ACAPI_Attribute_EnumerateAttributesByType (API_ZoneCatID, [&] (API_Attribute& a) {
+		const std::wstring code = otd::Trim (au::ToW (GS::UniString (a.zoneCat.catCode)));
+		if (!code.empty ()) c.codes.push_back (code);
+	});
+	if (EnsurePropGroup (c.group) != NoError) {
+		c.code.note = c.name.note = c.floor.note = L"не удалось создать группу свойств «" + std::wstring (otd::kPropGroup) + L"»";
+		return c;
+	}
+	EnsureFormulaProp (c, otd::kPropCatCode, { L"Код Категории Зоны", L"Код категории" }, c.code);
+	EnsureFormulaProp (c, otd::kPropCatName, { L"Название Категории Зоны", L"Категория Зоны", L"Имя Категории Зоны" }, c.name);
+	EnsureFormulaProp (c, otd::kPropFloorNo, { L"Номер Зоны" }, c.floor);
+	return c;
+}
+
+
+GSErrCode EnsureRuleGroup (API_Guid& out)
 {
 	API_OverrideRuleGroup grp = { APINULLGuid, au::FromW (otd::kPropGroup) };
 	if (ACAPI_GraphicalOverride_GetOverrideRuleGroup (grp) != NoError) {
 		grp.guid = APINULLGuid;
-		mr.ruleErr = ACAPI_GraphicalOverride_CreateOverrideRuleGroup (grp);
-		if (mr.ruleErr != NoError)
-			return;
+		const GSErrCode err = ACAPI_GraphicalOverride_CreateOverrideRuleGroup (grp);
+		if (err != NoError) return err;
 	}
-	std::map<std::wstring, API_Guid> ruleGuid;
-	for (const otd::OverrideRuleDef& d : otd::OverrideRules (rules)) {
+	out = grp.guid;
+	return NoError;
+}
+
+
+// Правила: недостающие создаются (цвет — фон покрывающей штриховки); у существующих меняется только условие
+// (если оно задано и не keepCrit), цвет, исправленный вручную, остаётся
+void EnsureRules (const API_Guid& grp, const std::vector<otd::OverrideRuleDef>& defs, std::map<std::wstring, API_Guid>& ids, OvStats& st)
+{
+	for (const otd::OverrideRuleDef& d : defs) {
+		const GS::UniString crit = au::FromW (d.crit.empty () ? otd::CriterionXml (d.prop, d.value) : d.crit);
 		API_OverrideRule rule;
 		rule.guid = APINULLGuid;
 		rule.name = au::FromW (d.name);
-		if (ACAPI_GraphicalOverride_GetOverrideRuleByName (rule, grp.guid) == NoError && rule.guid != APINULLGuid) {
-			ruleGuid[d.name] = rule.guid;		// уже есть — не трогаем
+		if (ACAPI_GraphicalOverride_GetOverrideRuleByName (rule, grp) == NoError && rule.guid != APINULLGuid) {
+			ids[d.name] = rule.guid;
+			if (!d.crit.empty () && !d.keepCrit) {
+				rule.criterionXML = crit;
+				if (ACAPI_GraphicalOverride_ChangeOverrideRule (rule) == NoError) ++st.rulesUpd;
+			}
 			continue;
 		}
 		rule = API_OverrideRule ();
 		rule.guid = APINULLGuid;
 		rule.name = au::FromW (d.name);
 		rule.style = API_OverrideRuleStyle ();
-		// цвет фона штриховки зоны (как в графзамене ZoneSum: перо фона покрывающей штриховки)
 		rule.style.fillBackgroundPenOverride = API_RGBColor { d.rgb[0], d.rgb[1], d.rgb[2] };
 		rule.style.fillTypeBackgroundPen.overrideCoverFill = true;
 		rule.style.fillTypeBackgroundPen.overrideCutFill = false;
 		rule.style.fillTypeBackgroundPen.overrideDraftingFill = false;
-		rule.criterionXML = au::FromW (otd::CriterionXml (d.prop, d.value));
-		const GSErrCode err = ACAPI_GraphicalOverride_CreateOverrideRule (rule, grp.guid);
-		if (err == NoError && rule.guid != APINULLGuid) {
-			ruleGuid[d.name] = rule.guid;
-			++mr.rulesNew;
-		} else {
-			++mr.rulesFailed;
-			mr.ruleErr = err;
+		rule.criterionXML = crit;
+		const GSErrCode err = ACAPI_GraphicalOverride_CreateOverrideRule (rule, grp);
+		if (err == NoError && rule.guid != APINULLGuid) { ids[d.name] = rule.guid; ++st.rulesNew; }
+		else { ++st.rulesFailed; st.ruleErr = err; }
+	}
+}
+
+
+// Комбинация: новая — правила по порядку; существующая — порядок в проекте не меняется, недостающие правила в конец
+void EnsureCombo (const otd::OverrideComboDef& c, const std::map<std::wstring, API_Guid>& ids, OvStats& st)
+{
+	GS::Array<API_Guid> list;
+	for (const auto& n : c.rules) {
+		const auto it = ids.find (n);
+		if (it != ids.end ()) list.Push (it->second);
+	}
+	if (list.IsEmpty ()) return;
+	API_OverrideCombination cmb = { APINULLGuid, au::FromW (c.name) };
+	GS::Array<API_Guid> have;
+	if (ACAPI_GraphicalOverride_GetOverrideCombination (cmb, &have) == NoError && cmb.guid != APINULLGuid) {
+		GS::Array<API_Guid> merged = have;
+		bool missing = false;
+		for (const API_Guid& g : list) if (!merged.Contains (g)) { merged.Push (g); missing = true; }
+		if (!missing) return;
+		const GSErrCode err = ACAPI_GraphicalOverride_ChangeOverrideCombination (cmb, &merged);
+		if (err == NoError) ++st.combosFixed; else st.comboErr = err;
+		return;
+	}
+	cmb.guid = APINULLGuid;
+	const GSErrCode err = ACAPI_GraphicalOverride_CreateOverrideCombination (cmb, list);
+	if (err == NoError) ++st.combosNew; else st.comboErr = err;
+}
+
+
+// «Отделка - проверка зон», «Отделка - подкатегории», «Зоны по категориям», «Зоны по типам пола».
+// Подкатегории — по коду категории (формула, сразу); если свойства-формулы нет — по свойству, которое пишет расчёт.
+void SyncFinishOverrides (const otd::Rules& rules, const ZoneCtx& c, OvStats& st)
+{
+	API_Guid grp = APINULLGuid;
+	st.ruleErr = EnsureRuleGroup (grp);
+	if (st.ruleErr != NoError) return;
+	std::vector<otd::OverrideRuleDef> defs = otd::OverrideRules (rules);
+	if (c.code.ok) {
+		const std::vector<otd::OverrideRuleDef> cat = otd::CategoryRules (rules, c.codes, au::ToW (c.code.def.name));
+		std::map<std::wstring, size_t> pos;
+		for (size_t i = 0; i < defs.size (); ++i) pos[defs[i].name] = i;
+		for (const auto& d : cat) {
+			const auto it = pos.find (d.name);
+			if (it != pos.end ()) defs[it->second] = d; else defs.push_back (d);
 		}
 	}
-	for (const otd::OverrideComboDef& c : otd::OverrideCombos (rules)) {
-		GS::Array<API_Guid> list;
-		for (const auto& n : c.rules)
-			if (ruleGuid.count (n)) list.Push (ruleGuid[n]);
-		API_OverrideCombination cmb = { APINULLGuid, au::FromW (c.name) };
-		GS::Array<API_Guid> have;
-		if (ACAPI_GraphicalOverride_GetOverrideCombination (cmb, &have) == NoError && cmb.guid != APINULLGuid) {
-			bool missing = false;
-			for (const API_Guid& g : list)
-				if (!have.Contains (g)) { missing = true; break; }
-			if (!missing)
-				continue;
-			// наших правил не хватает (удалены и созданы заново) — наши по порядку, затем добавленные вручную
-			GS::Array<API_Guid> merged = list;
-			for (const API_Guid& g : have)
-				if (!merged.Contains (g)) merged.Push (g);
-			const GSErrCode err = ACAPI_GraphicalOverride_ChangeOverrideCombination (cmb, &merged);
-			if (err == NoError) ++mr.combosFixed; else mr.comboErr = err;
-			continue;
-		}
-		cmb.guid = APINULLGuid;
-		const GSErrCode err = ACAPI_GraphicalOverride_CreateOverrideCombination (cmb, list);
-		if (err == NoError) ++mr.combosNew; else mr.comboErr = err;
+	if (c.floor.ok)
+		for (const auto& d : otd::FloorRules (au::ToW (c.floor.def.name))) defs.push_back (d);
+	std::map<std::wstring, API_Guid> ids;
+	EnsureRules (grp, defs, ids, st);
+	for (const auto& cb : otd::OverrideCombos (rules)) EnsureCombo (cb, ids, st);
+	if (c.code.ok) EnsureCombo (otd::CategoryCombo (rules), ids, st);
+	if (c.floor.ok) EnsureCombo (otd::FloorCombo (), ids, st);
+}
+
+
+void FormulaPropsReport (const ZoneCtx& c, std::vector<std::wstring>& lines)
+{
+	for (const FormulaProp* p : { &c.code, &c.name, &c.floor }) {
+		if (p->created) lines.push_back (L"   Создано свойство-формула «" + au::ToW (p->def.name) + L"» (группа «" + otd::kPropGroup + L"»).");
+		if (!p->note.empty ()) lines.push_back (L"   " + p->note + L".");
 	}
+}
+
+
+void OvStatsReport (const OvStats& st, std::vector<std::wstring>& lines)
+{
+	if (st.rulesNew > 0 || st.combosNew > 0)
+		lines.push_back (L"   Созданы правила графической замены: " + std::to_wstring (st.rulesNew) + L", комбинации: " + std::to_wstring (st.combosNew) + L".");
+	if (st.rulesUpd > 0)
+		lines.push_back (L"   Обновлены условия правил (коды категорий / номер пола): " + std::to_wstring (st.rulesUpd) + L".");
+	if (st.combosFixed > 0)
+		lines.push_back (L"   В комбинации добавлены недостающие правила: " + std::to_wstring (st.combosFixed) + L".");
+	if (st.rulesFailed > 0 || st.ruleErr != NoError)
+		lines.push_back (L"   Не удалось создать правил графической замены: " + std::to_wstring (st.rulesFailed) + L" (код " + std::to_wstring (st.ruleErr) + L").");
+	if (st.comboErr != NoError)
+		lines.push_back (L"   Не удалось создать / дополнить комбинацию графической замены (код " + std::to_wstring (st.comboErr) + L").");
 }
 
 
@@ -2084,7 +2267,8 @@ MarkResult MarkZones (const std::vector<otd::ZoneData>& zones, const RunStats& r
 		} else
 			++mr.failed;
 	}
-	EnsureOverrides (rules, mr);
+	mr.ctx = PrepareZoneCtx (avail);
+	SyncFinishOverrides (rules, mr.ctx, mr.ov);
 	return mr;
 }
 
@@ -2107,16 +2291,11 @@ void MarkReport (const MarkResult& mr, std::vector<std::wstring>& lines)
 		lines.push_back (L"   У " + std::to_wstring (mr.noAvail) + L" зон нет классификации — свойства не записаны (присвойте зонам классификацию).");
 	if (mr.failed > 0)
 		lines.push_back (L"   Не записано у " + std::to_wstring (mr.failed) + L" зон (зарезервированы другим пользователем или из модуля).");
-	if (mr.rulesNew > 0 || mr.combosNew > 0)
-		lines.push_back (L"   Созданы правила графической замены: " + std::to_wstring (mr.rulesNew) + L", комбинации: " + std::to_wstring (mr.combosNew) + L".");
-	if (mr.combosFixed > 0)
-		lines.push_back (L"   В комбинации добавлены созданные заново правила: " + std::to_wstring (mr.combosFixed) + L".");
-	if (mr.rulesFailed > 0 || mr.ruleErr != NoError)
-		lines.push_back (L"   Не удалось создать правил графической замены: " + std::to_wstring (mr.rulesFailed) + L" (код " + std::to_wstring (mr.ruleErr) + L").");
-	if (mr.comboErr != NoError)
-		lines.push_back (L"   Не удалось создать комбинацию графической замены (код " + std::to_wstring (mr.comboErr) + L").");
+	FormulaPropsReport (mr.ctx, lines);
+	OvStatsReport (mr.ov, lines);
 	lines.push_back (L"   На плане: Графическая замена -> «Отделка - проверка зон» (зелёные — верно, жёлтые — замечания, красные — ошибки, "
-					 L"серые — не входят) или «Отделка - подкатегории» (свой цвет у каждой подкатегории).");
+					 L"серые — не входят) или «Отделка - подкатегории» (свой цвет у каждой подкатегории). «Зоны по категориям» и «Зоны по типам пола» меняются сразу, "
+					 L"без расчёта.");
 }
 
 // ---- графическая замена «ПСО»: свойство «ПСО - тип» зонам + правила (перо фона штриховки) + комбинация «ПСО»
@@ -2126,6 +2305,112 @@ const wchar_t*	kPsoVariant = L"ПСО - вариант цвета";		// спис
 const char*		kPsoVarKey1 = "6F1C2B0A-4E71-4C5B-9C33-0A5D1E7B2101";
 const char*		kPsoVarKey2 = "6F1C2B0A-4E71-4C5B-9C33-0A5D1E7B2102";
 const char*		kPsoPensKey = "PsoPensVersion";		// версия перьев, уже записанных в правила проекта
+
+struct PsoOv {
+	int rulesNew = 0, rulesFailed = 0, rulesRepen = 0, rulesUpd = 0;
+	bool comboNew = false, hasVar = false;
+	GSErrCode err = NoError, ruleErr = NoError;
+	API_Guid varRule = APINULLGuid;
+	API_PropertyDefinition def, defVar;
+};
+
+// Свойства «ПСО - тип» / «ПСО - вариант цвета», правила «ПСО - …» и комбинация «ПСО».
+// Кладовые, общедомовые, тех.подполье — по коду категории (свойство-формула, сразу); квартиры — по «ПСО - тип» (пишут паспорта / ТЭП).
+// Перья существующих правил меняются только при смене версии перьев (kPsoPensVersion); условия по коду — каждый раз.
+void SyncPsoOverrides (const tep::Config& cfg, const ZoneCtx& c, PsoOv& r)
+{
+	r.err = EnsureStringProp (c.group, kPsoProp, L"Студия / N-комнатная / Кладовая / Общедомовое / Тех.подполье — для графической замены «ПСО»", c.avail, r.def);
+	if (r.err != NoError) return;
+	r.hasVar = EnsureEnumProp (c.group, kPsoVariant,
+		L"Вариант 2 — второй цвет графзамены «ПСО» (1-комнатные: перо 143). Выбирается вручную всем зонам квартиры",
+		{ L"Вариант 1", L"Вариант 2" }, { kPsoVarKey1, kPsoVarKey2 }, c.avail, r.defVar) == NoError;
+	int pensVer = 0;
+	try { pensVer = std::stoi (LoadModulText (kPsoPensKey)); } catch (...) { pensVer = 0; }
+	const bool updatePens = pensVer < tep::kPsoPensVersion;
+	API_Guid grp = APINULLGuid;
+	r.ruleErr = EnsureRuleGroup (grp);
+	if (r.ruleErr != NoError) return;
+	GS::Array<API_Guid> list;
+	for (const tep::PsoRule& pr : tep::PsoRules ()) {
+		API_OverrideRule rule;
+		rule.guid = APINULLGuid;
+		rule.name = au::FromW (pr.rule);
+		bool byCode = false;
+		std::wstring critW = pr.variant.empty () ? otd::CriterionXml (kPsoProp, pr.value) : otd::CriterionXml (kPsoVariant, pr.variant);
+		if (pr.byCode && c.code.ok) {
+			const std::vector<std::wstring> codes = tep::PsoCodes (cfg, c.codes, pr.value);
+			if (!codes.empty ()) { critW = otd::CriterionAnyXml (au::ToW (c.code.def.name), codes); byCode = true; }
+		}
+		const GS::UniString crit = au::FromW (critW);
+		if (ACAPI_GraphicalOverride_GetOverrideRuleByName (rule, grp) == NoError && rule.guid != APINULLGuid) {
+			list.Push (rule.guid);
+			if (updatePens || byCode) {
+				if (updatePens) {
+					rule.style.fillBackgroundPenOverride = static_cast<short> (pr.pen);
+					rule.style.fillTypeBackgroundPen.overrideCoverFill = true;
+				}
+				rule.criterionXML = crit;
+				if (ACAPI_GraphicalOverride_ChangeOverrideRule (rule) == NoError) {
+					if (updatePens) ++r.rulesRepen;
+					if (byCode) ++r.rulesUpd;
+				}
+			}
+			if (!pr.variant.empty ()) r.varRule = rule.guid;
+			continue;
+		}
+		rule = API_OverrideRule ();
+		rule.guid = APINULLGuid;
+		rule.name = au::FromW (pr.rule);
+		rule.style = API_OverrideRuleStyle ();
+		rule.style.fillBackgroundPenOverride = static_cast<short> (pr.pen);		// перо фона покрывающей штриховки зоны
+		rule.style.fillTypeBackgroundPen.overrideCoverFill = true;
+		rule.style.fillTypeBackgroundPen.overrideCutFill = false;
+		rule.style.fillTypeBackgroundPen.overrideDraftingFill = false;
+		rule.criterionXML = crit;
+		const GSErrCode e = ACAPI_GraphicalOverride_CreateOverrideRule (rule, grp);
+		if (e == NoError && rule.guid != APINULLGuid) { list.Push (rule.guid); ++r.rulesNew; if (!pr.variant.empty ()) r.varRule = rule.guid; }
+		else { ++r.rulesFailed; r.ruleErr = e; }
+	}
+	{	// правило прошлой версии (второй цвет по текстовому свойству) — больше не нужно
+		API_OverrideRule old;
+		old.guid = APINULLGuid;
+		old.name = au::FromW (L"ПСО - 1-комнатные (цвет 2)");
+		if (ACAPI_GraphicalOverride_GetOverrideRuleByName (old, grp) == NoError && old.guid != APINULLGuid)
+			ACAPI_GraphicalOverride_DeleteOverrideRule (old.guid);
+	}
+	API_OverrideCombination cmb = { APINULLGuid, au::FromW (kPsoCombo) };
+	GS::Array<API_Guid> have;
+	if (ACAPI_GraphicalOverride_GetOverrideCombination (cmb, &have) == NoError && cmb.guid != APINULLGuid) {
+		// порядок, выставленный в проекте, не трогаем: недостающие правила — в конец
+		GS::Array<API_Guid> merged = have;
+		bool missing = false;
+		for (const API_Guid& g : list) if (!merged.Contains (g)) { merged.Push (g); missing = true; }
+		if (missing) ACAPI_GraphicalOverride_ChangeOverrideCombination (cmb, &merged);
+	} else {
+		cmb.guid = APINULLGuid;
+		GS::Array<API_Guid> ordered;
+		for (const API_Guid& g : list) if (g != r.varRule) ordered.Push (g);
+		if (r.varRule != APINULLGuid) ordered.Push (r.varRule);
+		r.comboNew = ACAPI_GraphicalOverride_CreateOverrideCombination (cmb, ordered) == NoError;
+	}
+	if (updatePens && r.rulesFailed == 0)
+		StoreModulText (kPsoPensKey, std::to_wstring (tep::kPsoPensVersion));
+}
+
+
+void PsoOvReport (const PsoOv& r, std::vector<std::wstring>& lines)
+{
+	if (r.rulesUpd > 0)
+		lines.push_back (L"   Правила «ПСО - кладовые / общедомовые / тех.подполье» — по коду категории зоны (цвет сразу): " + std::to_wstring (r.rulesUpd) + L".");
+	if (r.rulesRepen > 0)
+		lines.push_back (L"   В существующих правилах «ПСО - …» перья заменены на новые: " + std::to_wstring (r.rulesRepen) + L" правил.");
+	if (r.rulesNew > 0 || r.comboNew)
+		lines.push_back (L"   Созданы правила «ПСО - …»: " + std::to_wstring (r.rulesNew) + (r.comboNew ? L", комбинация «ПСО»." : L".") +
+						 L" Перо, исправленное в правиле вручную, сохранится (до следующей смены перьев в надстройке).");
+	if (r.rulesFailed > 0)
+		lines.push_back (L"   Не удалось создать правил «ПСО - …»: " + std::to_wstring (r.rulesFailed) + L" (код " + std::to_wstring (r.ruleErr) + L").");
+}
+
 
 void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 {
@@ -2177,76 +2462,21 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 		if (ACAPI_Element_GetClassificationItems (m.first, items) == NoError)
 			for (const auto& it : items) avail.insert (it.second);
 	}
-	int written = 0, noAvail = 0, failed = 0, rulesNew = 0, rulesFailed = 0;
-	GSErrCode err = NoError, ruleErr = NoError;
-	bool comboNew = false;
-	int rulesRepen = 0, variant2 = 0;
-	API_Guid varRule = APINULLGuid;
-	int pensVer = 0;
-	try { pensVer = std::stoi (LoadModulText (kPsoPensKey)); } catch (...) { pensVer = 0; }
-	const bool updatePens = pensVer < tep::kPsoPensVersion;	// перья по умолчанию сменились — переписать в существующих правилах
+	int written = 0, noAvail = 0, failed = 0, variant2 = 0;
+	GSErrCode err = NoError;
+	PsoOv ov;
+	ZoneCtx ctx;
 	std::map<std::wstring, int> byKind;
 	ACAPI_CallUndoableCommand (au::FromW (L"ПСО: графическая замена"), [&] () -> GSErrCode {
-		API_Guid group = APINULLGuid;
-		API_PropertyDefinition def;
-		err = EnsurePropGroup (group);
-		if (err == NoError)
-			err = EnsureStringProp (group, kPsoProp, L"Студия / N-комнатная / Кладовая / Общедомовое / Тех.подполье — для графической замены «ПСО»", avail, def);
+		ctx = PrepareZoneCtx (avail);
+		SyncPsoOverrides (d.cfg, ctx, ov);
+		err = ov.err;
 		if (err != NoError) return NoError;
-		API_PropertyDefinition defVar;
-		const bool hasVar = EnsureEnumProp (group, kPsoVariant,
-			L"Вариант 2 — второй цвет графзамены «ПСО» (1-комнатные: перо 143). Выбирается вручную всем зонам квартиры",
-			{ L"Вариант 1", L"Вариант 2" }, { kPsoVarKey1, kPsoVarKey2 }, avail, defVar) == NoError;
-		// правила и комбинация «ПСО»; существующие правила меняются только при смене версии перьев (kPsoPensVersion)
-		API_OverrideRuleGroup grp = { APINULLGuid, au::FromW (otd::kPropGroup) };
-		if (ACAPI_GraphicalOverride_GetOverrideRuleGroup (grp) != NoError) {
-			grp.guid = APINULLGuid;
-			ruleErr = ACAPI_GraphicalOverride_CreateOverrideRuleGroup (grp);
-			if (ruleErr != NoError) return NoError;
-		}
-		GS::Array<API_Guid> list;
-		for (const tep::PsoRule& pr : tep::PsoRules ()) {
-			API_OverrideRule rule;
-			rule.guid = APINULLGuid;
-			rule.name = au::FromW (pr.rule);
-			// второй цвет: только «ПСО - вариант цвета» содержит «2» — меняется сразу при смене варианта у зоны
-			const GS::UniString crit = au::FromW (pr.variant.empty () ? otd::CriterionXml (kPsoProp, pr.value)
-																	   : otd::CriterionXml (kPsoVariant, pr.variant));
-			if (ACAPI_GraphicalOverride_GetOverrideRuleByName (rule, grp.guid) == NoError && rule.guid != APINULLGuid) {
-				list.Push (rule.guid);
-				if (updatePens) {
-					rule.style.fillBackgroundPenOverride = static_cast<short> (pr.pen);
-					rule.style.fillTypeBackgroundPen.overrideCoverFill = true;
-					rule.criterionXML = crit;
-					if (ACAPI_GraphicalOverride_ChangeOverrideRule (rule) == NoError) ++rulesRepen;
-				}
-				if (!pr.variant.empty ()) varRule = rule.guid;
-				continue;
-			}
-			rule = API_OverrideRule ();
-			rule.guid = APINULLGuid;
-			rule.name = au::FromW (pr.rule);
-			rule.style = API_OverrideRuleStyle ();
-			rule.style.fillBackgroundPenOverride = static_cast<short> (pr.pen);		// перо фона покрывающей штриховки зоны
-			rule.style.fillTypeBackgroundPen.overrideCoverFill = true;
-			rule.style.fillTypeBackgroundPen.overrideCutFill = false;
-			rule.style.fillTypeBackgroundPen.overrideDraftingFill = false;
-			rule.criterionXML = crit;
-			const GSErrCode e = ACAPI_GraphicalOverride_CreateOverrideRule (rule, grp.guid);
-			if (e == NoError && rule.guid != APINULLGuid) { list.Push (rule.guid); ++rulesNew; if (!pr.variant.empty ()) varRule = rule.guid; }
-			else { ++rulesFailed; ruleErr = e; }
-		}
-		{	// правило прошлой версии (второй цвет по текстовому свойству) — больше не нужно
-			API_OverrideRule old;
-			old.guid = APINULLGuid;
-			old.name = au::FromW (L"ПСО - 1-комнатные (цвет 2)");
-			if (ACAPI_GraphicalOverride_GetOverrideRuleByName (old, grp.guid) == NoError && old.guid != APINULLGuid)
-				ACAPI_GraphicalOverride_DeleteOverrideRule (old.guid);
-		}
+		const API_PropertyDefinition& def = ov.def;
 		for (const auto& m : marks) {
 			if (!ACAPI_Element_IsPropertyDefinitionAvailable (m.first, def.guid)) { ++noAvail; continue; }
 			std::wstring kind = m.second;
-			if (hasVar && kind == L"1-комнатная" && EnumPropValue (m.first, defVar).find (L"2") != std::wstring::npos)
+			if (ov.hasVar && kind == L"1-комнатная" && EnumPropValue (m.first, ov.defVar).find (L"2") != std::wstring::npos)
 				++variant2;
 			GS::Array<API_Property> props;
 			props.Push (StringProp (def, kind));
@@ -2256,23 +2486,6 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 			} else
 				++failed;
 		}
-		API_OverrideCombination cmb = { APINULLGuid, au::FromW (kPsoCombo) };
-		GS::Array<API_Guid> have;
-		if (ACAPI_GraphicalOverride_GetOverrideCombination (cmb, &have) == NoError && cmb.guid != APINULLGuid) {
-			// порядок, выставленный в проекте, не трогаем: недостающие правила — в конец
-			GS::Array<API_Guid> merged = have;
-			bool missing = false;
-			for (const API_Guid& g : list) if (!merged.Contains (g)) { merged.Push (g); missing = true; }
-			if (missing) ACAPI_GraphicalOverride_ChangeOverrideCombination (cmb, &merged);
-		} else {
-			cmb.guid = APINULLGuid;
-			GS::Array<API_Guid> ordered;
-			for (const API_Guid& g : list) if (g != varRule) ordered.Push (g);
-			if (varRule != APINULLGuid) ordered.Push (varRule);
-			comboNew = ACAPI_GraphicalOverride_CreateOverrideCombination (cmb, ordered) == NoError;
-		}
-		if (updatePens && rulesFailed == 0)
-			StoreModulText (kPsoPensKey, std::to_wstring (tep::kPsoPensVersion));
 		return NoError;
 	});
 	if (err != NoError) {
@@ -2287,15 +2500,10 @@ void MarkPso (const AptData& d, std::vector<std::wstring>& lines)
 					 L"кладовые 148, общедомовые 149, тех.подполье 150.");
 	if (variant2 > 0)
 		lines.push_back (L"   «ПСО - вариант цвета» = Вариант 2 у " + std::to_wstring (variant2) + L" зон 1-комнатных квартир — второй цвет (перо 143).");
-	if (varRule != APINULLGuid)
+	if (ov.varRule != APINULLGuid)
 		lines.push_back (L"   Второй цвет: правило «ПСО - 1-комнатные (вариант 2)» — «ПСО - вариант цвета» содержит 2, меняется сразу при выборе варианта у зоны.");
-	if (rulesRepen > 0)
-		lines.push_back (L"   В существующих правилах «ПСО - …» перья заменены на новые: " + std::to_wstring (rulesRepen) + L" правил.");
-	if (rulesNew > 0 || comboNew)
-		lines.push_back (L"   Созданы правила: " + std::to_wstring (rulesNew) + (comboNew ? L", комбинация «ПСО»." : L".") +
-						 L" Перо, исправленное в правиле вручную, сохранится (до следующей смены перьев в надстройке).");
-	if (rulesFailed > 0)
-		lines.push_back (L"   Не удалось создать правил: " + std::to_wstring (rulesFailed) + L" (код " + std::to_wstring (ruleErr) + L").");
+	PsoOvReport (ov, lines);
+	FormulaPropsReport (ctx, lines);
 	if (noAvail > 0)
 		lines.push_back (L"   У " + std::to_wstring (noAvail) + L" зон нет классификации — свойство не записано.");
 	if (failed > 0)
@@ -3826,5 +4034,49 @@ void DoArrangeStamps ()
 	if (hot > 0) lines.push_back (L"Копии зон из модулей не меняются: " + std::to_wstring (hot) + L" — расставьте маркеры в исходных зонах модуля.");
 	if (errs > 0) lines.push_back (L"Не удалось изменить: " + std::to_wstring (errs) + L" (код " + std::to_wstring ((int) firstErr) + L"; в Teamwork зоны должны быть зарезервированы).");
 	lines.push_back (L"Надписи можно поправить ручками. Вернуть обычный столбик — в параметрах маркера снять «Надписи расставлены по местам» и нажать сброс положения надписей. Отменить — Ctrl+Z.");
+	ShowReport (lines);
+}
+
+
+// ============================================================================= «Обновить графзамены»
+// Свойства-формулы зоны (код и имя категории, номер пола), все правила и комбинации надстройки:
+// «Отделка - проверка зон», «Отделка - подкатегории», «Зоны по категориям», «Зоны по типам пола», «ПСО».
+// Недостающие создаются, условия по кодам категорий переписываются по категориям проекта; цвета, исправленные вручную, остаются.
+void DoUpdateOverrides ()
+{
+	std::vector<std::wstring> lines, warn;
+	std::wstring rulesPath, cfgPath;
+	bool created = false;
+	const otd::Rules rules = LoadRules (warn, rulesPath);
+	const tep::Config cfg = LoadTepConfig (warn, cfgPath, created);
+	ZoneCtx ctx;
+	OvStats st;
+	PsoOv pso;
+	ACAPI_CallUndoableCommand (au::FromW (L"Обновить графзамены"), [&] () -> GSErrCode {
+		ctx = PrepareZoneCtx ({});
+		SyncFinishOverrides (rules, ctx, st);
+		SyncPsoOverrides (cfg, ctx, pso);
+		return NoError;
+	});
+	lines.push_back (L"Графические замены обновлены (группа правил «" + std::wstring (otd::kPropGroup) + L"»). Кодов категорий в проекте: " +
+					 std::to_wstring (ctx.codes.size ()) + L".");
+	for (const FormulaProp* p : { &ctx.code, &ctx.name, &ctx.floor })
+		if (p->ok && !p->created) lines.push_back (L"   Свойство-формула: «" + au::ToW (p->def.name) + L"».");
+	FormulaPropsReport (ctx, lines);
+	OvStatsReport (st, lines);
+	PsoOvReport (pso, lines);
+	if (pso.err != NoError)
+		lines.push_back (L"   Не удалось создать свойство «" + std::wstring (kPsoProp) + L"» (код " + std::to_wstring (pso.err) + L").");
+	lines.push_back (L"Комбинации (Документ → Графическая замена):");
+	if (ctx.code.ok)
+		lines.push_back (L"   «" + std::wstring (otd::kComboByCat) + L"» — по коду категории зоны, цвет меняется сразу при смене категории.");
+	if (ctx.floor.ok)
+		lines.push_back (L"   «" + std::wstring (otd::kComboByFloor) + L"» — по номеру пола зоны (1–" + std::to_wstring (otd::kFloorTypes) +
+						 L", правила «Тип пола - N»), сразу.");
+	lines.push_back (L"   «Отделка - подкатегории» — подкатегории тоже по коду категории (сразу); ошибки и замечания — после расчёта ведомости.");
+	lines.push_back (L"   «Отделка - проверка зон» — после расчёта ведомости.");
+	lines.push_back (L"   «ПСО» — кладовые, общедомовые, тех.подполье сразу; квартиры (студии, 1–3-комнатные) — после «Паспорта квартир» или «ТЭП по дому».");
+	lines.push_back (L"После добавления новых категорий зон запустите команду ещё раз — коды допишутся в условия.");
+	for (const auto& w : warn) lines.push_back (w);
 	ShowReport (lines);
 }

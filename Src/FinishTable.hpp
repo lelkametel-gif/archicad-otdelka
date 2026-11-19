@@ -99,6 +99,8 @@ ZoneCheck		OtherLibCheck (const std::wstring& libName);
 struct OverrideRuleDef {
 	std::wstring	name, prop, value;
 	double			rgb[3] = { 1, 1, 1 };		// цвет фона штриховки зоны 0..1
+	std::wstring	crit;						// готовый критерий (XML); пусто — CriterionXml (prop, value)
+	bool			keepCrit = false;			// у существующего правила условие не менять (правило «всё прочее»)
 };
 struct OverrideComboDef {
 	std::wstring				name;
@@ -112,6 +114,25 @@ std::wstring	CriterionXml (const std::wstring& prop, const std::wstring& value);
 struct CritCond { std::wstring prop, value; bool option = false; };
 std::wstring	CriterionXml (const std::vector<CritCond>& conds);
 std::wstring	CriterionXml (const std::vector<std::pair<std::wstring, std::wstring>>& conds);
+// «Тип элемента = Зона» И (prop = values[0] ИЛИ prop = values[1] …); пусто — только «Зона»
+std::wstring	CriterionAnyXml (const std::wstring& prop, const std::vector<std::wstring>& values);
+
+// ---- Графзамены по свойствам-формулам зоны (код категории, номер пола): цвет меняется сразу, без запуска надстройки.
+// Условия — точные коды категорий проекта («Обновить графзамены» после добавления категорий).
+extern const wchar_t* const kPropCatCode;		// «Код категории зоны» (формула: код категории)
+extern const wchar_t* const kPropCatName;		// «Категория зоны» (формула: имя категории)
+extern const wchar_t* const kPropFloorNo;		// «Номер пола зоны» (формула)
+extern const wchar_t* const kComboByCat;		// «Зоны по категориям»
+extern const wchar_t* const kComboByFloor;		// «Зоны по типам пола»
+extern const wchar_t* const kRuleOtherCats;		// «Категории зон прочие» — все остальные зоны
+const int		kFloorTypes = 20;
+std::wstring	GroupOfCode (const std::wstring& code, const Rules& r);	// по началу кода; kExcludedGroup / r.otherGroup
+// подкатегории (как «Отделка подкатегория - …») по коду категории; codes — коды категорий проекта
+std::vector<OverrideRuleDef>	CategoryRules (const Rules& r, const std::vector<std::wstring>& codes, const std::wstring& codeProp);
+OverrideComboDef				CategoryCombo (const Rules& r);
+std::wstring					FloorRuleName (int n);
+std::vector<OverrideRuleDef>	FloorRules (const std::wstring& floorProp);
+OverrideComboDef				FloorCombo ();
 
 // SVG для проверки на Linux
 std::string		LayoutSvg (const TableLayout& t);

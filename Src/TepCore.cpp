@@ -316,11 +316,28 @@ const std::vector<PsoRule>& PsoRules ()
 		{ L"ПСО - 1-комнатные",		L"1-комнатная",		144 },
 		{ L"ПСО - 2-комнатные",		L"2-комнатная",		141 },
 		{ L"ПСО - 3-комнатные",		L"3-комнатная",		116 },
-		{ L"ПСО - кладовые",		L"Кладовая",		148 },
-		{ L"ПСО - общедомовые",		L"Общедомовое",		149 },
-		{ L"ПСО - тех.подполье",	L"Тех.подполье",	150 },
+		{ L"ПСО - кладовые",		L"Кладовая",		148, L"", true },
+		{ L"ПСО - общедомовые",		L"Общедомовое",		149, L"", true },
+		{ L"ПСО - тех.подполье",	L"Тех.подполье",	150, L"", true },
 	};
 	return r;
+}
+
+
+std::vector<std::wstring> PsoCodes (const Config& c, const std::vector<std::wstring>& codes, const std::wstring& kind)
+{
+	std::vector<std::wstring> res;
+	for (const auto& code0 : codes) {
+		const std::wstring code = Trim (code0);
+		if (code.empty () || c.excluded.Has (code)) continue;
+		std::wstring k;
+		if (c.storage.Has (code)) k = L"Кладовая";
+		else if (c.common.Has (code)) k = L"Общедомовое";
+		else if (c.basement.Has (code)) k = L"Тех.подполье";
+		if (k == kind && std::find (res.begin (), res.end (), code) == res.end ()) res.push_back (code);
+	}
+	std::sort (res.begin (), res.end ());
+	return res;
 }
 
 

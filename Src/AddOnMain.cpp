@@ -30,6 +30,7 @@ static GSErrCode MenuCommandHandler (const API_MenuParams* menuParams)
 		else if (menuParams->menuItemRef.itemIndex == 9) DoPylonFinish ();
 		else if (menuParams->menuItemRef.itemIndex == 10) DoPremisesReport ();
 		else if (menuParams->menuItemRef.itemIndex == 11) DoArrangeStamps ();
+		else if (menuParams->menuItemRef.itemIndex == 12) DoUpdateOverrides ();
 	}
 	return NoError;
 }

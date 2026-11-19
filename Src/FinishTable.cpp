@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <set>
 
 namespace otd {
 
@@ -532,6 +533,24 @@ static std::wstring SubcatRuleName (const std::wstring& g)	{ return L"Отдел
 static std::wstring CheckRuleName (const std::wstring& v)	{ return L"Отделка проверка - " + v; }
 
 
+static const double* SubcatRgb (size_t i)
+{
+	static const double pal[][3] = {
+		{ 0.70, 0.78, 0.92 },	// голубовато-серый
+		{ 1.00, 0.78, 0.55 },	// оранжевый
+		{ 0.72, 0.90, 0.66 },	// зелёный
+		{ 0.84, 0.74, 0.96 },	// сиреневый
+		{ 1.00, 0.95, 0.55 },	// жёлтый
+		{ 0.62, 0.84, 1.00 },	// голубой
+		{ 0.86, 0.76, 0.62 },	// бежево-коричневый
+		{ 1.00, 0.74, 0.84 },	// розовый
+		{ 0.66, 0.92, 0.88 },	// бирюзовый
+		{ 0.92, 0.88, 0.70 },	// песочный
+	};
+	return pal[i % (sizeof (pal) / sizeof (pal[0]))];
+}
+
+
 std::vector<OverrideRuleDef> OverrideRules (const Rules& r)
 {
 	std::vector<OverrideRuleDef> res;
@@ -549,23 +568,10 @@ std::vector<OverrideRuleDef> OverrideRules (const Rules& r)
 	add (CheckRuleName (kChkNotes), kPropCheck, kChkNotes,			1.00, 0.85, 0.20);	// жёлтый
 	add (CheckRuleName (kChkOk), kPropCheck, kChkOk,				0.55, 0.85, 0.45);	// зелёный
 	// подкатегории — светлые цвета по порядку групп в правилах
-	static const double pal[][3] = {
-		{ 0.70, 0.78, 0.92 },	// голубовато-серый
-		{ 1.00, 0.78, 0.55 },	// оранжевый
-		{ 0.72, 0.90, 0.66 },	// зелёный
-		{ 0.84, 0.74, 0.96 },	// сиреневый
-		{ 1.00, 0.95, 0.55 },	// жёлтый
-		{ 0.62, 0.84, 1.00 },	// голубой
-		{ 0.86, 0.76, 0.62 },	// бежево-коричневый
-		{ 1.00, 0.74, 0.84 },	// розовый
-		{ 0.66, 0.92, 0.88 },	// бирюзовый
-		{ 0.92, 0.88, 0.70 },	// песочный
-	};
-	const size_t nPal = sizeof (pal) / sizeof (pal[0]);
 	size_t i = 0;
 	for (const auto& g : r.groupOrder) {
 		if (g.empty () || g == kExcludedGroup) continue;
-		const double* c = pal[i++ % nPal];
+		const double* c = SubcatRgb (i++);
 		add (SubcatRuleName (g), kPropSubcat, g, c[0], c[1], c[2]);
 	}
 	return res;
@@ -605,40 +611,49 @@ static std::wstring XmlEsc (const std::wstring& s)
 }
 
 
-std::wstring CriterionXml (const std::vector<CritCond>& conds)
+static std::wstring PropCritXml (const CritCond& cv)
+{
+	const std::wstring variant = L"<Variant Type=\"StringVariant\"><Status>Normal</Status><Value>" + XmlEsc (cv.value) + L"</Value></Variant>";
+	return
+		L"<ClassGuid>58E4905F-AD57-45F5-8D26-0100000F60BF</ClassGuid>"
+		L"<PropertyCriterion Mv=\"5\" Sv=\"0\">"
+			L"<VBEF::ConditionIO Mv=\"1\" Sv=\"0\">"
+				L"<PropertyDefinitionUserId Version=\"2\">"
+					L"<PrimaryId>1</PrimaryId>"
+					L"<HasGuidId>false</HasGuidId>"
+					L"<Guid>00000000-0000-0000-0000-000000000000</Guid>"
+					L"<HasNameId>true</HasNameId>"
+					L"<Name>" + XmlEsc (cv.prop) + L"</Name>"
+					L"<PropertyDefinitionGroupUserId Version=\"2\">"
+						L"<PrimaryId>1</PrimaryId>"
+						L"<HasGuidId>false</HasGuidId>"
+						L"<Guid>00000000-0000-0000-0000-000000000000</Guid>"
+						L"<HasNameId>true</HasNameId>"
+						L"<Name>" + XmlEsc (kPropGroup) + L"</Name>"
+					L"</PropertyDefinitionGroupUserId>"
+				L"</PropertyDefinitionUserId>"
+				+ (cv.option ? L"<CriteriaOperatorEnum>0</CriteriaOperatorEnum>" + variant
+							 : L"<CriteriaOperatorEnum>6</CriteriaOperatorEnum><Value>" + variant + L"</Value>") +
+			L"</VBEF::ConditionIO>"
+		L"</PropertyCriterion>";
+}
+
+
+// groups: каждая группа — условия через ИЛИ; группы между собой и с типом «Зона» — через И
+static std::wstring CriterionGroupsXml (const std::vector<std::vector<CritCond>>& groups)
 {
 	std::wstring props;
-	for (const auto& cv : conds) {
-		const std::wstring& prop = cv.prop;
-		const std::wstring& value = cv.value;
-		const std::wstring variant = L"<Variant Type=\"StringVariant\"><Status>Normal</Status><Value>" + XmlEsc (value) + L"</Value></Variant>";
+	size_t n = 0;
+	for (const auto& g : groups) {
+		if (g.empty ()) continue;
+		++n;
 		props +=
 				L"<ClassGuid>C6EBD1BD-7702-46FF-8ED9-9CC37648A7C7</ClassGuid>"
 				L"<CompositeCriterion Mv=\"2\" Sv=\"1\">"
 					L"<LogicalOperator>1</LogicalOperator>"
-					L"<CriteriaCount>1</CriteriaCount>"
-					L"<ClassGuid>58E4905F-AD57-45F5-8D26-0100000F60BF</ClassGuid>"
-					L"<PropertyCriterion Mv=\"5\" Sv=\"0\">"
-						L"<VBEF::ConditionIO Mv=\"1\" Sv=\"0\">"
-							L"<PropertyDefinitionUserId Version=\"2\">"
-								L"<PrimaryId>1</PrimaryId>"
-								L"<HasGuidId>false</HasGuidId>"
-								L"<Guid>00000000-0000-0000-0000-000000000000</Guid>"
-								L"<HasNameId>true</HasNameId>"
-								L"<Name>" + XmlEsc (prop) + L"</Name>"
-								L"<PropertyDefinitionGroupUserId Version=\"2\">"
-									L"<PrimaryId>1</PrimaryId>"
-									L"<HasGuidId>false</HasGuidId>"
-									L"<Guid>00000000-0000-0000-0000-000000000000</Guid>"
-									L"<HasNameId>true</HasNameId>"
-									L"<Name>" + XmlEsc (kPropGroup) + L"</Name>"
-								L"</PropertyDefinitionGroupUserId>"
-							L"</PropertyDefinitionUserId>"
-							+ (cv.option ? L"<CriteriaOperatorEnum>0</CriteriaOperatorEnum>" + variant
-										 : L"<CriteriaOperatorEnum>6</CriteriaOperatorEnum><Value>" + variant + L"</Value>") +
-						L"</VBEF::ConditionIO>"
-					L"</PropertyCriterion>"
-				L"</CompositeCriterion>";
+					L"<CriteriaCount>" + std::to_wstring (g.size ()) + L"</CriteriaCount>";
+		for (const auto& cv : g) props += PropCritXml (cv);
+		props += L"</CompositeCriterion>";
 	}
 	// как в файле графической замены, сохранённом из Archicad 27 (тип элемента «Зона» + свойство «равно»)
 	return
@@ -649,7 +664,7 @@ std::wstring CriterionXml (const std::vector<CritCond>& conds)
 			L"<ClassGuid>C6EBD1BD-7702-46FF-8ED9-9CC37648A7C7</ClassGuid>"
 			L"<CompositeCriterion Mv=\"2\" Sv=\"1\">"
 				L"<LogicalOperator>2</LogicalOperator>"
-				L"<CriteriaCount>" + std::to_wstring (conds.size () + 1) + L"</CriteriaCount>"
+				L"<CriteriaCount>" + std::to_wstring (n + 1) + L"</CriteriaCount>"
 				L"<ClassGuid>C6EBD1BD-7702-46FF-8ED9-9CC37648A7C7</ClassGuid>"
 				L"<CompositeCriterion Mv=\"2\" Sv=\"1\">"
 					L"<LogicalOperator>1</LogicalOperator>"
@@ -672,6 +687,22 @@ std::wstring CriterionXml (const std::vector<CritCond>& conds)
 }
 
 
+std::wstring CriterionXml (const std::vector<CritCond>& conds)
+{
+	std::vector<std::vector<CritCond>> groups;
+	for (const auto& c : conds) groups.push_back ({ c });
+	return CriterionGroupsXml (groups);
+}
+
+
+std::wstring CriterionAnyXml (const std::wstring& prop, const std::vector<std::wstring>& values)
+{
+	std::vector<CritCond> any;
+	for (const auto& v : values) any.push_back ({ prop, v, false });
+	return CriterionGroupsXml ({ any });
+}
+
+
 std::wstring CriterionXml (const std::vector<std::pair<std::wstring, std::wstring>>& conds)
 {
 	std::vector<CritCond> c;
@@ -683,6 +714,124 @@ std::wstring CriterionXml (const std::vector<std::pair<std::wstring, std::wstrin
 std::wstring CriterionXml (const std::wstring& prop, const std::wstring& value)
 {
 	return CriterionXml (std::vector<CritCond> { { prop, value, false } });
+}
+
+// ---- графзамены по свойствам-формулам зоны
+const wchar_t* const kPropCatCode = L"Код категории зоны";
+const wchar_t* const kPropCatName = L"Категория зоны";
+const wchar_t* const kPropFloorNo = L"Номер пола зоны";
+const wchar_t* const kComboByCat = L"Зоны по категориям";
+const wchar_t* const kComboByFloor = L"Зоны по типам пола";
+const wchar_t* const kRuleOtherCats = L"Категории зон прочие";
+
+
+std::wstring GroupOfCode (const std::wstring& code, const Rules& r)
+{
+	size_t best = 0;
+	std::wstring g;
+	const std::wstring c = Trim (code);
+	for (const auto& kv : r.groupByCode) {
+		const std::wstring pre = Trim (kv.first);
+		if (!pre.empty () && pre.size () > best && c.compare (0, pre.size (), pre) == 0) {
+			best = pre.size ();
+			g = kv.second;
+		}
+	}
+	return g.empty () ? r.otherGroup : g;
+}
+
+
+std::vector<OverrideRuleDef> CategoryRules (const Rules& r, const std::vector<std::wstring>& codesIn, const std::wstring& codeProp)
+{
+	std::set<std::wstring> codes;
+	for (const auto& c : codesIn) if (!Trim (c).empty ()) codes.insert (Trim (c));
+	std::vector<OverrideRuleDef> res;
+	auto add = [&] (const std::wstring& name, const std::vector<std::wstring>& vals, const double* rgb) {
+		OverrideRuleDef d;
+		d.name = name;
+		d.rgb[0] = rgb[0]; d.rgb[1] = rgb[1]; d.rgb[2] = rgb[2];
+		d.crit = CriterionAnyXml (codeProp, vals);
+		res.push_back (d);
+	};
+	auto prefixesOf = [&r] (const std::wstring& g) {
+		std::vector<std::wstring> p;
+		for (const auto& kv : r.groupByCode) if (kv.second == g) p.push_back (Trim (kv.first));
+		return p;
+	};
+	size_t i = 0;
+	for (const auto& g : r.groupOrder) {
+		if (g.empty () || g == kExcludedGroup || g == r.otherGroup) { if (g == r.otherGroup) ++i; continue; }
+		std::vector<std::wstring> vals;
+		for (const auto& c : codes) if (GroupOfCode (c, r) == g) vals.push_back (c);
+		if (vals.empty ()) vals = prefixesOf (g);		// кодов нет — заведомо не совпадёт (код из 1 цифры)
+		if (vals.empty ()) vals.push_back (L"-");
+		add (SubcatRuleName (g), vals, SubcatRgb (i++));
+	}
+	{	// не входят в ведомость (8, 9) и без подкатегории
+		std::vector<std::wstring> vals;
+		for (const auto& c : codes) {
+			const std::wstring g = GroupOfCode (c, r);
+			if (g == kExcludedGroup || g == r.otherGroup) vals.push_back (c);
+		}
+		if (vals.empty ()) vals = prefixesOf (kExcludedGroup);
+		if (vals.empty ()) vals.push_back (L"-");
+		static const double pink[3] = { 1.00, 0.74, 0.84 };
+		add (SubcatRuleName (r.otherGroup), vals, pink);
+	}
+	{
+		static const double grey[3] = { 0.85, 0.85, 0.85 };
+		OverrideRuleDef d;
+		d.name = kRuleOtherCats;
+		d.rgb[0] = grey[0]; d.rgb[1] = grey[1]; d.rgb[2] = grey[2];
+		d.crit = CriterionAnyXml (codeProp, {});
+		d.keepCrit = true;
+		res.push_back (d);
+	}
+	return res;
+}
+
+
+OverrideComboDef CategoryCombo (const Rules& r)
+{
+	OverrideComboDef c;
+	c.name = kComboByCat;
+	for (const auto& g : r.groupOrder)
+		if (!g.empty () && g != kExcludedGroup && g != r.otherGroup) c.rules.push_back (SubcatRuleName (g));
+	c.rules.push_back (SubcatRuleName (r.otherGroup));
+	c.rules.push_back (kRuleOtherCats);
+	return c;
+}
+
+
+std::wstring FloorRuleName (int n) { return L"Тип пола - " + std::to_wstring (n); }
+
+
+std::vector<OverrideRuleDef> FloorRules (const std::wstring& floorProp)
+{
+	static const double pal[kFloorTypes][3] = {
+		{ 0.90, 0.30, 0.30 }, { 0.30, 0.60, 0.95 }, { 0.40, 0.80, 0.40 }, { 1.00, 0.75, 0.20 }, { 0.70, 0.45, 0.90 },
+		{ 0.30, 0.85, 0.85 }, { 1.00, 0.55, 0.75 }, { 0.65, 0.50, 0.30 }, { 0.75, 0.90, 0.30 }, { 0.20, 0.45, 0.60 },
+		{ 1.00, 0.60, 0.40 }, { 0.55, 0.75, 1.00 }, { 0.20, 0.60, 0.40 }, { 0.95, 0.90, 0.50 }, { 0.85, 0.55, 0.95 },
+		{ 0.60, 0.60, 0.60 }, { 0.85, 0.20, 0.55 }, { 0.50, 0.85, 0.70 }, { 0.95, 0.75, 0.60 }, { 0.40, 0.40, 0.80 },
+	};
+	std::vector<OverrideRuleDef> res;
+	for (int n = 1; n <= kFloorTypes; ++n) {
+		OverrideRuleDef d;
+		d.name = FloorRuleName (n);
+		for (int k = 0; k < 3; ++k) d.rgb[k] = pal[n - 1][k];
+		d.crit = CriterionAnyXml (floorProp, { std::to_wstring (n) });
+		res.push_back (d);
+	}
+	return res;
+}
+
+
+OverrideComboDef FloorCombo ()
+{
+	OverrideComboDef c;
+	c.name = kComboByFloor;
+	for (int n = 1; n <= kFloorTypes; ++n) c.rules.push_back (FloorRuleName (n));
+	return c;
 }
 
 }	// namespace otd

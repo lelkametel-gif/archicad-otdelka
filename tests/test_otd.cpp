@@ -499,6 +499,31 @@ int main (int argc, char** argv)
 		for (const auto& cb : cd) for (const auto& n : cb.rules) CHECK (names.count (n) == 1);
 		const std::wstring x = CriterionXml (kPropSubcat, L"A&B");
 		CHECK (x.find (L"<Value>A&amp;B</Value>") != std::wstring::npos && x.find (L"<Name>ПСО и отделка</Name>") != std::wstring::npos);
+		CHECK (x.find (L"<CriteriaCount>2</CriteriaCount>") != std::wstring::npos && x.find (L"<CriteriaOperatorEnum>6</CriteriaOperatorEnum>") != std::wstring::npos);
+		// графзамены по коду категории (свойство-формула): точные коды проекта, ИЛИ
+		const std::vector<std::wstring> codes = { L"1010", L"1020", L"5010", L"5020", L"3110", L"8010", L"9010", L"", L"2110" };
+		CHECK (GroupOfCode (L"5010", r) == L"Встроенные помещения" && GroupOfCode (L"8010", r) == kExcludedGroup && GroupOfCode (L"0", r) == r.otherGroup);
+		const std::vector<OverrideRuleDef> cr = CategoryRules (r, codes, L"Код категории зоны_новый");
+		const OverrideComboDef cc = CategoryCombo (r);
+		CHECK (cr.size () == cc.rules.size () && cc.rules.back () == kRuleOtherCats && cr.back ().keepCrit);
+		for (size_t i = 0; i < cr.size (); ++i) CHECK (cr[i].name == cc.rules[i]);
+		const OverrideRuleDef* emb = nullptr; const OverrideRuleDef* oth = nullptr; const OverrideRuleDef* att = nullptr;
+		for (const auto& d : cr) {
+			if (d.name == L"Отделка подкатегория - Встроенные помещения") emb = &d;
+			if (d.name == L"Отделка подкатегория - Прочие помещения") oth = &d;
+			if (d.name == L"Отделка подкатегория - Чердак") att = &d;
+		}
+		CHECK (emb && emb->crit.find (L"<Value>5010</Value>") != std::wstring::npos && emb->crit.find (L"<Value>5020</Value>") != std::wstring::npos &&
+			   emb->crit.find (L"<Value>1010</Value>") == std::wstring::npos && emb->crit.find (L"<CriteriaCount>2</CriteriaCount>") != std::wstring::npos &&
+			   emb->crit.find (L"<Name>Код категории зоны_новый</Name>") != std::wstring::npos);
+		CHECK (oth && oth->crit.find (L"<Value>8010</Value>") != std::wstring::npos && oth->crit.find (L"<Value>9010</Value>") != std::wstring::npos);
+		CHECK (att && att->crit.find (L"<Value>7</Value>") != std::wstring::npos);		// кодов 7xxx нет — заведомо не совпадёт
+		CHECK (cr.back ().crit.find (L"PropertyCriterion") == std::wstring::npos);
+		const std::vector<OverrideRuleDef> fr = FloorRules (L"Номер пола зоны");
+		CHECK (fr.size () == 20 && FloorCombo ().rules.size () == 20 && fr[4].name == L"Тип пола - 5" && fr[4].crit.find (L"<Value>5</Value>") != std::wstring::npos);
+		std::set<std::wstring> rgbs;
+		for (const auto& d : fr) rgbs.insert (std::to_wstring (d.rgb[0]) + std::to_wstring (d.rgb[1]) + std::to_wstring (d.rgb[2]));
+		CHECK (rgbs.size () == 20);
 	}
 
 	std::printf ("%d проверок, ошибок: %d\n", checks, fails);

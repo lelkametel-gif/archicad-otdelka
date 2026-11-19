@@ -90,13 +90,15 @@ std::vector<std::wstring>	NotApartmentRooms (const std::vector<Room>& rooms, con
 // общедомовые (common), тех. подполье (basement). Остальные — пусто.
 // variant — правило только по свойству «ПСО - вариант цвета» «содержит variant» (как сделано вручную в проекте 16.11.2026),
 // без условия по «ПСО - тип»; value тогда не используется
-struct PsoRule { std::wstring rule, value; short pen = 0; std::wstring variant; };
+struct PsoRule { std::wstring rule, value; short pen = 0; std::wstring variant; bool byCode = false; };	// byCode — условие по коду категории (сразу)
 // «Вариант 2» свойства «ПСО - вариант цвета» (выбирает проектировщик): тип зоны -> тип для графзамены
 // (1-комнатная -> «1-комнатная (вариант 2)»); у остальных типов второго варианта нет — без изменений
 std::wstring			PsoVariant2 (const std::wstring& kind);
 // kPsoPensVersion — повышать при смене перьев по умолчанию: правила проекта со старой версией получат новые перья
 const int					kPsoPensVersion = 5;	// 3–4: второй цвет — по свойству-списку прямо в графзамене (4 — повтор после ложной проверки)
 const std::vector<PsoRule>&	PsoRules ();
+// Коды категорий проекта, которым PsoKinds даёт вид kind по коду (Кладовая / Общедомовое / Тех.подполье)
+std::vector<std::wstring>	PsoCodes (const Config& c, const std::vector<std::wstring>& codes, const std::wstring& kind);
 std::vector<std::wstring>	PsoKinds (const std::vector<Room>& rooms, const std::vector<Apartment>& apts, const Config& c);
 // Раскладка маркера зоны как в томе АР: имя у верхней стены по центру, под ним треугольник номера пола,
 // площадь — в правом нижнем углу. polys — контур зоны, angle — поворот здания (рад), basis — высота текста, м
