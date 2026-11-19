@@ -499,7 +499,7 @@ int main (int argc, char** argv)
 		for (const auto& cb : cd) for (const auto& n : cb.rules) CHECK (names.count (n) == 1);
 		const std::wstring x = CriterionXml (kPropSubcat, L"A&B");
 		CHECK (x.find (L"<Value>A&amp;B</Value>") != std::wstring::npos && x.find (L"<Name>ПСО и отделка</Name>") != std::wstring::npos);
-		CHECK (x.find (L"<CriteriaCount>2</CriteriaCount>") != std::wstring::npos && x.find (L"<CriteriaOperatorEnum>4</CriteriaOperatorEnum>") != std::wstring::npos);
+		CHECK (x.find (L"<CriteriaCount>2</CriteriaCount>") != std::wstring::npos && x.find (L"<CriteriaOperatorEnum>0</CriteriaOperatorEnum>") != std::wstring::npos);
 		// графзамены по коду категории (свойство-формула): точные коды проекта, ИЛИ
 		CHECK (GroupOfCode (L"5010", r) == L"Встроенные помещения" && GroupOfCode (L"8010", r) == kExcludedGroup && GroupOfCode (L"0", r) == r.otherGroup);
 		const std::vector<OverrideRuleDef> cr = CategoryRules (r, L"Код категории зоны_новый");
@@ -520,7 +520,7 @@ int main (int argc, char** argv)
 		CHECK (x.find (L"<PropertyCriterion Mv=\"6\" Sv=\"0\"><VBEF::ConditionIO Mv=\"2\" Sv=\"0\">") != std::wstring::npos);
 		CHECK (cr.back ().crit.find (L"PropertyCriterion") == std::wstring::npos);
 		const std::vector<OverrideRuleDef> fr = FloorRules (L"Номер пола зоны");
-		CHECK (fr.size () == 20 && FloorCombo ().rules.size () == 20 && fr[4].name == L"Тип пола - 5" && fr[4].crit.find (L"<Value>5</Value>") != std::wstring::npos && fr[4].crit.find (L"<CriteriaOperatorEnum>4</CriteriaOperatorEnum>") != std::wstring::npos);
+		CHECK (fr.size () == 20 && FloorCombo ().rules.size () == 20 && fr[4].name == L"Тип пола - 5" && fr[4].crit.find (L"<Value>5</Value>") != std::wstring::npos && fr[4].crit.find (L"<CriteriaOperatorEnum>0</CriteriaOperatorEnum>") != std::wstring::npos);
 		std::set<std::wstring> rgbs;
 		for (const auto& d : fr) rgbs.insert (std::to_wstring (d.rgb[0]) + std::to_wstring (d.rgb[1]) + std::to_wstring (d.rgb[2]));
 		CHECK (rgbs.size () == 20);

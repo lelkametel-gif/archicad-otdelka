@@ -111,9 +111,9 @@ std::vector<OverrideComboDef>	OverrideCombos (const Rules& r);
 // Критерий правила: «Тип элемента = Зона» И «свойство prop (группа kPropGroup) = value» (формат Archicad 27)
 std::wstring	CriterionXml (const std::wstring& prop, const std::wstring& value);
 // несколько условий (И) для зон. option = свойство-список (вариант по имени), иначе текстовое свойство
-// Операторы в XML — по порядку меню Archicad 27: 4 совпадает с, 5 не совпадает с, 6 содержит, 7 не содержит, 8 начинается с, 9 заканчивается на
-// (6 и 8 — из правил пользователя 19.11.2026; до этого «равно» ошибочно писалось как 6 = «содержит»)
-const int kOpEquals = 4, kOpContains = 6, kOpStartsWith = 8;
+// Операторы в XML (из правил, сделанных пользователем вручную в Archicad 27, 19.11.2026): 0 совпадает с, 6 содержит, 8 начинается с.
+// До 19.11.2026 «равно» ошибочно писалось как 6 (= «содержит»), потом как 4 (Archicad не принял).
+const int kOpEquals = 0, kOpContains = 6, kOpStartsWith = 8;
 struct CritCond { std::wstring prop, value; bool option = false; int op = kOpEquals; };
 std::wstring	CriterionXml (const std::vector<CritCond>& conds);
 std::wstring	CriterionXml (const std::vector<std::pair<std::wstring, std::wstring>>& conds);

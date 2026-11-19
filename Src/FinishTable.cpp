@@ -659,7 +659,7 @@ static std::wstring CriterionGroupsXml (const std::vector<std::vector<CritCond>>
 	// как в файле графической замены, сохранённом из Archicad 27 (тип элемента «Зона» + свойство «равно»)
 	return
 		L"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>"
-		L"<CriterionExpression Mv=\"2\" Sv=\"1\">"
+		L"<CriterionExpression Mv=\"2\" Sv=\"2\">"
 			L"<TextMatchType>1</TextMatchType>"
 			L"<Size>1</Size>"
 			L"<ClassGuid>C6EBD1BD-7702-46FF-8ED9-9CC37648A7C7</ClassGuid>"
