@@ -23,5 +23,7 @@ void DoPremisesReport ();
 void DoArrangeStamps ();
 // Свойства-формулы зоны, все правила и комбинации графической замены надстройки: создать недостающие, обновить условия
 void DoUpdateOverrides ();
+// Зоны чужих категорий (свой маркер) -> категории HimeraZone_АСП по имени зоны, маркер HimeraZone_АСП, параметры переносятся
+void DoConvertZones ();
 
 #endif

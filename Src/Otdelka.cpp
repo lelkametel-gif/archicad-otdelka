@@ -34,6 +34,7 @@
 #include "TepCore.hpp"
 #include "PremisesReport.hpp"
 #include "ZoneParamsFile.hpp"
+#include "CatMap.hpp"
 #include "ApiUtils.hpp"
 
 #include <algorithm>
@@ -4137,5 +4138,299 @@ void DoUpdateOverrides ()
 	lines.push_back (L"   «Отделка - проверка зон» — после расчёта ведомости.");
 	lines.push_back (L"   «ПСО» — кладовые, общедомовые, тех.подполье сразу; квартиры (студии, 1–3-комнатные) — после «Паспорта квартир» или «ТЭП по дому».");
 	for (const auto& w : warn) lines.push_back (w);
+	ShowReport (lines);
+}
+
+
+// ============================================================================= перевод зон на категории HimeraZone_АСП
+// Проект, где зоны стоят на своих категориях со своим маркером (HimeraZone22 и др.), а наши категории импортированы рядом:
+// категория подбирается по имени зоны (старая категория — подсказка группы), маркер меняется на HimeraZone_АСП,
+// значения параметров переносятся по именам. Чего не подобралось — правила в «Документы\Перевод категорий зон.txt».
+
+namespace {
+
+const wchar_t*	kZoneLibName = L"HimeraZone_АСП";
+const wchar_t*	kCatMapFile = L"Перевод категорий зон.txt";
+
+bool ZoneLibInd (Int32& libInd)
+{
+	API_LibPart lp = {};
+	const GS::UniString n = au::FromW (kZoneLibName);
+	GS::ucsncpy (lp.docu_UName, n.ToUStr (), API_UniLongNameLen - 1);
+	const GSErrCode err = ACAPI_LibraryPart_Search (&lp, false, true);
+	if (lp.location != nullptr) { delete lp.location; lp.location = nullptr; }
+	libInd = lp.index;
+	return err == NoError && libInd > 0;
+}
+
+struct ZoneCatInfo {
+	API_AttributeIndex	index;
+	std::wstring		code, name;
+	bool				ours = false;		// маркер категории — HimeraZone_АСП
+};
+
+std::vector<ZoneCatInfo> LoadZoneCatInfo ()
+{
+	std::vector<ZoneCatInfo> res;
+	ACAPI_Attribute_EnumerateAttributesByType (API_ZoneCatID, [&] (API_Attribute& a) {
+		ZoneCatInfo c;
+		c.index = a.header.index;
+		c.code = otd::Trim (au::ToW (GS::UniString (a.zoneCat.catCode)));
+		c.name = AttrName (API_ZoneCatID, a.header.index);
+		const std::wstring stamp = otd::Lower (au::ToW (GS::UniString (a.zoneCat.stampName)));
+		const std::wstring g = otd::Lower (au::ToW (APIGuidToString (a.zoneCat.stampMainGuid)));
+		c.ours = stamp.find (otd::Lower (kZoneLibName)) != std::wstring::npos || g.find (L"74d2561b-1b23-4787-ae10-4a78aa88340e") != std::wstring::npos;
+		res.push_back (c);
+	});
+	return res;
+}
+
+std::wstring LoadCatMapText (IO::Location& loc, bool& created)
+{
+	created = false;
+	std::string bytes;
+	if (!DocumentsFile (kCatMapFile, loc)) return cm::DefaultRulesText ();
+	if (!ReadBytes (loc, bytes)) {
+		created = true;
+		return cm::DefaultRulesText ();
+	}
+	if (bytes.size () >= 3 && bytes.compare (0, 3, "\xEF\xBB\xBF") == 0) bytes.erase (0, 3);
+	std::wstring t = otd::FromUtf8 (bytes);
+	t.erase (std::remove (t.begin (), t.end (), L'\r'), t.end ());
+	return t;
+}
+
+void SaveCatMapText (const IO::Location& loc, const std::wstring& text)
+{
+	std::wstring crlf;
+	for (wchar_t c : text) { if (c == L'\n') crlf += L'\r'; crlf += c; }
+	WriteBytes (loc, "\xEF\xBB\xBF" + otd::ToUtf8 (crlf));
+}
+
+}	// namespace
+
+void DoConvertZones ()
+{
+	{
+		API_DatabaseInfo fp = {};
+		fp.typeID = APIWind_FloorPlanID;
+		ACAPI_Database_ChangeCurrentDatabase (&fp);
+	}
+	Int32 targetLib = 0;
+	if (!ZoneLibInd (targetLib)) {
+		ShowReport ({ L"Объект «HimeraZone_АСП» не найден в библиотеке проекта.",
+					  L"Добавьте HimeraZone_АСП.gsm в библиотеку (Файл → Библиотеки → Менеджер библиотек) и запустите команду снова." });
+		return;
+	}
+	const std::vector<ZoneCatInfo> cats = LoadZoneCatInfo ();
+	std::vector<cm::TargetCat> targets;
+	std::map<std::wstring, const ZoneCatInfo*> ourByCode;
+	for (const auto& c : cats) {
+		if (!c.ours || c.code.empty ()) continue;
+		if (ourByCode.count (c.code)) continue;		// две наши категории с одним кодом — берётся первая
+		ourByCode[c.code] = &c;
+		targets.push_back ({ c.code, c.name });
+	}
+	if (targets.empty ()) {
+		ShowReport ({ L"В проекте нет категорий зон с маркером HimeraZone_АСП.",
+					  L"Импортируйте «Категории зон - HimeraZone_АСП (импорт).xml» (папка AddPars — рядом с файлом) в Менеджере реквизитов и запустите команду снова." });
+		return;
+	}
+	auto catOf = [&cats] (const API_AttributeIndex& idx) -> const ZoneCatInfo* {
+		for (const auto& c : cats) if (c.index == idx) return &c;
+		return nullptr;
+	};
+
+	// зоны: выделенные, иначе все
+	GS::Array<API_Guid> list;
+	bool selected = false;
+	{
+		API_SelectionInfo selInfo = {};
+		GS::Array<API_Neig> sel;
+		ACAPI_Selection_Get (&selInfo, &sel, false);
+		BMKillHandle ((GSHandle*) &selInfo.marquee.coords);
+		for (const API_Neig& n : sel) {
+			API_Elem_Head h = {};
+			h.guid = n.guid;
+			if (ACAPI_Element_GetHeader (&h) == NoError && h.type.typeID == API_ZoneID) list.Push (n.guid);
+		}
+		selected = !list.IsEmpty ();
+		if (!selected) ACAPI_Element_GetElemList (API_ElemType (API_ZoneID), &list);
+	}
+
+	IO::Location mapLoc;
+	bool mapCreated = false;
+	std::wstring mapText = LoadCatMapText (mapLoc, mapCreated);
+	const std::vector<cm::Rule> rules = cm::ParseRules (mapText);
+
+	// план: что с каждой зоной
+	struct Plan {
+		API_Guid			guid;
+		const ZoneCatInfo*	newCat = nullptr;		// nullptr — категорию не менять
+		bool				stamp = false;			// сменить маркер на HimeraZone_АСП
+	};
+	std::vector<Plan> plans;
+	std::map<std::wstring, int> moved;						// «старая → имя → новая» -> зон
+	std::map<std::pair<std::wstring, std::wstring>, cm::Unresolved> unres;
+	int hot = 0, alreadyOurs = 0, skippedByRule = 0, stampOnly = 0;
+	std::map<std::wstring, int> oldLibs;
+	for (const API_Guid& g : list) {
+		API_Element el = {};
+		el.header.guid = g;
+		if (ACAPI_Element_Get (&el) != NoError) continue;
+		if (el.header.hotlinkGuid != APINULLGuid) { ++hot; continue; }
+		const ZoneCatInfo* cur = catOf (el.zone.catInd);
+		const std::wstring curName = cur != nullptr ? cur->name : std::wstring ();
+		const std::wstring curCode = cur != nullptr ? cur->code : std::wstring ();
+		const std::wstring zname = otd::Trim (au::ToW (GS::UniString (el.zone.roomName)));
+		Plan p;
+		p.guid = g;
+		p.stamp = el.zone.libInd != targetLib;
+		if (cur != nullptr && cur->ours) {
+			++alreadyOurs;
+			if (p.stamp) { ++stampOnly; plans.push_back (p); }
+			if (p.stamp) oldLibs[otd::Trim (au::ToW (au::LibPartName (el.zone.libInd)))] += 1;
+			continue;
+		}
+		const std::wstring oldCat = otd::Trim ((curCode.empty () ? L"" : curCode + L" ") + curName);
+		cm::Result r = cm::Match (targets, rules, curName, zname, el.header.floorInd);
+		if (r.how == cm::None && !curCode.empty ())		// правило могли записать с кодом старой категории
+			r = cm::Match (targets, rules, oldCat, zname, el.header.floorInd);
+		if (r.how == cm::SkipByRule) { ++skippedByRule; continue; }
+		if (r.how != cm::ByName && r.how != cm::ByRule) {
+			cm::Unresolved& u = unres[{ curName, cm::NormName (zname) }];
+			u.oldCat = curName;
+			if (u.zoneName.empty ()) u.zoneName = zname;
+			u.variants = r.variants;
+			u.count += 1;
+			continue;
+		}
+		p.newCat = ourByCode[r.code];
+		if (p.stamp) oldLibs[otd::Trim (au::ToW (au::LibPartName (el.zone.libInd)))] += 1;
+		moved[oldCat + L"  →  «" + zname + L"»  →  " + r.code + L" " + p.newCat->name + (r.how == cm::ByRule ? L" (по правилу)" : L"")] += 1;
+		plans.push_back (p);
+	}
+
+	// скрытые / заблокированные слои — на время команды
+	std::vector<std::pair<API_AttributeIndex, short>> layerFlags;
+	for (const Plan& p : plans) {
+		API_Elem_Head h = {};
+		h.guid = p.guid;
+		if (ACAPI_Element_GetHeader (&h) != NoError) continue;
+		bool known = false;
+		for (const auto& kv : layerFlags) if (kv.first == h.layer) known = true;
+		if (known) continue;
+		API_Attribute a = {};
+		a.header.typeID = API_LayerID;
+		a.header.index = h.layer;
+		if (ACAPI_Attribute_Get (&a) == NoError && (a.header.flags & (APILay_Hidden | APILay_Locked)) != 0)
+			layerFlags.push_back ({ h.layer, a.header.flags });
+	}
+	auto setLayerFlags = [&] (bool open) {
+		for (const auto& kv : layerFlags) {
+			API_Attribute a = {};
+			a.header.typeID = API_LayerID;
+			a.header.index = kv.first;
+			if (ACAPI_Attribute_Get (&a) != NoError) continue;
+			a.header.flags = open ? (short) (kv.second & ~(APILay_Hidden | APILay_Locked)) : kv.second;
+			ACAPI_Attribute_Modify (&a, nullptr);
+		}
+	};
+
+	int doneCat = 0, doneStamp = 0, errs = 0;
+	GSErrCode firstErr = NoError;
+	if (!plans.empty ()) {
+		ACAPI_CallUndoableCommand (au::FromW (L"Перевести зоны на категории HimeraZone_АСП"), [&] () -> GSErrCode {
+			setLayerFlags (true);
+			for (const Plan& p : plans) {
+				API_Element el = {};
+				el.header.guid = p.guid;
+				if (ACAPI_Element_Get (&el) != NoError) continue;
+				API_Element mask;
+				ACAPI_ELEMENT_MASK_CLEAR (mask);
+				if (p.newCat != nullptr) {
+					el.zone.catInd = p.newCat->index;
+					ACAPI_ELEMENT_MASK_SET (mask, API_ZoneType, catInd);
+				}
+				GSErrCode e = NoError;
+				if (p.stamp) {
+					// новый маркер: параметры по умолчанию HimeraZone_АСП + значения старых параметров с теми же именами
+					API_ElementMemo memo = {};
+					e = ACAPI_Element_GetMemo (p.guid, &memo, APIMemoMask_AddPars);
+					zp::ZoneRec rec;
+					if (e == NoError) rec.pars = ReadPars (memo.params);
+					double pa = 0, pb = 0;
+					Int32 n = 0;
+					API_AddParType** pars = nullptr;
+					if (e == NoError) e = ACAPI_LibraryPart_GetParams (targetLib, &pa, &pb, &n, &pars);
+					if (e == NoError) {
+						if (memo.params != nullptr) ACAPI_DisposeAddParHdl (&memo.params);
+						memo.params = pars;
+						ApplyPars (memo.params, rec);
+						el.zone.libInd = targetLib;
+						ACAPI_ELEMENT_MASK_SET (mask, API_ZoneType, libInd);
+						e = ACAPI_Element_Change (&el, &mask, &memo, APIMemoMask_AddPars, true);
+					}
+					ACAPI_DisposeElemMemoHdls (&memo);
+				} else
+					e = ACAPI_Element_Change (&el, &mask, nullptr, 0, true);
+				if (e != NoError) { if (errs++ == 0) firstErr = e; continue; }
+				if (p.newCat != nullptr) ++doneCat;
+				if (p.stamp) ++doneStamp;
+			}
+			setLayerFlags (false);
+			return NoError;
+		});
+	}
+
+	// неподобранное — в файл правил
+	std::vector<cm::Unresolved> un;
+	int unresZones = 0;
+	for (const auto& kv : unres) { un.push_back (kv.second); unresZones += kv.second.count; }
+	std::sort (un.begin (), un.end (), [] (const cm::Unresolved& a, const cm::Unresolved& b) { return a.count > b.count; });
+	const std::wstring newText = cm::AppendUnresolved (mapText, un, targets);
+	if (mapCreated || newText != mapText) SaveCatMapText (mapLoc, newText);
+
+	std::vector<std::wstring> lines;
+	lines.push_back (std::wstring (L"Перевод зон на категории HimeraZone_АСП — ") + (selected ? L"выделенные зоны: " : L"все зоны проекта: ") +
+					 std::to_wstring (list.GetSize ()) + L".");
+	lines.push_back (L"Категория сменена у " + std::to_wstring (doneCat) + L" зон, маркер заменён на HimeraZone_АСП у " + std::to_wstring (doneStamp) + L" зон.");
+	if (!oldLibs.empty ()) {
+		std::wstring s;
+		for (const auto& kv : oldLibs) s += (s.empty () ? L"" : L", ") + (kv.first.empty () ? std::wstring (L"(без объекта)") : kv.first) + L" — " + std::to_wstring (kv.second);
+		lines.push_back (L"   Был маркер: " + s + L". Значения параметров (Квартира, Секция и др.) перенесены по именам.");
+	}
+	if (alreadyOurs > 0)
+		lines.push_back (L"Уже на наших категориях: " + std::to_wstring (alreadyOurs) + L" зон" +
+						 (stampOnly > 0 ? L" (у " + std::to_wstring (stampOnly) + L" из них заменён только маркер)." : L"."));
+	if (skippedByRule > 0) lines.push_back (L"Не переводить (правило с «-»): " + std::to_wstring (skippedByRule) + L" зон.");
+	if (hot > 0) lines.push_back (L"Зоны модулей (копии) не меняются: " + std::to_wstring (hot) + L" — переведите их в исходном файле или на этаже-источнике.");
+	if (errs > 0) lines.push_back (L"Не удалось изменить: " + std::to_wstring (errs) + L" зон (код " + std::to_wstring (firstErr) + L"; в Teamwork — зарезервируйте зоны).");
+	if (!layerFlags.empty ()) lines.push_back (L"Зоны на скрытых / заблокированных слоях тоже переведены (слои включались на время команды).");
+	lines.push_back (L"");
+	if (!moved.empty ()) {
+		lines.push_back (L"Как переведены (старая категория → имя зоны → новая категория: зон):");
+		int k = 0;
+		for (const auto& kv : moved) {
+			if (++k > 80) { lines.push_back (L"   … и ещё " + std::to_wstring (moved.size () - 80) + L" сочетаний."); break; }
+			lines.push_back (L"   " + kv.first + L": " + std::to_wstring (kv.second));
+		}
+		lines.push_back (L"");
+	}
+	if (unresZones > 0) {
+		lines.push_back (L"НЕ подобрано: " + std::to_wstring (unresZones) + L" зон — они не изменены:");
+		int k = 0;
+		for (const auto& u : un) {
+			if (++k > 40) { lines.push_back (L"   …"); break; }
+			std::wstring v;
+			for (const auto& c : u.variants) v += (v.empty () ? L" — варианты: " : L", ") + c;
+			lines.push_back (L"   " + u.oldCat + L" | «" + u.zoneName + L"»: " + std::to_wstring (u.count) + v);
+		}
+		lines.push_back (L"Они дописаны в файл " + PathOf (mapLoc) + L": впишите код нужной категории после «=» и запустите команду ещё раз.");
+	} else
+		lines.push_back (L"Все зоны подобраны.");
+	lines.push_back (L"Ошибся подбор — впишите правило «старая категория | имя зоны = код» в " + std::wstring (kCatMapFile) + L" и запустите снова (Ctrl+Z — отменить перевод).");
+	lines.push_back (L"Старые категории после перевода можно удалить в Менеджере реквизитов (если на них не осталось зон).");
+	if (unresZones > 0) OpenInShell (PathOf (mapLoc), true);
 	ShowReport (lines);
 }
