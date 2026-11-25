@@ -53,8 +53,8 @@ if bByMVO then		! из параметров модельного вида (гл�
 	for i = 1 to 5
 		_g[i] = -1
 	next i
-	_ok = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "iShowItemTitle", _g)
-	if _ok = 0 or _g[1] < 0 then _ok = LIBRARYGLOBAL ("HimeraGlobals", "iShowItemTitle", _g)
+	_ok = LIBRARYGLOBAL ("HimeraGlobals", "iShowItemTitle", _g)		! как в HimeraPassport / ZoneSumPassport25
+	if _ok = 0 or _g[1] < 0 then _ok = LIBRARYGLOBAL ("[gjs]-LibraryGlobals", "iShowItemTitle", _g)
 	if _ok and _g[1] >= 0 then
 		for i = 1 to 5
 			_it[i] = _g[i]
