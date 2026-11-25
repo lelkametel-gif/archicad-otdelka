@@ -4268,6 +4268,7 @@ void DoConvertZones ()
 		API_Guid			guid;
 		const ZoneCatInfo*	newCat = nullptr;		// nullptr — категорию не менять
 		bool				stamp = false;			// сменить маркер на HimeraZone_АСП
+		std::wstring		name;					// имя зоны до перевода (для проверки после смены маркера)
 	};
 	std::vector<Plan> plans;
 	std::map<std::wstring, int> moved;						// «старая → имя → новая» -> зон
@@ -4285,6 +4286,7 @@ void DoConvertZones ()
 		const std::wstring zname = otd::Trim (au::ToW (GS::UniString (el.zone.roomName)));
 		Plan p;
 		p.guid = g;
+		p.name = zname;
 		p.stamp = el.zone.libInd != targetLib;
 		if (cur != nullptr && cur->ours) {
 			++alreadyOurs;
@@ -4337,7 +4339,7 @@ void DoConvertZones ()
 		}
 	};
 
-	int doneCat = 0, doneStamp = 0, errs = 0;
+	int doneCat = 0, doneStamp = 0, errs = 0, nameLost = 0;
 	GSErrCode firstErr = NoError;
 	if (!plans.empty ()) {
 		ACAPI_CallUndoableCommand (au::FromW (L"Перевести зоны на категории HimeraZone_АСП"), [&] () -> GSErrCode {
@@ -4367,6 +4369,11 @@ void DoConvertZones ()
 						if (memo.params != nullptr) ACAPI_DisposeAddParHdl (&memo.params);
 						memo.params = pars;
 						ApplyPars (memo.params, rec);
+						// Имя и номер зоны: ApplyPars их не переносит (zp::Skip пропускает «room_*»), и в зоне
+						// остаются значения по умолчанию нового объекта — у HimeraZone_АСП имя «<имя зоны>»,
+						// номер «3». Переносим явно из самой зоны (до смены маркера они верные).
+						SetStrPar (memo.params, L"ROOM_NAME", au::ToW (GS::UniString (el.zone.roomName)));
+						SetStrPar (memo.params, L"ROOM_NUMBER", au::ToW (GS::UniString (el.zone.roomNoStr)));
 						el.zone.libInd = targetLib;
 						ACAPI_ELEMENT_MASK_SET (mask, API_ZoneType, libInd);
 						e = ACAPI_Element_Change (&el, &mask, &memo, APIMemoMask_AddPars, true);
@@ -4376,7 +4383,14 @@ void DoConvertZones ()
 					e = ACAPI_Element_Change (&el, &mask, nullptr, 0, true);
 				if (e != NoError) { if (errs++ == 0) firstErr = e; continue; }
 				if (p.newCat != nullptr) ++doneCat;
-				if (p.stamp) ++doneStamp;
+				if (p.stamp) {
+					++doneStamp;
+					// контроль: имя зоны после смены маркера должно остаться прежним
+					API_Element chk = {};
+					chk.header.guid = p.guid;
+					if (ACAPI_Element_Get (&chk) == NoError &&
+						otd::Trim (au::ToW (GS::UniString (chk.zone.roomName))) != p.name) ++nameLost;
+				}
 			}
 			setLayerFlags (false);
 			return NoError;
@@ -4398,7 +4412,7 @@ void DoConvertZones ()
 	if (!oldLibs.empty ()) {
 		std::wstring s;
 		for (const auto& kv : oldLibs) s += (s.empty () ? L"" : L", ") + (kv.first.empty () ? std::wstring (L"(без объекта)") : kv.first) + L" — " + std::to_wstring (kv.second);
-		lines.push_back (L"   Был маркер: " + s + L". Значения параметров (Квартира, Секция и др.) перенесены по именам.");
+		lines.push_back (L"   Был маркер: " + s + L". Значения параметров (Квартира, Секция, имя и номер зоны и др.) перенесены по именам.");
 	}
 	if (alreadyOurs > 0)
 		lines.push_back (L"Уже на наших категориях: " + std::to_wstring (alreadyOurs) + L" зон" +
@@ -4406,6 +4420,9 @@ void DoConvertZones ()
 	if (skippedByRule > 0) lines.push_back (L"Не переводить (правило с «-»): " + std::to_wstring (skippedByRule) + L" зон.");
 	if (hot > 0) lines.push_back (L"Зоны модулей (копии) не меняются: " + std::to_wstring (hot) + L" — переведите их в исходном файле или на этаже-источнике.");
 	if (errs > 0) lines.push_back (L"Не удалось изменить: " + std::to_wstring (errs) + L" зон (код " + std::to_wstring (firstErr) + L"; в Teamwork — зарезервируйте зоны).");
+	if (nameLost > 0)
+		lines.push_back (L"Имя зоны не сохранилось у " + std::to_wstring (nameLost) + L" зон из " + std::to_wstring (doneStamp) +
+						 L" — проверьте настройки зоны (Ctrl+Z отменит перевод, пришлите это сообщение).");
 	if (!layerFlags.empty ()) lines.push_back (L"Зоны на скрытых / заблокированных слоях тоже переведены (слои включались на время команды).");
 	lines.push_back (L"");
 	if (!moved.empty ()) {
