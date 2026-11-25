@@ -32,6 +32,7 @@ static GSErrCode MenuCommandHandler (const API_MenuParams* menuParams)
 		else if (menuParams->menuItemRef.itemIndex == 11) DoArrangeStamps ();
 		else if (menuParams->menuItemRef.itemIndex == 12) DoUpdateOverrides ();
 		else if (menuParams->menuItemRef.itemIndex == 13) DoConvertZones ();
+		else if (menuParams->menuItemRef.itemIndex == 14) DoMarkerByPmv ();
 	}
 	return NoError;
 }

@@ -4374,6 +4374,8 @@ void DoConvertZones ()
 						// номер «3». Переносим явно из самой зоны (до смены маркера они верные).
 						SetStrPar (memo.params, L"ROOM_NAME", au::ToW (GS::UniString (el.zone.roomName)));
 						SetStrPar (memo.params, L"ROOM_NUMBER", au::ToW (GS::UniString (el.zone.roomNoStr)));
+						// состав маркера — сразу «ПО ПМВ» (значение по умолчанию объекта), а не старый набор галочек
+						au::Params (memo.params).SetReal ("bypmv", 1);
 						el.zone.libInd = targetLib;
 						ACAPI_ELEMENT_MASK_SET (mask, API_ZoneType, libInd);
 						e = ACAPI_Element_Change (&el, &mask, &memo, APIMemoMask_AddPars, true);
@@ -4449,5 +4451,68 @@ void DoConvertZones ()
 	lines.push_back (L"Ошибся подбор — впишите правило «старая категория | имя зоны = код» в " + std::wstring (kCatMapFile) + L" и запустите снова (Ctrl+Z — отменить перевод).");
 	lines.push_back (L"Старые категории после перевода можно удалить в Менеджере реквизитов (если на них не осталось зон).");
 	if (unresZones > 0) OpenInShell (PathOf (mapLoc), true);
+	ShowReport (lines);
+}
+
+
+// ============================================================================= состав маркера «ПО ПМВ»
+// Выделенные зоны (иначе все зоны проекта): включить «ПО ПМВ» в составе маркера (bypmv = 1) — надписи маркера
+// (номер, имя, площадь, тип пола, категория, спец. параметры) берутся из панели «[GJS] - Параметры отображения зон»,
+// а не из галочек каждой зоны. Новые зоны и переведённые на HimeraZone_АСП уже ставятся по ПМВ по умолчанию.
+void DoMarkerByPmv ()
+{
+	{
+		API_DatabaseInfo fp = {};
+		fp.typeID = APIWind_FloorPlanID;
+		ACAPI_Database_ChangeCurrentDatabase (&fp);
+	}
+	GS::Array<API_Guid> list;
+	bool selected = false;
+	{
+		API_SelectionInfo selInfo = {};
+		GS::Array<API_Neig> sel;
+		ACAPI_Selection_Get (&selInfo, &sel, false);
+		BMKillHandle ((GSHandle*) &selInfo.marquee.coords);
+		for (const API_Neig& n : sel) {
+			API_Elem_Head h = {};
+			h.guid = n.guid;
+			if (ACAPI_Element_GetHeader (&h) == NoError && h.type.typeID == API_ZoneID) list.Push (n.guid);
+		}
+		selected = !list.IsEmpty ();
+		if (!selected) ACAPI_Element_GetElemList (API_ElemType (API_ZoneID), &list);
+	}
+
+	int done = 0, already = 0, notOur = 0, hot = 0, errs = 0;
+	GSErrCode firstErr = NoError;
+	ACAPI_CallUndoableCommand (au::FromW (L"Состав маркера зон — по ПМВ"), [&] () -> GSErrCode {
+		for (const API_Guid& g : list) {
+			API_Element el = {};
+			el.header.guid = g;
+			if (ACAPI_Element_Get (&el) != NoError) continue;
+			if (el.header.hotlinkGuid != APINULLGuid) { ++hot; continue; }
+			API_ElementMemo memo = {};
+			if (ACAPI_Element_GetMemo (g, &memo, APIMemoMask_AddPars) != NoError) continue;
+			au::Params P (memo.params);
+			if (!P.Has ("bypmv")) { ++notOur; ACAPI_DisposeElemMemoHdls (&memo); continue; }
+			if (P.Bool ("bypmv")) { ++already; ACAPI_DisposeElemMemoHdls (&memo); continue; }
+			P.SetReal ("bypmv", 1);
+			API_Element mask;
+			ACAPI_ELEMENT_MASK_CLEAR (mask);
+			const GSErrCode e = ACAPI_Element_Change (&el, &mask, &memo, APIMemoMask_AddPars, true);
+			if (e == NoError) ++done; else if (errs++ == 0) firstErr = e;
+			ACAPI_DisposeElemMemoHdls (&memo);
+		}
+		return NoError;
+	});
+
+	std::vector<std::wstring> lines;
+	lines.push_back (std::wstring (L"Состав маркера по ПМВ — ") + (selected ? L"выделенные зоны: " : L"все зоны проекта: ") +
+					 std::to_wstring (list.GetSize ()) + L".");
+	lines.push_back (L"Включено «ПО ПМВ»: " + std::to_wstring (done) + L" зон; уже было включено: " + std::to_wstring (already) + L".");
+	if (notOur > 0)
+		lines.push_back (L"Зоны другого объекта (нет параметра bypmv): " + std::to_wstring (notOur) + L" — их маркер не HimeraZone, не менялись.");
+	if (hot > 0) lines.push_back (L"Зоны модулей (копии): " + std::to_wstring (hot) + L" — переключите их в исходном файле или на этаже-источнике.");
+	if (errs > 0) lines.push_back (L"Не удалось изменить: " + std::to_wstring (errs) + L" зон (код " + std::to_wstring ((int) firstErr) + L"; в Teamwork — зарезервируйте зоны).");
+	lines.push_back (L"Надписи маркера берутся из панели «[GJS] - Параметры отображения зон» (МВО). Отменить — Ctrl+Z.");
 	ShowReport (lines);
 }

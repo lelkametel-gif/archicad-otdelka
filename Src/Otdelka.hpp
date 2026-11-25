@@ -25,5 +25,7 @@ void DoArrangeStamps ();
 void DoUpdateOverrides ();
 // Зоны чужих категорий (свой маркер) -> категории HimeraZone_АСП по имени зоны, маркер HimeraZone_АСП, параметры переносятся
 void DoConvertZones ();
+// Выделенные зоны (иначе все): состав маркера «ПО ПМВ» (bypmv = 1) — надписи из панели «[GJS] - Параметры отображения зон»
+void DoMarkerByPmv ();
 
 #endif

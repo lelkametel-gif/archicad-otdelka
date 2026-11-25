@@ -749,7 +749,7 @@ values "WallDownHighWindow" RANGE [0,ROOM_HEIGHT]
 			<Flags>
 				<ParFlg_BoldName/>
 			</Flags>
-			<Value>0</Value>
+			<Value>1</Value>
 		</Boolean>
 		<Boolean Name="bZone">
 			<Description><![CDATA["выбор компонентов"]]></Description>
