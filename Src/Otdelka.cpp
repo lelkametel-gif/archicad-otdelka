@@ -4369,7 +4369,7 @@ void DoConvertZones ()
 					if (memo.params != nullptr) {
 						const Int32 np = (Int32) ((size_t) BMGetHandleSize ((GSConstHandle) memo.params) / sizeof (API_AddParType));
 						for (Int32 i = 0; i < np; ++i) {
-							const API_AddParType& pp = memo.params[i];
+							const API_AddParType& pp = (*memo.params)[i];
 							if (pp.typeMod == API_ParArray) continue;
 							const std::wstring nm = au::Lower (au::ToW (GS::UniString (pp.name)));
 							if (nm.compare (0, 5, L"room_") != 0 && nm.compare (0, 5, L"glob_") != 0) continue;
