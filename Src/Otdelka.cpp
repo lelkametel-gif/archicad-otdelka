@@ -4361,6 +4361,25 @@ void DoConvertZones ()
 					e = ACAPI_Element_GetMemo (p.guid, &memo, APIMemoMask_AddPars);
 					zp::ZoneRec rec;
 					if (e == NoError) rec.pars = ReadPars (memo.params);
+					// ROOM_* и GLOB_* Archicad хранит в параметрах зоны: площадь, периметр, высота, ID. zp::Skip их
+					// не переносит, и в новом маркере остаются нули из объекта — маркер считает из них текст и
+					// показывает «0,0 м²». Забираем значения старой зоны отдельно.
+					std::vector<std::pair<std::string, double>> sysNum;
+					std::vector<std::pair<std::string, std::wstring>> sysStr;
+					if (memo.params != nullptr) {
+						const Int32 np = (Int32) ((size_t) BMGetHandleSize ((GSConstHandle) memo.params) / sizeof (API_AddParType));
+						for (Int32 i = 0; i < np; ++i) {
+							const API_AddParType& pp = memo.params[i];
+							if (pp.typeMod == API_ParArray) continue;
+							const std::wstring nm = au::Lower (au::ToW (GS::UniString (pp.name)));
+							if (nm.compare (0, 5, L"room_") != 0 && nm.compare (0, 5, L"glob_") != 0) continue;
+							if (pp.typeID == APIParT_CString)
+								sysStr.push_back (std::make_pair (std::string (pp.name), au::ToW (GS::UniString (pp.value.uStr))));
+							else if (pp.typeID != APIParT_Title && pp.typeID != APIParT_Separator && pp.typeID != APIParT_Dictionary &&
+									 pp.typeID != API_ZombieParT)
+								sysNum.push_back (std::make_pair (std::string (pp.name), pp.value.real));
+						}
+					}
 					double pa = 0, pb = 0;
 					Int32 n = 0;
 					API_AddParType** pars = nullptr;
@@ -4369,6 +4388,10 @@ void DoConvertZones ()
 						if (memo.params != nullptr) ACAPI_DisposeAddParHdl (&memo.params);
 						memo.params = pars;
 						ApplyPars (memo.params, rec);
+						// значения зоны из старого маркера: площадь, периметр, ID и т. п.
+						au::Params NP (memo.params);
+						for (const auto& kv : sysNum) NP.SetReal (kv.first.c_str (), kv.second);
+						for (const auto& kv : sysStr) NP.SetStr (kv.first.c_str (), au::FromW (kv.second));
 						// Имя и номер зоны: ApplyPars их не переносит (zp::Skip пропускает «room_*»), и в зоне
 						// остаются значения по умолчанию нового объекта — у HimeraZone_АСП имя «<имя зоны>»,
 						// номер «3». Переносим явно из самой зоны (до смены маркера они верные).
