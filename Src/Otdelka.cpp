@@ -4339,7 +4339,7 @@ void DoConvertZones ()
 		}
 	};
 
-	int doneCat = 0, doneStamp = 0, errs = 0, nameLost = 0;
+	int doneCat = 0, doneStamp = 0, errs = 0, nameLost = 0, pmvSet = 0;
 	GSErrCode firstErr = NoError;
 	if (!plans.empty ()) {
 		ACAPI_CallUndoableCommand (au::FromW (L"Перевести зоны на категории HimeraZone_АСП"), [&] () -> GSErrCode {
@@ -4397,8 +4397,10 @@ void DoConvertZones ()
 						// номер «3». Переносим явно из самой зоны (до смены маркера они верные).
 						SetStrPar (memo.params, L"ROOM_NAME", au::ToW (GS::UniString (el.zone.roomName)));
 						SetStrPar (memo.params, L"ROOM_NUMBER", au::ToW (GS::UniString (el.zone.roomNoStr)));
-						// состав маркера — сразу «ПО ПМВ» (значение по умолчанию объекта), а не старый набор галочек
-						au::Params (memo.params).SetReal ("bypmv", 1);
+						// «ПО ПМВ» тут НЕ включаем: если поставить его вместе со сменой маркера, Archicad не
+						// пересчитывает компоненты и надписи зоны пропадают. Включаем отдельным изменением ниже —
+						// как ручное «выключить/включить ПО ПМВ».
+						au::Params (memo.params).SetReal ("bypmv", 0);
 						el.zone.libInd = targetLib;
 						ACAPI_ELEMENT_MASK_SET (mask, API_ZoneType, libInd);
 						e = ACAPI_Element_Change (&el, &mask, &memo, APIMemoMask_AddPars, true);
@@ -4415,6 +4417,23 @@ void DoConvertZones ()
 					chk.header.guid = p.guid;
 					if (ACAPI_Element_Get (&chk) == NoError &&
 						otd::Trim (au::ToW (GS::UniString (chk.zone.roomName))) != p.name) ++nameLost;
+					// состав маркера — «ПО ПМВ» отдельным изменением: так Archicad пересчитывает компоненты
+					// (одним изменением со сменой маркера надписи зоны пропадают)
+					API_ElementMemo m2 = {};
+					if (ACAPI_Element_GetMemo (p.guid, &m2, APIMemoMask_AddPars) == NoError) {
+						au::Params P2 (m2.params);
+						if (P2.Has ("bypmv") && !P2.Bool ("bypmv")) {
+							P2.SetReal ("bypmv", 1);
+							API_Element el2 = {};
+							el2.header.guid = p.guid;
+							if (ACAPI_Element_Get (&el2) == NoError) {
+								API_Element mask2;
+								ACAPI_ELEMENT_MASK_CLEAR (mask2);
+								if (ACAPI_Element_Change (&el2, &mask2, &m2, APIMemoMask_AddPars, true) == NoError) ++pmvSet;
+							}
+						}
+					}
+					ACAPI_DisposeElemMemoHdls (&m2);
 				}
 			}
 			setLayerFlags (false);
@@ -4434,6 +4453,8 @@ void DoConvertZones ()
 	lines.push_back (std::wstring (L"Перевод зон на категории HimeraZone_АСП — ") + (selected ? L"выделенные зоны: " : L"все зоны проекта: ") +
 					 std::to_wstring (list.GetSize ()) + L".");
 	lines.push_back (L"Категория сменена у " + std::to_wstring (doneCat) + L" зон, маркер заменён на HimeraZone_АСП у " + std::to_wstring (doneStamp) + L" зон.");
+	if (pmvSet > 0)
+		lines.push_back (L"Состав маркера включён «ПО ПМВ» (из панели «[GJS] - Параметры отображения зон») у " + std::to_wstring (pmvSet) + L" зон.");
 	if (!oldLibs.empty ()) {
 		std::wstring s;
 		for (const auto& kv : oldLibs) s += (s.empty () ? L"" : L", ") + (kv.first.empty () ? std::wstring (L"(без объекта)") : kv.first) + L" — " + std::to_wstring (kv.second);
@@ -4505,25 +4526,54 @@ void DoMarkerByPmv ()
 		if (!selected) ACAPI_Element_GetElemList (API_ElemType (API_ZoneID), &list);
 	}
 
-	int done = 0, already = 0, notOur = 0, hot = 0, errs = 0;
+	int done = 0, already = 0, refreshed = 0, notOur = 0, hot = 0, errs = 0;
 	GSErrCode firstErr = NoError;
 	ACAPI_CallUndoableCommand (au::FromW (L"Состав маркера зон — по ПМВ"), [&] () -> GSErrCode {
+		// включить/выключить «ПО ПМВ»: 1 — сделано, 0 — нет параметра bypmv (чужой маркер), -1 — ошибка
+		auto setFlag = [&] (const API_Guid& g, double v) -> int {
+			API_Element el = {};
+			el.header.guid = g;
+			if (ACAPI_Element_Get (&el) != NoError) return -1;
+			API_ElementMemo memo = {};
+			if (ACAPI_Element_GetMemo (g, &memo, APIMemoMask_AddPars) != NoError) return -1;
+			au::Params P (memo.params);
+			int r = 1;
+			if (!P.Has ("bypmv")) r = 0;
+			else {
+				P.SetReal ("bypmv", v);
+				API_Element mask;
+				ACAPI_ELEMENT_MASK_CLEAR (mask);
+				const GSErrCode e = ACAPI_Element_Change (&el, &mask, &memo, APIMemoMask_AddPars, true);
+				if (e != NoError) { if (errs == 0) firstErr = e; ++errs; r = -1; }
+			}
+			ACAPI_DisposeElemMemoHdls (&memo);
+			return r;
+		};
 		for (const API_Guid& g : list) {
 			API_Element el = {};
 			el.header.guid = g;
 			if (ACAPI_Element_Get (&el) != NoError) continue;
 			if (el.header.hotlinkGuid != APINULLGuid) { ++hot; continue; }
-			API_ElementMemo memo = {};
-			if (ACAPI_Element_GetMemo (g, &memo, APIMemoMask_AddPars) != NoError) continue;
-			au::Params P (memo.params);
-			if (!P.Has ("bypmv")) { ++notOur; ACAPI_DisposeElemMemoHdls (&memo); continue; }
-			if (P.Bool ("bypmv")) { ++already; ACAPI_DisposeElemMemoHdls (&memo); continue; }
-			P.SetReal ("bypmv", 1);
-			API_Element mask;
-			ACAPI_ELEMENT_MASK_CLEAR (mask);
-			const GSErrCode e = ACAPI_Element_Change (&el, &mask, &memo, APIMemoMask_AddPars, true);
-			if (e == NoError) ++done; else if (errs++ == 0) firstErr = e;
-			ACAPI_DisposeElemMemoHdls (&memo);
+			bool has = false, on = false;
+			{
+				API_ElementMemo memo = {};
+				if (ACAPI_Element_GetMemo (g, &memo, APIMemoMask_AddPars) == NoError) {
+					au::Params P (memo.params);
+					has = P.Has ("bypmv");
+					on = has && P.Bool ("bypmv");
+				}
+				ACAPI_DisposeElemMemoHdls (&memo);
+			}
+			if (!has) { ++notOur; continue; }
+			if (on) {
+				// уже «по ПМВ»: пересчитать компоненты — выключить и включить (после смены маркера надписи
+				// иногда не отрисовываются, пока «ПО ПМВ» не переключить руками)
+				++already;
+				if (setFlag (g, 0) < 0) continue;
+				if (setFlag (g, 1) < 0) continue;
+				++refreshed;
+			} else if (setFlag (g, 1) > 0)
+				++done;
 		}
 		return NoError;
 	});
@@ -4531,7 +4581,9 @@ void DoMarkerByPmv ()
 	std::vector<std::wstring> lines;
 	lines.push_back (std::wstring (L"Состав маркера по ПМВ — ") + (selected ? L"выделенные зоны: " : L"все зоны проекта: ") +
 					 std::to_wstring (list.GetSize ()) + L".");
-	lines.push_back (L"Включено «ПО ПМВ»: " + std::to_wstring (done) + L" зон; уже было включено: " + std::to_wstring (already) + L".");
+	lines.push_back (L"Включено «ПО ПМВ»: " + std::to_wstring (done) + L" зон; было включено: " + std::to_wstring (already) + L".");
+	if (refreshed > 0)
+		lines.push_back (L"Пересчитано (было «по ПМВ» — выключено и включено снова): " + std::to_wstring (refreshed) + L" зон.");
 	if (notOur > 0)
 		lines.push_back (L"Зоны другого объекта (нет параметра bypmv): " + std::to_wstring (notOur) + L" — их маркер не HimeraZone, не менялись.");
 	if (hot > 0) lines.push_back (L"Зоны модулей (копии): " + std::to_wstring (hot) + L" — переключите их в исходном файле или на этаже-источнике.");
